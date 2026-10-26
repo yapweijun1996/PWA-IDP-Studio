@@ -182,6 +182,19 @@ export const scenarios = [
     await until(()=>{assert.equal(b.navigations-initial,1,'No update reload loop');return Date.now()>=quietUntil},'post-update navigation stability',5000);
     assert.equal(b.navigations-initial,1,'Exactly one navigation'); assert.equal(await b.eval('sessionStorage.getItem("e2eReloads")'),'1'); assert.equal(await b.eval('document.body.innerText.includes("New version available.")'),false);
   } },
+  { name: 'settings-updates', async run({b,server,buildApp,buildB}) {
+    await pwa(b); await reload(b); await b.wait('!!navigator.serviceWorker.controller','controlled build A'); await settings(b);
+    await text(b,'Version 0.'); await text(b,'Build e2e-1'); await click(b,'Check for updates');
+    await b.wait(`document.querySelector('[data-update-phase]')?.dataset.updatePhase==='ready'&&document.querySelector('[data-update-phase]').innerText.includes('latest version')`,'up-to-date status after check');
+    assert.equal(await b.eval(`[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Update now')`),false,'No Update now when already current');
+    await buildApp('e2e-2',buildB); server.setRoot(buildB); const initial=b.navigations;
+    await click(b,'Check for updates');
+    await b.wait(`document.querySelector('[data-update-phase]')?.dataset.updatePhase==='available'`,'update found by manual check');
+    assert.equal(b.navigations,initial,'Check must not reload'); assert.equal(await b.eval(`document.querySelectorAll('main button').length>0&&[...document.querySelectorAll('main button')].some(e=>e.textContent.trim()==='Update now')`),true,'Update now inside Settings');
+    await b.eval(`[...document.querySelectorAll('main button')].find(e=>e.textContent.trim()==='Update now').click()`);
+    await text(b,'Build e2e-2'); await b.wait('navigator.serviceWorker.getRegistration().then(r=>!!r?.active&&!r.waiting&&!r.installing)','updated worker settled');
+    assert.equal(b.navigations-initial,1,'Exactly one navigation');
+  } },
   { name: 'search-docs', async run({b}) {
     await drop(b,'alpha.png'); await home(b); await drop(b,'zulu.png'); await home(b);
     for(const hash of ['#/','#/documents']) {
