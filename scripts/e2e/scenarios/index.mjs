@@ -16,10 +16,24 @@ async function correct(b, name, value) {
 async function shell(b, live = false) {
   await b.wait('!!document.querySelector("main table")', 'initial batches loaded');
   await text(b, 'Upload Documents'); await text(b, 'gpt.yapweijun1996.com');
-  const nav = await b.eval(`[...document.querySelectorAll('aside nav a')].map(e=>({label:e.getAttribute('aria-label')||e.querySelector('span')?.textContent,disabled:e.getAttribute('aria-disabled'),reason:e.querySelector('small')?.textContent,href:e.getAttribute('href')}))`);
+  const nav = await b.eval(`[...document.querySelectorAll('aside nav a')].map(e=>{
+    const ids = (e.getAttribute('aria-describedby') || '').trim().split(/\\s+/).filter(Boolean);
+    const descriptions = ids.map(id => document.getElementById(id));
+    const badge = e.querySelector('.ds-badge');
+    return {label:e.getAttribute('aria-label')||e.querySelector('span')?.textContent,
+      disabled:e.getAttribute('aria-disabled'),href:e.getAttribute('href'),
+      reason:ids.length && descriptions.every(Boolean) ? descriptions.map(d=>d.textContent.trim()).join(' ') : null,
+      badge:badge?.textContent, badgeVisible:!!badge && badge.checkVisibility()};
+  })`);
   assert.deepEqual(nav.map(n => n.label), ['Home','Documents','Review Queue','Label Studio','Templates','JSON Explorer','AI Agents','Validation','Settings']);
   assert.deepEqual(nav.filter(n => n.disabled === 'true').map(n => n.label), ['Label Studio','Templates','JSON Explorer','AI Agents','Validation']);
-  for (const n of nav.filter(n => n.disabled === 'true')) { assert.equal(n.reason, 'Coming soon'); assert.equal(n.href, null); }
+  assert.equal(await b.eval('!!document.querySelector("aside:not(.ds-collapsed) button[aria-expanded=true]")'), true, 'Expanded sidebar');
+  for (const n of nav.filter(n => n.disabled === 'true')) {
+    assert.equal(n.reason, 'Coming soon', `${n.label} accessible description`);
+    assert.equal(n.badge, 'Coming soon', `${n.label} badge`);
+    assert.equal(n.badgeVisible, true, `${n.label} badge visible when expanded`);
+    assert.equal(n.href, null);
+  }
   assert.deepEqual(nav.filter(n => n.href).map(n => n.href), ['#/','#/documents','#/review','#/settings']);
   const footer = await b.eval('document.querySelector("aside footer")?.textContent');
   assert.match(footer || '', /Version \S+ · Build \S+/);

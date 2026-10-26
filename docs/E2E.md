@@ -49,7 +49,7 @@ Offline contract: once cached, the app shell and stored documents remain availab
 
 | Scenario | Assertions |
 | --- | --- |
-| `shell` | Upload Documents and gateway disclosure; exact nine-item navigation order; four actual routes; five aria-disabled links with Coming soon reasons; footer version/build `e2e-1`; no console errors or uncaught page errors. |
+| `shell` | Upload Documents and gateway disclosure; exact nine-item navigation order; four actual routes; five aria-disabled links without hrefs, each resolving its aria-describedby IDs to the exact Coming soon reason; expanded sidebar with a visible Coming soon badge on each disabled item; footer version/build `e2e-1`; no console errors or uncaught page errors. |
 | `upload-demo` | In-page canvas PNG dropped through DataTransfer; real extraction and workspace; input_image and demo Bearer token; no BYOK fixture key; Home lists batch and all three stat cards show 1; table opens workspace. |
 | `review-flow` | Invalid date and mismatched totals block approval with visible reason; readable Issues title; date correction resolves its issue but leaves totals blocking; total correction enables approval; Approved status; Clean/Full JSON differ; v2 envelope keys and references, correction/approval reviews and revision increments; selecting date highlights read-only evidence on page 1; no draw/move/resize control. |
 | `repair-turn` | First invalid response is repaired by a second request; two invalid responses give a visible error Notice and failed batch with no fabricated transactions. |
@@ -134,7 +134,17 @@ without inventing an overlay hook. The no-loop check covers worker settlement
 and a two-second condition-polled navigation stability window, not an unbounded
 observation of future scheduled navigations.
 
-Repair-turn verification: both changed `.mjs` modules pass `node --check`.
-The full runner was launched directly through Node without a shell, but this
-tool runtime denied writes to `node_modules/.vite-temp` and `artifacts/e2e`
-with `EPERM` before browser scenarios ran. No new browser passes are claimed.
+Post-B3 selector audit: checked scenario/helper selectors against `src/ui/**`
+and `src/ds/**`. The sidebar reason now resolves `aria-describedby` with
+`getElementById` (IDs include route punctuation), independently of badge text
+and visibility. The single-row stats layout retains the `dl`/`dt`/`dd` contract;
+the remaining route, field, table, tab, evidence, menu, drawer and tooltip
+selectors still match their components.
+
+Shell-repair verification: `scripts/e2e/scenarios/index.mjs` passes
+`node --check`. The full runner was launched directly through Node without a
+shell, but this tool runtime denied writes to `node_modules/.vite-temp` and
+`artifacts/e2e` with `EPERM` before browser scenarios ran. A separate shell
+scenario smoke against the existing `dist/` was also attempted without a build;
+the runtime denied the loopback server's `listen` with `EPERM`. No new browser
+passes are claimed.
