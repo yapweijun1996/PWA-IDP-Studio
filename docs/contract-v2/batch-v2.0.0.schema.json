@@ -1,0 +1,829 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.invalid/pwa-idp-studio/batch-v2.0.0.schema.json",
+  "title": "PWA-IDP-Studio Multi-Document Multi-Transaction Batch Contract 2.0.0",
+  "description": "Portable IDP extraction and review contract; not an ERP posting instruction.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "batch",
+    "source_files",
+    "pages",
+    "documents",
+    "transactions",
+    "evidence",
+    "issues",
+    "reviews",
+    "validation"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "batch": {
+      "$ref": "#/$defs/batch"
+    },
+    "source_files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source_file"
+      },
+      "minItems": 1
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/page"
+      },
+      "minItems": 1
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/document"
+      },
+      "minItems": 0
+    },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/transaction"
+      },
+      "minItems": 0
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      },
+      "minItems": 0
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      },
+      "minItems": 0
+    },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/review"
+      },
+      "minItems": 0
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    }
+  },
+  "$defs": {
+    "batch": {
+      "type": "object",
+      "properties": {
+        "batch_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "processing",
+            "review_required",
+            "validated",
+            "partially_approved",
+            "approved",
+            "failed"
+          ]
+        },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "batch_id",
+        "created_at",
+        "status",
+        "policy_version",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "source_file": {
+      "type": "object",
+      "properties": {
+        "file_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "media_type": {
+          "type": "string",
+          "enum": [
+            "application/pdf",
+            "image/png",
+            "image/jpeg",
+            "image/tiff"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "page_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "storage_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "file_id",
+        "filename",
+        "media_type",
+        "sha256",
+        "page_count",
+        "storage_ref"
+      ],
+      "additionalProperties": false
+    },
+    "region": {
+      "type": "object",
+      "properties": {
+        "region_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "document_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "bbox": {
+          "$ref": "#/$defs/bbox"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "full_page",
+            "sub_document",
+            "attachment",
+            "table",
+            "other"
+          ]
+        }
+      },
+      "required": [
+        "region_id",
+        "document_id",
+        "bbox",
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "page": {
+      "type": "object",
+      "properties": {
+        "file_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "page_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rotation": {
+          "type": "integer",
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "classified",
+            "error"
+          ]
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/region"
+          },
+          "minItems": 0
+        },
+        "unassigned_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "blank",
+                "unknown",
+                "ocr_failed",
+                "review_pending"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "file_id",
+        "page_number",
+        "width",
+        "height",
+        "rotation",
+        "status",
+        "regions",
+        "unassigned_reason"
+      ],
+      "additionalProperties": false
+    },
+    "bbox": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "page_ref": {
+      "type": "object",
+      "properties": {
+        "file_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "page_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "region_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        }
+      },
+      "required": [
+        "file_id",
+        "page_number",
+        "region_id"
+      ],
+      "additionalProperties": false
+    },
+    "document": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "document_type": {
+          "type": "string",
+          "enum": [
+            "purchase_invoice",
+            "sales_invoice",
+            "purchase_order",
+            "sales_order",
+            "delivery_order",
+            "credit_note",
+            "bank_receipt",
+            "payment_document",
+            "statement",
+            "unknown"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "validated",
+            "review_required",
+            "approved",
+            "rejected"
+          ]
+        },
+        "page_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/page_ref"
+          },
+          "minItems": 1
+        },
+        "transaction_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "uniqueItems": true
+        },
+        "classification_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "boundary_status": {
+          "type": "string",
+          "enum": [
+            "confirmed",
+            "needs_review"
+          ]
+        },
+        "schema_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        }
+      },
+      "required": [
+        "document_id",
+        "document_type",
+        "status",
+        "page_refs",
+        "transaction_ids",
+        "classification_confidence",
+        "boundary_status",
+        "schema_id",
+        "schema_version"
+      ],
+      "additionalProperties": false
+    },
+    "value": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/value"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/value"
+          }
+        }
+      ]
+    },
+    "transaction": {
+      "type": "object",
+      "properties": {
+        "transaction_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "document_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "transaction_type": {
+          "type": "string",
+          "enum": [
+            "purchase_invoice",
+            "sales_invoice",
+            "purchase_order",
+            "sales_order",
+            "delivery_order",
+            "credit_note",
+            "bank_receipt",
+            "payment_document",
+            "statement_entry",
+            "unknown"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "validated",
+            "review_required",
+            "approved",
+            "rejected"
+          ]
+        },
+        "business_key": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/value"
+          }
+        },
+        "field_evidence": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "transaction_id",
+        "document_id",
+        "transaction_type",
+        "status",
+        "business_key",
+        "data",
+        "field_evidence",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "source_region": {
+      "type": "object",
+      "properties": {
+        "file_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "page_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bbox": {
+          "$ref": "#/$defs/bbox"
+        },
+        "coordinate_system": {
+          "const": "normalized_unrotated_top_left"
+        },
+        "text_span": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "file_id",
+        "page_number",
+        "bbox",
+        "coordinate_system",
+        "text_span"
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "document_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "transaction_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "field_pointer": {
+          "type": "string",
+          "pattern": "^(/([^~/]|~0|~1)*)*$"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "ocr",
+            "vision_llm",
+            "native_text",
+            "human"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source_region"
+          },
+          "minItems": 1
+        },
+        "review_status": {
+          "type": "string",
+          "enum": [
+            "unreviewed",
+            "confirmed",
+            "corrected",
+            "rejected"
+          ]
+        }
+      },
+      "required": [
+        "evidence_id",
+        "document_id",
+        "transaction_id",
+        "field_pointer",
+        "value",
+        "confidence",
+        "method",
+        "sources",
+        "review_status"
+      ],
+      "additionalProperties": false
+    },
+    "issue": {
+      "type": "object",
+      "properties": {
+        "issue_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "batch",
+            "file",
+            "page",
+            "document",
+            "transaction",
+            "evidence"
+          ]
+        },
+        "target_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "rule_code": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error",
+            "blocking"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "resolved",
+            "waived"
+          ]
+        },
+        "waiver_review_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "issue_id",
+        "scope",
+        "target_id",
+        "rule_code",
+        "severity",
+        "message",
+        "status",
+        "waiver_review_id"
+      ],
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "target_type": {
+          "type": "string",
+          "enum": [
+            "document",
+            "transaction",
+            "issue",
+            "page",
+            "evidence"
+          ]
+        },
+        "target_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "confirm",
+            "correct",
+            "split",
+            "merge",
+            "assign",
+            "waive",
+            "approve",
+            "reject"
+          ]
+        },
+        "actor_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prior_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "new_revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "review_id",
+        "target_type",
+        "target_id",
+        "action",
+        "actor_id",
+        "at",
+        "reason",
+        "prior_revision",
+        "new_revision"
+      ],
+      "additionalProperties": false
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "structural_valid": {
+          "type": "boolean"
+        },
+        "reference_valid": {
+          "type": "boolean"
+        },
+        "coverage_valid": {
+          "type": "boolean"
+        },
+        "business_rules_valid": {
+          "type": "boolean"
+        },
+        "export_eligible_transaction_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "uniqueItems": true
+        },
+        "validated_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validator_version": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        }
+      },
+      "required": [
+        "structural_valid",
+        "reference_valid",
+        "coverage_valid",
+        "business_rules_valid",
+        "export_eligible_transaction_ids",
+        "validated_at",
+        "validator_version"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

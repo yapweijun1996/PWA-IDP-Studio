@@ -1,0 +1,4015 @@
+{
+  "schema_version": "2.0.0",
+  "batch": {
+    "batch_id": "batch_001",
+    "created_at": "2026-10-26T10:00:00Z",
+    "status": "review_required",
+    "policy_version": "policy_1",
+    "revision": 1
+  },
+  "source_files": [
+    {
+      "file_id": "file_001",
+      "filename": "combined_100_pages.pdf",
+      "media_type": "application/pdf",
+      "sha256": "bb92d90de7d22a2811024d95d4048c341f44d1ef5ab36be0c806469b4612397a",
+      "page_count": 100,
+      "storage_ref": null
+    }
+  ],
+  "pages": [
+    {
+      "file_id": "file_001",
+      "page_number": 1,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_001_1",
+          "document_id": "doc_001",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 2,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_001_2",
+          "document_id": "doc_001",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 3,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_001_3",
+          "document_id": "doc_001",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 4,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_001_4",
+          "document_id": "doc_001",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 5,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_010_5",
+          "document_id": "doc_010",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 6,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_002_6",
+          "document_id": "doc_002",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 7,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_002_7",
+          "document_id": "doc_002",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 8,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_002_8",
+          "document_id": "doc_002",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 9,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_002_9",
+          "document_id": "doc_002",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 10,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_002_10",
+          "document_id": "doc_002",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 11,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_003_11",
+          "document_id": "doc_003",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 12,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_003_12",
+          "document_id": "doc_003",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 13,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_003_13",
+          "document_id": "doc_003",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 14,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_003_14",
+          "document_id": "doc_003",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 15,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_003_15",
+          "document_id": "doc_003",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 16,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_004_16",
+          "document_id": "doc_004",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 17,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_004_17",
+          "document_id": "doc_004",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 18,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_004_18",
+          "document_id": "doc_004",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 19,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_004_19",
+          "document_id": "doc_004",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 20,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_004_20",
+          "document_id": "doc_004",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 21,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_005_21",
+          "document_id": "doc_005",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 22,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_005_22",
+          "document_id": "doc_005",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 23,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_005_23",
+          "document_id": "doc_005",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 24,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_005_24",
+          "document_id": "doc_005",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 25,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_005_25",
+          "document_id": "doc_005",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 26,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_006_26",
+          "document_id": "doc_006",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 27,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_006_27",
+          "document_id": "doc_006",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 28,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_006_28",
+          "document_id": "doc_006",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 29,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_006_29",
+          "document_id": "doc_006",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 30,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_006_30",
+          "document_id": "doc_006",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 31,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_007_31",
+          "document_id": "doc_007",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 32,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_007_32",
+          "document_id": "doc_007",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 33,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_007_33",
+          "document_id": "doc_007",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 34,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_007_34",
+          "document_id": "doc_007",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 35,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_007_35",
+          "document_id": "doc_007",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 36,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_008_36",
+          "document_id": "doc_008",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 37,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_008_37",
+          "document_id": "doc_008",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 38,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_008_38",
+          "document_id": "doc_008",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 39,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_008_39",
+          "document_id": "doc_008",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 40,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_008_40",
+          "document_id": "doc_008",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 41,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_009_41",
+          "document_id": "doc_009",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 42,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_009_42",
+          "document_id": "doc_009",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 43,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_009_43",
+          "document_id": "doc_009",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 44,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_009_44",
+          "document_id": "doc_009",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 45,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_009_45",
+          "document_id": "doc_009",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 46,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_010_46",
+          "document_id": "doc_010",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 47,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_010_47",
+          "document_id": "doc_010",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 48,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_010_48",
+          "document_id": "doc_010",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 49,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_010_49",
+          "document_id": "doc_010",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 50,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_001_50",
+          "document_id": "doc_001",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "attachment"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 51,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_011_51",
+          "document_id": "doc_011",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 52,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_011_52",
+          "document_id": "doc_011",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 53,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_011_53",
+          "document_id": "doc_011",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 54,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_011_54",
+          "document_id": "doc_011",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 55,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_011_55",
+          "document_id": "doc_011",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 56,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_012_56",
+          "document_id": "doc_012",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 57,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_012_57",
+          "document_id": "doc_012",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 58,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_012_58",
+          "document_id": "doc_012",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 59,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_012_59",
+          "document_id": "doc_012",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 60,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_012_60",
+          "document_id": "doc_012",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 61,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_013_61",
+          "document_id": "doc_013",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 62,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_013_62",
+          "document_id": "doc_013",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 63,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_013_63",
+          "document_id": "doc_013",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 64,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_013_64",
+          "document_id": "doc_013",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 65,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_013_65",
+          "document_id": "doc_013",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 66,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_014_66",
+          "document_id": "doc_014",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 67,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_014_67",
+          "document_id": "doc_014",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 68,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_014_68",
+          "document_id": "doc_014",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 69,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_014_69",
+          "document_id": "doc_014",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 70,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_014_70",
+          "document_id": "doc_014",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 71,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_015_71",
+          "document_id": "doc_015",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 72,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_015_72",
+          "document_id": "doc_015",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 73,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_015_73",
+          "document_id": "doc_015",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 74,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_015_74",
+          "document_id": "doc_015",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 75,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_015_75",
+          "document_id": "doc_015",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 76,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_016_76",
+          "document_id": "doc_016",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 77,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_016_77",
+          "document_id": "doc_016",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 78,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_016_78",
+          "document_id": "doc_016",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 79,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_016_79",
+          "document_id": "doc_016",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 80,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_016_80",
+          "document_id": "doc_016",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 81,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_017_81",
+          "document_id": "doc_017",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 82,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_017_82",
+          "document_id": "doc_017",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 83,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_017_83",
+          "document_id": "doc_017",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 84,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_017_84",
+          "document_id": "doc_017",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 85,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_017_85",
+          "document_id": "doc_017",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 86,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_018_86",
+          "document_id": "doc_018",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 87,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_018_87",
+          "document_id": "doc_018",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 88,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_018_88",
+          "document_id": "doc_018",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 89,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_018_89",
+          "document_id": "doc_018",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 90,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_018_90",
+          "document_id": "doc_018",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 91,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_019_91",
+          "document_id": "doc_019",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 92,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_019_92",
+          "document_id": "doc_019",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 93,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_019_93",
+          "document_id": "doc_019",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 94,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_019_94",
+          "document_id": "doc_019",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 95,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_019_95",
+          "document_id": "doc_019",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 96,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_020_96",
+          "document_id": "doc_020",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 97,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_020_97",
+          "document_id": "doc_020",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 98,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_020_98",
+          "document_id": "doc_020",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 99,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_020_99",
+          "document_id": "doc_020",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    },
+    {
+      "file_id": "file_001",
+      "page_number": 100,
+      "width": 595,
+      "height": 842,
+      "rotation": 0,
+      "status": "classified",
+      "regions": [
+        {
+          "region_id": "r_doc_020_100",
+          "document_id": "doc_020",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "role": "full_page"
+        }
+      ],
+      "unassigned_reason": null
+    }
+  ],
+  "documents": [
+    {
+      "document_id": "doc_001",
+      "document_type": "purchase_invoice",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 1,
+          "region_id": "r_doc_001_1"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 2,
+          "region_id": "r_doc_001_2"
+        }
+      ],
+      "transaction_ids": [
+        "txn_001"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.purchase_invoice",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_002",
+      "document_type": "sales_invoice",
+      "status": "review_required",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 6,
+          "region_id": "r_doc_002_6"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 7,
+          "region_id": "r_doc_002_7"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 8,
+          "region_id": "r_doc_002_8"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 9,
+          "region_id": "r_doc_002_9"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 10,
+          "region_id": "r_doc_002_10"
+        }
+      ],
+      "transaction_ids": [
+        "txn_002"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "needs_review",
+      "schema_id": "erp.sales_invoice",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_003",
+      "document_type": "purchase_order",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 11,
+          "region_id": "r_doc_003_11"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 12,
+          "region_id": "r_doc_003_12"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 13,
+          "region_id": "r_doc_003_13"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 14,
+          "region_id": "r_doc_003_14"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 15,
+          "region_id": "r_doc_003_15"
+        }
+      ],
+      "transaction_ids": [
+        "txn_003"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.purchase_order",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_004",
+      "document_type": "sales_order",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 16,
+          "region_id": "r_doc_004_16"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 17,
+          "region_id": "r_doc_004_17"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 18,
+          "region_id": "r_doc_004_18"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 19,
+          "region_id": "r_doc_004_19"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 20,
+          "region_id": "r_doc_004_20"
+        }
+      ],
+      "transaction_ids": [
+        "txn_004"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.sales_order",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_005",
+      "document_type": "delivery_order",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 21,
+          "region_id": "r_doc_005_21"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 22,
+          "region_id": "r_doc_005_22"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 23,
+          "region_id": "r_doc_005_23"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 24,
+          "region_id": "r_doc_005_24"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 25,
+          "region_id": "r_doc_005_25"
+        }
+      ],
+      "transaction_ids": [
+        "txn_005"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.delivery_order",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_006",
+      "document_type": "credit_note",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 26,
+          "region_id": "r_doc_006_26"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 27,
+          "region_id": "r_doc_006_27"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 28,
+          "region_id": "r_doc_006_28"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 29,
+          "region_id": "r_doc_006_29"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 30,
+          "region_id": "r_doc_006_30"
+        }
+      ],
+      "transaction_ids": [
+        "txn_006"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.credit_note",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_007",
+      "document_type": "bank_receipt",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 31,
+          "region_id": "r_doc_007_31"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 32,
+          "region_id": "r_doc_007_32"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 33,
+          "region_id": "r_doc_007_33"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 34,
+          "region_id": "r_doc_007_34"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 35,
+          "region_id": "r_doc_007_35"
+        }
+      ],
+      "transaction_ids": [
+        "txn_007"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.bank_receipt",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_008",
+      "document_type": "payment_document",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 36,
+          "region_id": "r_doc_008_36"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 37,
+          "region_id": "r_doc_008_37"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 38,
+          "region_id": "r_doc_008_38"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 39,
+          "region_id": "r_doc_008_39"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 40,
+          "region_id": "r_doc_008_40"
+        }
+      ],
+      "transaction_ids": [
+        "txn_008"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.payment_document",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_009",
+      "document_type": "statement",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 41,
+          "region_id": "r_doc_009_41"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 42,
+          "region_id": "r_doc_009_42"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 43,
+          "region_id": "r_doc_009_43"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 44,
+          "region_id": "r_doc_009_44"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 45,
+          "region_id": "r_doc_009_45"
+        }
+      ],
+      "transaction_ids": [
+        "txn_009"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.statement",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_010",
+      "document_type": "purchase_invoice",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 5,
+          "region_id": "r_doc_010_5"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 46,
+          "region_id": "r_doc_010_46"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 47,
+          "region_id": "r_doc_010_47"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 48,
+          "region_id": "r_doc_010_48"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 49,
+          "region_id": "r_doc_010_49"
+        }
+      ],
+      "transaction_ids": [
+        "txn_010"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.purchase_invoice",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_011",
+      "document_type": "sales_invoice",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 51,
+          "region_id": "r_doc_011_51"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 52,
+          "region_id": "r_doc_011_52"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 53,
+          "region_id": "r_doc_011_53"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 54,
+          "region_id": "r_doc_011_54"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 55,
+          "region_id": "r_doc_011_55"
+        }
+      ],
+      "transaction_ids": [
+        "txn_011"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.sales_invoice",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_012",
+      "document_type": "purchase_order",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 56,
+          "region_id": "r_doc_012_56"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 57,
+          "region_id": "r_doc_012_57"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 58,
+          "region_id": "r_doc_012_58"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 59,
+          "region_id": "r_doc_012_59"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 60,
+          "region_id": "r_doc_012_60"
+        }
+      ],
+      "transaction_ids": [
+        "txn_012"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.purchase_order",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_013",
+      "document_type": "sales_order",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 61,
+          "region_id": "r_doc_013_61"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 62,
+          "region_id": "r_doc_013_62"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 63,
+          "region_id": "r_doc_013_63"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 64,
+          "region_id": "r_doc_013_64"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 65,
+          "region_id": "r_doc_013_65"
+        }
+      ],
+      "transaction_ids": [
+        "txn_013"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.sales_order",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_014",
+      "document_type": "delivery_order",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 66,
+          "region_id": "r_doc_014_66"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 67,
+          "region_id": "r_doc_014_67"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 68,
+          "region_id": "r_doc_014_68"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 69,
+          "region_id": "r_doc_014_69"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 70,
+          "region_id": "r_doc_014_70"
+        }
+      ],
+      "transaction_ids": [
+        "txn_014"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.delivery_order",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_015",
+      "document_type": "credit_note",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 71,
+          "region_id": "r_doc_015_71"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 72,
+          "region_id": "r_doc_015_72"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 73,
+          "region_id": "r_doc_015_73"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 74,
+          "region_id": "r_doc_015_74"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 75,
+          "region_id": "r_doc_015_75"
+        }
+      ],
+      "transaction_ids": [
+        "txn_015"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.credit_note",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_016",
+      "document_type": "bank_receipt",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 76,
+          "region_id": "r_doc_016_76"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 77,
+          "region_id": "r_doc_016_77"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 78,
+          "region_id": "r_doc_016_78"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 79,
+          "region_id": "r_doc_016_79"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 80,
+          "region_id": "r_doc_016_80"
+        }
+      ],
+      "transaction_ids": [
+        "txn_016"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.bank_receipt",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_017",
+      "document_type": "payment_document",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 81,
+          "region_id": "r_doc_017_81"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 82,
+          "region_id": "r_doc_017_82"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 83,
+          "region_id": "r_doc_017_83"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 84,
+          "region_id": "r_doc_017_84"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 85,
+          "region_id": "r_doc_017_85"
+        }
+      ],
+      "transaction_ids": [
+        "txn_017"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.payment_document",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_018",
+      "document_type": "purchase_invoice",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 86,
+          "region_id": "r_doc_018_86"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 87,
+          "region_id": "r_doc_018_87"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 88,
+          "region_id": "r_doc_018_88"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 89,
+          "region_id": "r_doc_018_89"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 90,
+          "region_id": "r_doc_018_90"
+        }
+      ],
+      "transaction_ids": [
+        "txn_018"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.purchase_invoice",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_019",
+      "document_type": "purchase_order",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 91,
+          "region_id": "r_doc_019_91"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 92,
+          "region_id": "r_doc_019_92"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 93,
+          "region_id": "r_doc_019_93"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 94,
+          "region_id": "r_doc_019_94"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 95,
+          "region_id": "r_doc_019_95"
+        }
+      ],
+      "transaction_ids": [
+        "txn_019"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.purchase_order",
+      "schema_version": "1.0.0"
+    },
+    {
+      "document_id": "doc_020",
+      "document_type": "sales_invoice",
+      "status": "validated",
+      "page_refs": [
+        {
+          "file_id": "file_001",
+          "page_number": 96,
+          "region_id": "r_doc_020_96"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 97,
+          "region_id": "r_doc_020_97"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 98,
+          "region_id": "r_doc_020_98"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 99,
+          "region_id": "r_doc_020_99"
+        },
+        {
+          "file_id": "file_001",
+          "page_number": 100,
+          "region_id": "r_doc_020_100"
+        }
+      ],
+      "transaction_ids": [
+        "txn_020"
+      ],
+      "classification_confidence": 0.98,
+      "boundary_status": "confirmed",
+      "schema_id": "erp.sales_invoice",
+      "schema_version": "1.0.0"
+    }
+  ],
+  "transactions": [
+    {
+      "transaction_id": "txn_001",
+      "document_id": "doc_001",
+      "transaction_type": "purchase_invoice",
+      "status": "validated",
+      "business_key": "PURCHASE_INVOICE-001",
+      "data": {
+        "document_no": "PURCHASE_INVOICE-001",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_001"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_002",
+      "document_id": "doc_002",
+      "transaction_type": "sales_invoice",
+      "status": "review_required",
+      "business_key": "SALES_INVOICE-002",
+      "data": {
+        "document_no": "SALES_INVOICE-002",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_002"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_003",
+      "document_id": "doc_003",
+      "transaction_type": "purchase_order",
+      "status": "validated",
+      "business_key": "PURCHASE_ORDER-003",
+      "data": {
+        "document_no": "PURCHASE_ORDER-003",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_003"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_004",
+      "document_id": "doc_004",
+      "transaction_type": "sales_order",
+      "status": "validated",
+      "business_key": "SALES_ORDER-004",
+      "data": {
+        "document_no": "SALES_ORDER-004",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_004"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_005",
+      "document_id": "doc_005",
+      "transaction_type": "delivery_order",
+      "status": "validated",
+      "business_key": "DELIVERY_ORDER-005",
+      "data": {
+        "document_no": "DELIVERY_ORDER-005",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_005"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_006",
+      "document_id": "doc_006",
+      "transaction_type": "credit_note",
+      "status": "validated",
+      "business_key": "CREDIT_NOTE-006",
+      "data": {
+        "document_no": "CREDIT_NOTE-006",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_006"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_007",
+      "document_id": "doc_007",
+      "transaction_type": "bank_receipt",
+      "status": "validated",
+      "business_key": "BANK_RECEIPT-007",
+      "data": {
+        "document_no": "BANK_RECEIPT-007",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_007"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_008",
+      "document_id": "doc_008",
+      "transaction_type": "payment_document",
+      "status": "validated",
+      "business_key": "PAYMENT_DOCUMENT-008",
+      "data": {
+        "document_no": "PAYMENT_DOCUMENT-008",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_008"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_009",
+      "document_id": "doc_009",
+      "transaction_type": "statement_entry",
+      "status": "validated",
+      "business_key": "STATEMENT-009",
+      "data": {
+        "document_no": "STATEMENT-009",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_009"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_010",
+      "document_id": "doc_010",
+      "transaction_type": "purchase_invoice",
+      "status": "validated",
+      "business_key": "PURCHASE_INVOICE-010",
+      "data": {
+        "document_no": "PURCHASE_INVOICE-010",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_010"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_011",
+      "document_id": "doc_011",
+      "transaction_type": "sales_invoice",
+      "status": "validated",
+      "business_key": "SALES_INVOICE-011",
+      "data": {
+        "document_no": "SALES_INVOICE-011",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_011"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_012",
+      "document_id": "doc_012",
+      "transaction_type": "purchase_order",
+      "status": "validated",
+      "business_key": "PURCHASE_ORDER-012",
+      "data": {
+        "document_no": "PURCHASE_ORDER-012",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_012"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_013",
+      "document_id": "doc_013",
+      "transaction_type": "sales_order",
+      "status": "validated",
+      "business_key": "SALES_ORDER-013",
+      "data": {
+        "document_no": "SALES_ORDER-013",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_013"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_014",
+      "document_id": "doc_014",
+      "transaction_type": "delivery_order",
+      "status": "validated",
+      "business_key": "DELIVERY_ORDER-014",
+      "data": {
+        "document_no": "DELIVERY_ORDER-014",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_014"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_015",
+      "document_id": "doc_015",
+      "transaction_type": "credit_note",
+      "status": "validated",
+      "business_key": "CREDIT_NOTE-015",
+      "data": {
+        "document_no": "CREDIT_NOTE-015",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_015"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_016",
+      "document_id": "doc_016",
+      "transaction_type": "bank_receipt",
+      "status": "validated",
+      "business_key": "BANK_RECEIPT-016",
+      "data": {
+        "document_no": "BANK_RECEIPT-016",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_016"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_017",
+      "document_id": "doc_017",
+      "transaction_type": "payment_document",
+      "status": "validated",
+      "business_key": "PAYMENT_DOCUMENT-017",
+      "data": {
+        "document_no": "PAYMENT_DOCUMENT-017",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_017"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_018",
+      "document_id": "doc_018",
+      "transaction_type": "purchase_invoice",
+      "status": "validated",
+      "business_key": "PURCHASE_INVOICE-018",
+      "data": {
+        "document_no": "PURCHASE_INVOICE-018",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_018"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_019",
+      "document_id": "doc_019",
+      "transaction_type": "purchase_order",
+      "status": "validated",
+      "business_key": "PURCHASE_ORDER-019",
+      "data": {
+        "document_no": "PURCHASE_ORDER-019",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_019"
+        ]
+      },
+      "revision": 1
+    },
+    {
+      "transaction_id": "txn_020",
+      "document_id": "doc_020",
+      "transaction_type": "sales_invoice",
+      "status": "validated",
+      "business_key": "SALES_INVOICE-020",
+      "data": {
+        "document_no": "SALES_INVOICE-020",
+        "currency": "SGD",
+        "total_amount": "150.00",
+        "line_items": [
+          {
+            "description": "Example item",
+            "quantity": "1",
+            "amount": "150.00"
+          }
+        ]
+      },
+      "field_evidence": {
+        "/document_no": [
+          "ev_txn_020"
+        ]
+      },
+      "revision": 1
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "ev_txn_001",
+      "document_id": "doc_001",
+      "transaction_id": "txn_001",
+      "field_pointer": "/document_no",
+      "value": "PURCHASE_INVOICE-001",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 1,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_002",
+      "document_id": "doc_002",
+      "transaction_id": "txn_002",
+      "field_pointer": "/document_no",
+      "value": "SALES_INVOICE-002",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 6,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_003",
+      "document_id": "doc_003",
+      "transaction_id": "txn_003",
+      "field_pointer": "/document_no",
+      "value": "PURCHASE_ORDER-003",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 11,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_004",
+      "document_id": "doc_004",
+      "transaction_id": "txn_004",
+      "field_pointer": "/document_no",
+      "value": "SALES_ORDER-004",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 16,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_005",
+      "document_id": "doc_005",
+      "transaction_id": "txn_005",
+      "field_pointer": "/document_no",
+      "value": "DELIVERY_ORDER-005",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 21,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_006",
+      "document_id": "doc_006",
+      "transaction_id": "txn_006",
+      "field_pointer": "/document_no",
+      "value": "CREDIT_NOTE-006",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 26,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_007",
+      "document_id": "doc_007",
+      "transaction_id": "txn_007",
+      "field_pointer": "/document_no",
+      "value": "BANK_RECEIPT-007",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 31,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_008",
+      "document_id": "doc_008",
+      "transaction_id": "txn_008",
+      "field_pointer": "/document_no",
+      "value": "PAYMENT_DOCUMENT-008",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 36,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_009",
+      "document_id": "doc_009",
+      "transaction_id": "txn_009",
+      "field_pointer": "/document_no",
+      "value": "STATEMENT-009",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 41,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_010",
+      "document_id": "doc_010",
+      "transaction_id": "txn_010",
+      "field_pointer": "/document_no",
+      "value": "PURCHASE_INVOICE-010",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 5,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_011",
+      "document_id": "doc_011",
+      "transaction_id": "txn_011",
+      "field_pointer": "/document_no",
+      "value": "SALES_INVOICE-011",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 51,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_012",
+      "document_id": "doc_012",
+      "transaction_id": "txn_012",
+      "field_pointer": "/document_no",
+      "value": "PURCHASE_ORDER-012",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 56,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_013",
+      "document_id": "doc_013",
+      "transaction_id": "txn_013",
+      "field_pointer": "/document_no",
+      "value": "SALES_ORDER-013",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 61,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_014",
+      "document_id": "doc_014",
+      "transaction_id": "txn_014",
+      "field_pointer": "/document_no",
+      "value": "DELIVERY_ORDER-014",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 66,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_015",
+      "document_id": "doc_015",
+      "transaction_id": "txn_015",
+      "field_pointer": "/document_no",
+      "value": "CREDIT_NOTE-015",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 71,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_016",
+      "document_id": "doc_016",
+      "transaction_id": "txn_016",
+      "field_pointer": "/document_no",
+      "value": "BANK_RECEIPT-016",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 76,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_017",
+      "document_id": "doc_017",
+      "transaction_id": "txn_017",
+      "field_pointer": "/document_no",
+      "value": "PAYMENT_DOCUMENT-017",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 81,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_018",
+      "document_id": "doc_018",
+      "transaction_id": "txn_018",
+      "field_pointer": "/document_no",
+      "value": "PURCHASE_INVOICE-018",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 86,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_019",
+      "document_id": "doc_019",
+      "transaction_id": "txn_019",
+      "field_pointer": "/document_no",
+      "value": "PURCHASE_ORDER-019",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 91,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    },
+    {
+      "evidence_id": "ev_txn_020",
+      "document_id": "doc_020",
+      "transaction_id": "txn_020",
+      "field_pointer": "/document_no",
+      "value": "SALES_INVOICE-020",
+      "confidence": 0.98,
+      "method": "vision_llm",
+      "sources": [
+        {
+          "file_id": "file_001",
+          "page_number": 96,
+          "bbox": {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.3,
+            "height": 0.04
+          },
+          "coordinate_system": "normalized_unrotated_top_left",
+          "text_span": null
+        }
+      ],
+      "review_status": "unreviewed"
+    }
+  ],
+  "issues": [
+    {
+      "issue_id": "issue_001",
+      "scope": "document",
+      "target_id": "doc_002",
+      "rule_code": "BOUNDARY_UNCERTAIN",
+      "severity": "blocking",
+      "message": "Please confirm document boundary for doc_002.",
+      "status": "open",
+      "waiver_review_id": null
+    }
+  ],
+  "reviews": [],
+  "validation": {
+    "structural_valid": true,
+    "reference_valid": true,
+    "coverage_valid": true,
+    "business_rules_valid": false,
+    "export_eligible_transaction_ids": [
+      "txn_001",
+      "txn_003",
+      "txn_004",
+      "txn_005",
+      "txn_006",
+      "txn_007",
+      "txn_008",
+      "txn_009",
+      "txn_010",
+      "txn_011",
+      "txn_012",
+      "txn_013",
+      "txn_014",
+      "txn_015",
+      "txn_016",
+      "txn_017",
+      "txn_018",
+      "txn_019",
+      "txn_020"
+    ],
+    "validated_at": "2026-10-26T10:01:00Z",
+    "validator_version": "2.0.0"
+  }
+}
