@@ -7,6 +7,7 @@ import { modelFor } from './settings';
 import { friendlyProviderError } from './errors';
 import { checkModelOutput, parseModelJson } from './validate';
 import { DOCUMENT_TYPES } from './types';
+import type { AgentStep, ExtractionProfile } from './agent/contract';
 import { buildBatch, type BuildInput } from '../contract/build';
 import type { Batch } from '../contract/types';
 
@@ -33,6 +34,11 @@ export interface ExtractOptions {
   settings: Settings;
   signal?: AbortSignal;
   onStatus?: (msg: string) => void;
+  /** original file; the agent tools re-render and crop pages from it */
+  blob?: Blob;
+  /** Targeted mode; omitted = Auto */
+  profile?: ExtractionProfile;
+  onStep?: (step: AgentStep) => void;
   /** test seam: replaces the network stream */
   streamFn?: StreamFn;
 }
