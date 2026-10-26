@@ -1,0 +1,63 @@
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { ProfileEditor } from './ProfileEditor';
+import { Home } from './pages/Home';
+import { Workspace } from './pages/Workspace';
+import { clearLocalData } from './storage';
+import { loadProfiles, saveBatchMode, saveMode, saveProfiles } from '../lib/profiles';
+import { BUILTIN_PROFILES } from '../lib/agent/contract';
+import { loadSettings } from '../lib/settings';
+import { buildBatch } from '../contract/build';
+import { invoiceInput } from '../contract/fixtures';
+let root: Root;
+let container: HTMLDivElement;
+const click = async (name: string) => { await act(async () => { const button = [...document.querySelectorAll('button')].find(b => b.textContent === name || b.getAttribute('aria-label') === name)!; button.click(); }); };
+const fill = async (label: string, value: string) => { await act(async () => { const element = [...document.querySelectorAll('input')].find(input => input.id === [...document.querySelectorAll('label')].find(l => l.textContent === label)?.htmlFor)!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(element, value); element.dispatchEvent(new Event('input', { bubbles: true })); }); };
+beforeEach(async () => {
+  (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  await clearLocalData();
+  container = document.createElement('div'); document.body.append(container); root = createRoot(container);
+});
+afterEach(() => { act(() => root.unmount()); container.remove(); });
+it('creates a profile only after valid fields and duplicates a locked builtin', async () => {
+  await act(async () => root.render(<ProfileEditor />));
+  await click('Create profile'); await click('Save profile');
+  expect(document.body.textContent).toContain('Use 1–30 fields in total.');
+  await fill('Profile name', 'Shipping'); await click('Add header field');
+  await fill('Header fields 1 key', 'tracking_no'); await fill('Header fields 1 label', 'Tracking number'); await click('Save profile');
+  expect(loadProfiles().find(p => p.name === 'Shipping')?.fields[0].key).toBe('tracking_no');
+  await click('Duplicate Document info'); await click('Save profile');
+  const copy = loadProfiles().find(p => p.name === 'Document info copy')!;
+  expect(copy.builtin).toBe(false); expect(copy.id).not.toBe('doc-info'); expect(copy.fields).toEqual(BUILTIN_PROFILES[0].fields);
+  expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Edit Document info')).toBe(false);
+});
+it('passes the selected profile on targeted uploads and no profile in Auto', async () => {
+  const onFiles = vi.fn();
+  saveMode({ kind: 'targeted', profileId: 'doc-info-rows' });
+  await act(async () => root.render(<Home docs={[]} settings={loadSettings()} busy={null} onFiles={onFiles} />));
+  const file = new File(['image'], 'scan.png', { type: 'image/png' });
+  const upload = async () => { await act(async () => { const input = container.querySelector('input[type="file"]')!; Object.defineProperty(input, 'files', { configurable: true, value: [file] }); input.dispatchEvent(new Event('change', { bubbles: true })); }); };
+  await upload(); expect(onFiles.mock.calls[0][1]).toEqual(BUILTIN_PROFILES[1]);
+  await act(async () => { (container.querySelector('input[type="radio"][value="auto"]') as HTMLInputElement).click(); });
+  await upload(); expect(onFiles.mock.calls[1][1]).toBeUndefined();
+});
+it('renders generic header and row labels using the batch snapshot', async () => {
+  const batch = buildBatch(invoiceInput());
+  const profile = { id: 'shipping', name: 'Shipping', fields: [{ key: 'tracking_no', label: 'Tracking number', type: 'code' as const }], rowFields: [{ key: 'box_code', label: 'Box code', type: 'code' as const }] };
+  batch.transactions[0].data = { tracking_no: 'TRACK-1', line_items: [{ box_code: 'BOX-1' }, { box_code: 'BOX-2' }] };
+  saveBatchMode(batch.batch.batch_id, { kind: 'targeted', profileId: profile.id }, profile);
+  await act(async () => root.render(<Workspace doc={batch} onSaved={() => {}} />));
+  expect(container.textContent).toContain('Tracking number');
+  expect([...container.querySelectorAll('th')].map(e => e.textContent)).toEqual(['Box code']);
+  expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+  await click('Edit Box code row 1'); expect(document.body.textContent).toContain('Correction reason');
+});
+it('clear all removes user profiles, selected mode and retry snapshots', async () => {
+  saveProfiles([{ ...BUILTIN_PROFILES[0], id: 'mine', builtin: false }]);
+  saveMode({ kind: 'targeted', profileId: 'mine' }); saveBatchMode('batch', { kind: 'auto' });
+  await clearLocalData();
+  for (const key of ['idp-studio.profiles.v1', 'idp-studio.mode.v1', 'idp-studio.batch-modes.v1']) expect(localStorage.getItem(key)).toBeNull();
+  expect(loadProfiles()).toEqual(BUILTIN_PROFILES);
+});

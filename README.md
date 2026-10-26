@@ -8,6 +8,7 @@ Drop → Detect → Extract → Label → Review → Export JSON. Browser-first 
 - The demo endpoint only serves the published origin (`https://yapweijun1996.github.io`), so test it on the deployed site; local tests use `src/lib/fakeStream.ts`.
 - Data uses the v2.0.0 Batch contract with decimal-string amounts, explicit issues and human reviews. All physical pages remain in the manifest; the configurable extraction limit defaults to 20 pages, and unprocessed pages block export.
 - IndexedDB upgrades preserve legacy rows and migrate available originals once. See [Local data model](docs/DATA-MODEL.md) for migration, validation and export behavior.
+- Auto extraction lets AI choose fields; Targeted extraction uses built-in or custom profiles with header fields and row columns. Settings supports profile creation, duplication and editing. Retries retain the original profile snapshot; live agent activity appears during processing.
 
 ```bash
 npm ci && npm run dev      # local

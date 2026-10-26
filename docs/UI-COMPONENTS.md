@@ -6,6 +6,8 @@ Visit `#/design` for the interactive inventory (also linked from Settings > Abou
 
 Home uses `batchSummary` totals and reports physical-page coverage separately. Documents sorts before pagination using controlled DataTable sorting. Review Queue and its badge share the same exception-first transaction selector. Workspace supports transaction selection, required-reason corrections and explicit human approval. Clean JSON contains business data; Full evidence JSON contains the complete batch. Copy/export require current validation and transaction eligibility; pending pages remain blocking. See [Local data model](DATA-MODEL.md).
 
+Home's Extraction mode Segmented chooses Auto or Targeted; Targeted exposes a profile Select, field summary and Settings link. Settings' Extraction profiles card uses a Dialog with separate header/row lists, labelled inputs, type Selects, required Checkboxes and keyboard-accessible add/remove/reorder buttons. Builtins are locked and duplicable. Workspace renders dynamic row columns and corrections using profile labels with readable-key fallback. Home and processing Workspace announce the last 20 agent steps through polite status lists while retaining the busy line.
+
 ## Theme and tokens
 
 `ThemeProvider` / `useTheme()` expose `theme` and `setTheme('light' | 'dark' | 'system')`. Default is light. Choice is stored as `idp-studio.theme`; blocked storage is tolerated. System mode listens for OS changes. The resolved theme is applied to the document element. The topbar's opaque safe-area background uses `--topbar`.

@@ -10,6 +10,12 @@ Demo requests allow only `model`, `input`, `stream`, `store`, and `instructions`
 
 Amounts, prices, totals and quantities are decimal strings (up to six fractional digits). Reconciliation uses the shared fixed-precision decimal helpers, with their default 0.01 tolerance. Invalid decimal text is preserved for correction and reported as `INVALID_DECIMAL` (error). Required values, real ISO dates, ISO currencies and totals mismatches produce blocking issues. Confidence below 0.85 produces an evidence warning; no bounding box produces an informational issue, not fabricated evidence.
 
+### Extraction modes and profile snapshots
+
+Home defaults to Auto (AI decides). Targeted sends a selected profile's header fields and repeating row columns. User profiles and the selected mode are stored in `idp-studio.profiles.v1` and `idp-studio.mode.v1` in localStorage. Builtins are read-only; duplication creates an independent user profile.
+
+Before extraction, `idp-studio.batch-modes.v1` records the used mode and a deep-copied profile keyed by batch id. Retry reads this snapshot, not the current Home selection or edited/deleted profile. This sidecar leaves the strict v2 envelope and IndexedDB schema unchanged. Workspace labels use the same snapshot; full evidence JSON remains the unmodified envelope. Targeted clean JSON exports transaction data without Auto's extra `document_type` wrapper. Clear all local data removes profiles, mode and snapshots. Blocked storage retains settings and snapshots for this session only.
+
 ## Review and export
 
 `correctField` returns a new batch, increments revisions, records a local-user review and marks existing evidence as human-corrected without changing its geometry. Corrections invalidate prior approval. `recomputeIssues` resolves obsolete issues and retains resolved/waived history; recurring conditions append new issues. `approveTransaction` refuses open blockers and records explicit human approval. Batch/document statuses and advisory validation are recomputed. Workspace JSON provides clean business data or the complete batch; export and copy are disabled for ineligible transactions. Evidence boxes remain read-only.
