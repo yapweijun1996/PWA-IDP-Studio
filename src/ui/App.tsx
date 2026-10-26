@@ -18,7 +18,7 @@ const placeholder = (id: string, status: Envelope['status']): Envelope => ({
   status,
   extraction: {},
   evidence: {},
-  validation: { schema_valid: false, totals_match: null, missing_required: [], low_confidence: [], needs_review: false },
+  validation: { schema_valid: false, totals_match: null, missing_required: [], low_confidence: [], standards_issues: [], needs_review: false },
   model: null,
   audit: [],
 });

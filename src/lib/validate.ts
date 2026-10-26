@@ -15,6 +15,8 @@ export const REQUIRED_FIELDS: Record<DocumentType, string[]> = {
   bank_receipt: ['payer_name', 'receipt_no', 'receipt_date', 'currency', 'amount'],
   credit_note: ['supplier_name', 'credit_note_no', 'credit_note_date', 'currency', 'total_amount'],
   payment_document: ['payee_name', 'payment_no', 'payment_date', 'currency', 'amount'],
+  delivery_order: ['customer_name', 'do_no', 'delivery_date'],
+  receipt: ['payer_name', 'receipt_no', 'receipt_date', 'currency', 'amount'],
   other: [],
 };
 
@@ -71,6 +73,23 @@ export function totalsMatch(extraction: Envelope['extraction']): boolean | null 
   return Math.abs(sum - total) < 0.01;
 }
 
+const CURRENCIES: Record<string, true> = {
+  SGD: true, MYR: true, USD: true, EUR: true, GBP: true, CNY: true, JPY: true,
+  HKD: true, AUD: true, IDR: true, THB: true, INR: true, CHF: true, CAD: true,
+  NZD: true, KRW: true, VND: true, PHP: true, TWD: true,
+};
+
+function isIsoDate(value: unknown): boolean {
+  if (typeof value !== 'string' || value.length !== 10 || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  if (year < 1 || month < 1 || month > 12) return false;
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day >= 1 && day <= days[month - 1];
+}
+
 export function validate(
   type: DocumentType,
   extraction: Envelope['extraction'],
@@ -84,12 +103,23 @@ export function validate(
     .filter(([, e]) => e.confidence < LOW_CONFIDENCE)
     .map(([k]) => k);
   const totals_match = totalsMatch(extraction);
+  const standards_issues: string[] = [];
+  for (const [key, value] of Object.entries(extraction)) {
+    if (key.endsWith('_date') && !isIsoDate(value)) {
+      standards_issues.push(`${key}: not ISO 8601`);
+    }
+    if (key === 'currency' && (typeof value !== 'string' || !Object.prototype.hasOwnProperty.call(CURRENCIES, value))) {
+      standards_issues.push('currency: not a supported ISO 4217 code');
+    }
+  }
   return {
     schema_valid: true,
     totals_match,
     missing_required,
     low_confidence,
-    needs_review: missing_required.length > 0 || low_confidence.length > 0 || totals_match === false,
+    standards_issues,
+    needs_review: missing_required.length > 0 || low_confidence.length > 0 ||
+      totals_match === false || standards_issues.length > 0,
   };
 }
 

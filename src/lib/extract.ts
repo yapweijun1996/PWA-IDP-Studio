@@ -17,8 +17,8 @@ Reply with ONE JSON object and nothing else:
               "confidence": 0..1}],
   "line_items": [{"description": string, "quantity": number, "unit_price": number, "amount": number}]
 }
-Use these keys when present: supplier_name, customer_name, invoice_no, order_no, po_no, receipt_no, credit_note_no, payment_no,
-invoice_date/order_date/po_date/receipt_date/credit_note_date/payment_date (YYYY-MM-DD), currency (ISO code), total_amount, amount.
+Use these keys when present: supplier_name, customer_name, payer_name, invoice_no, order_no, po_no, do_no, receipt_no, credit_note_no, payment_no,
+invoice_date/order_date/po_date/delivery_date/receipt_date/credit_note_date/payment_date (YYYY-MM-DD), currency (ISO code), total_amount, amount.
 Never guess: use null with low confidence when a value is not readable. Numbers have no thousands separators.`;
 
 export interface ExtractOptions {

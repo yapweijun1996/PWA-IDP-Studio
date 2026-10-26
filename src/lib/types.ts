@@ -5,6 +5,8 @@ export const DOCUMENT_TYPES = [
   'bank_receipt',
   'credit_note',
   'payment_document',
+  'delivery_order',
+  'receipt',
   'other',
 ] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
@@ -32,6 +34,7 @@ export interface Validation {
   totals_match: boolean | null;
   missing_required: string[];
   low_confidence: string[];
+  standards_issues: string[];
   needs_review: boolean;
 }
 
