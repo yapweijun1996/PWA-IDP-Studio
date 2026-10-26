@@ -3,6 +3,7 @@ import { getFile, putDocument } from '../lib/db';
 import { renderFile, type RenderedPage } from '../lib/pdf';
 import { LOW_CONFIDENCE, cleanJson, validate } from '../lib/validate';
 import type { DocumentRecord, Envelope } from '../lib/types';
+import { Icon } from './Icon';
 
 type Tab = 'fields' | 'json';
 
@@ -85,16 +86,20 @@ export function Workspace({ doc, onSaved }: { doc: DocumentRecord; onSaved: (d: 
       <header className="ws-head">
         <div>
           <h1>{doc.name}</h1>
-          <span className={`badge ${env.status}`}>{env.status.replace('_', ' ')}</span>{' '}
+          <span className={`badge ${env.status}`}>
+            {(env.status === 'ready' || env.status === 'approved') && <Icon name="check" size="sm" />}
+            {(env.status === 'review_required' || env.status === 'failed') && <Icon name="alert" size="sm" />}
+            {env.status.replace('_', ' ')}
+          </span>{' '}
           <span className="muted">{env.document_type.replace(/_/g, ' ')}</span>
         </div>
         <div className="actions">
           <button className="btn" disabled={env.status === 'approved' || env.validation.needs_review} onClick={approve}
             title={env.validation.needs_review ? 'Resolve the review items first' : ''}>
-            Approve
+            <Icon name="check" /> Approve
           </button>
           <button className="btn primary" onClick={() => download(`${base}.json`, json)}>
-            Export JSON
+            <Icon name="download" /> Export JSON
           </button>
         </div>
       </header>
@@ -151,7 +156,7 @@ export function Workspace({ doc, onSaved }: { doc: DocumentRecord; onSaved: (d: 
                           <span>{String(env.extraction[k] ?? '') || <em className="muted">empty</em>}</span>
                           {env.status !== 'approved' && (
                             <button className="link" onClick={() => { setEditing(k); setDraft(String(env.extraction[k] ?? '')); }}>
-                              Edit
+                              <Icon name="edit" size="sm" /> Edit
                             </button>
                           )}
                         </div>
@@ -175,7 +180,7 @@ export function Workspace({ doc, onSaved }: { doc: DocumentRecord; onSaved: (d: 
             <>
               <div className="json-bar">
                 <label><input type="checkbox" checked={full} onChange={(e) => setFull(e.target.checked)} /> Full evidence JSON</label>
-                <button className="btn" onClick={() => navigator.clipboard?.writeText(json)}>Copy</button>
+                <button className="btn" onClick={() => navigator.clipboard?.writeText(json)}><Icon name="copy" /> Copy</button>
               </div>
               <pre className="json">{json}</pre>
             </>

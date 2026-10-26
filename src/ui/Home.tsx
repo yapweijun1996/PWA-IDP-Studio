@@ -4,6 +4,7 @@ import { isSupported } from '../lib/pdf';
 import type { Settings } from '../lib/settings';
 import type { DocumentRecord } from '../lib/types';
 import { go } from './useHash';
+import { Icon } from './Icon';
 
 const label = (d: DocumentRecord) =>
   d.envelope.status === 'processing' ? 'Processing…' : d.envelope.status === 'failed' ? 'Failed' : d.envelope.status.replace('_', ' ');
@@ -50,6 +51,7 @@ export function Home(props: {
           accept(e.dataTransfer.files);
         }}
       >
+        <Icon name="upload" size="lg" />
         <p>Drag &amp; drop, or</p>
         <button className="btn primary" onClick={() => input.current?.click()}>
           Choose files
@@ -81,9 +83,14 @@ export function Home(props: {
           {props.docs.slice(0, 20).map((d) => (
             <li key={d.id}>
               <a href={`#/doc/${d.id}`} onClick={() => go(`#/doc/${d.id}`)}>
+                <Icon name="document" />
                 <strong>{d.name}</strong>
                 <span className="muted">{d.envelope.document_type.replace(/_/g, ' ')}</span>
-                <span className={`badge ${d.envelope.status}`}>{label(d)}</span>
+                <span className={`badge ${d.envelope.status}`}>
+                  {(d.envelope.status === 'ready' || d.envelope.status === 'approved') && <Icon name="check" size="sm" />}
+                  {(d.envelope.status === 'review_required' || d.envelope.status === 'failed') && <Icon name="alert" size="sm" />}
+                  {label(d)}
+                </span>
               </a>
             </li>
           ))}
