@@ -18,6 +18,19 @@ export function responseStream(text) {
   ];
   return events.map(([type, body], sequence_number) => `event: ${type}\ndata: ${JSON.stringify({ type, sequence_number, ...body })}\n\n`).join('');
 }
+export function toolResponseStream(name, args, id) {
+  const item = { id: `fc_${id}`, type: 'function_call', call_id: id, name, arguments: JSON.stringify(args), status: 'completed' };
+  const response = { id: `resp_${id}`, object: 'response', created_at: Math.floor(Date.now() / 1000), status: 'completed', model: 'demo-auto', output: [item], usage: { input_tokens: 100, output_tokens: 100, total_tokens: 200, input_tokens_details: { cached_tokens: 0 }, output_tokens_details: { reasoning_tokens: 0 } } };
+  const events = [
+    ['response.created', { response: { ...response, status: 'in_progress', output: [] } }],
+    ['response.output_item.added', { output_index: 0, item: { ...item, arguments: '', status: 'in_progress' } }],
+    ['response.function_call_arguments.delta', { item_id: item.id, output_index: 0, delta: item.arguments }],
+    ['response.function_call_arguments.done', { item_id: item.id, output_index: 0, arguments: item.arguments }],
+    ['response.output_item.done', { output_index: 0, item }],
+    ['response.completed', { response }],
+  ];
+  return events.map(([type, body], sequence_number) => `event: ${type}\ndata: ${JSON.stringify({ type, sequence_number, ...body })}\n\n`).join('');
+}
 export async function installMocks(b, { baseURL, live = false } = {}) {
   const origin = new URL(baseURL).origin;
   const providers = new Set(['api.openai.com', 'openrouter.ai', 'generativelanguage.googleapis.com', 'gpt.yapweijun1996.com']);
@@ -48,6 +61,14 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
         await fulfill(400, JSON.stringify({ error: { message: 'max_output_tokens is disabled for the demo' } })); return;
       }
       replies++;
+      if (variant === 'agent-tools') {
+        const payload = JSON.parse(r.postData || '{}');
+        const hasOutput = Array.isArray(payload.input) && payload.input.some(item => item.type === 'function_call_output');
+        await fulfill(200, hasOutput
+          ? toolResponseStream('submit_result', { json: invoice() }, 'submit_e2e')
+          : toolResponseStream('crop_zoom', { page: 1, ymin: 100, xmin: 100, ymax: 500, xmax: 900, scale: 6 }, 'crop_e2e'), 'text/event-stream');
+        return;
+      }
       const text = variant === 'invalid' || (variant === 'repair' && replies === 1) ? 'not JSON: E2E invalid reply' : JSON.stringify(invoice(variant === 'bad'));
       await fulfill(200, responseStream(text), 'text/event-stream'); return;
     }

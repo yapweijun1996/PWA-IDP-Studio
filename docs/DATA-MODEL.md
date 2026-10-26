@@ -6,9 +6,11 @@ The application stores the **2.0.0 Batch contract**. One upload currently produc
 
 The renderer reads the complete physical page manifest before calling the provider. `maxPages` defaults to 20 and is clamped to 1–500. Only that prefix is sent. Remaining pages retain `pending` status and `review_pending` attribution, with one batch-level blocking `PAGE_LIMIT_EXCEEDED` issue. Model claims of complete processing or approval are ignored. PDF views and evidence use unrotated top-left coordinates.
 
-Demo requests allow only `model`, `input`, `stream`, `store`, and `instructions`, forcing `store:false` on initial and repair turns because the shared gateway rejects token limits and other unlisted controls; BYOK payloads are unchanged.
+Demo requests allow only `model`, `input`, `stream`, `store`, `instructions`, `tools`, `tool_choice`, and `parallel_tool_calls`, forcing `store:false` on every agent turn. Token limits and other unlisted controls are dropped; BYOK payloads are unchanged. See [agent architecture](ARCHITECTURE-AGENT.md) for tool budgets and image forwarding.
 
 Amounts, prices, totals and quantities are decimal strings (up to six fractional digits). Reconciliation uses the shared fixed-precision decimal helpers, with their default 0.01 tolerance. Invalid decimal text is preserved for correction and reported as `INVALID_DECIMAL` (error). Required values, real ISO dates, ISO currencies and totals mismatches produce blocking issues. Confidence below 0.85 produces an evidence warning; no bounding box produces an informational issue, not fabricated evidence.
+
+Targeted extraction retains only selected profile keys. Generic row cells are stored as ordinary values in `data.line_items`, with separate pointer-addressed evidence. Header-only profiles omit rows. Optional transaction `required_fields` (JSON pointers) and `field_types` (pointer-to-type map) preserve profile requirements and types across issue recomputation and correction; they are not business data. Amount/quantity fields normalize to decimal strings, integer fields to safe integers, and dates to ISO dates. Missing required values remain null and create blocking `MISSING_REQUIRED` issues. Auto transactions omit this metadata and retain standard document rules.
 
 ## Review and export
 

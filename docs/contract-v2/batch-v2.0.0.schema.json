@@ -484,6 +484,15 @@
             }
           ]
         },
+        "field_types": {
+          "type": "object",
+          "additionalProperties": { "enum": ["text", "date", "amount", "quantity", "integer", "code"] }
+        },
+        "required_fields": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^/" },
+          "uniqueItems": true
+        },
         "data": {
           "type": "object",
           "additionalProperties": {

@@ -27,7 +27,7 @@ export function sanitizePayload(provider: ProviderId, payload: unknown): unknown
   if (provider !== 'demo') return payload;
   const source = (payload ?? {}) as Record<string, unknown>;
   const sanitized: Record<string, unknown> = {};
-  for (const key of ['model', 'input', 'stream', 'instructions']) {
+  for (const key of ['model', 'input', 'stream', 'instructions', 'tools', 'tool_choice', 'parallel_tool_calls']) {
     if (Object.prototype.hasOwnProperty.call(source, key)) sanitized[key] = source[key];
   }
   return { ...sanitized, store: false };

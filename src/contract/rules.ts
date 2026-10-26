@@ -14,22 +14,31 @@ export function businessIssues(batch: Batch): Issue[] {
   if (pending.length) add('batch', batch.batch.batch_id, 'PAGE_LIMIT_EXCEEDED', 'blocking', `${batch.pages.length - pending.length} of ${batch.pages.length} pages processed; unprocessed pages: ${pending.map(p => p.page_number).join(', ')}.`);
   for (const tx of batch.transactions) {
     const doc = batch.documents.find(d => d.document_id === tx.document_id)!;
-    for (const key of REQUIRED_FIELDS[doc.document_type]) {
-      if (tx.data[key] === undefined || tx.data[key] === null || tx.data[key] === '') add('transaction', tx.transaction_id, 'MISSING_REQUIRED', 'blocking', `${pointerFor(key)}: required field is missing.`);
+    const required = tx.required_fields ?? REQUIRED_FIELDS[doc.document_type].map(pointerFor);
+    for (const pointer of required) {
+      let value: Value | undefined = tx.data;
+      for (const part of pointer.slice(1).split('/')) {
+        const key = part.replace(/~1/g, '/').replace(/~0/g, '~');
+        value = value !== null && typeof value === 'object' && Object.hasOwn(value, key) ? (value as Record<string, Value>)[key] : undefined;
+      }
+      if (value === undefined || value === null || value === '') add('transaction', tx.transaction_id, 'MISSING_REQUIRED', 'blocking', `${pointer}: required field is missing.`);
     }
     const walk = (value: Record<string, Value>, prefix = '') => {
       for (const [key, v] of Object.entries(value)) {
         const pointer = prefix + pointerFor(key);
-        if (decimalKey(key) && normalizeDecimal(v) === null) add('transaction', tx.transaction_id, 'INVALID_DECIMAL', 'error', `${pointer}: invalid decimal.`);
-        if (key.endsWith('_date') && !isIsoDate(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO8601', 'blocking', `${pointer}: not ISO 8601.`);
-        if (key === 'currency' && !isIsoCurrency(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO4217', 'blocking', `${pointer}: not ISO 4217.`);
+        const type = tx.field_types?.[pointer];
+        const present = v !== null && v !== '';
+        if ((tx.field_types ? present && (type === 'amount' || type === 'quantity') : decimalKey(key)) && normalizeDecimal(v) === null) add('transaction', tx.transaction_id, 'INVALID_DECIMAL', 'error', `${pointer}: invalid decimal.`);
+        if ((tx.field_types ? present && type === 'date' : key.endsWith('_date')) && !isIsoDate(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO8601', 'blocking', `${pointer}: not ISO 8601.`);
+        if (present && type === 'integer' && (typeof v !== 'number' || !Number.isSafeInteger(v))) add('transaction', tx.transaction_id, 'INVALID_INTEGER', 'blocking', `${pointer}: not an integer.`);
+        if (!tx.field_types && key === 'currency' && !isIsoCurrency(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO4217', 'blocking', `${pointer}: not ISO 4217.`);
         if (Array.isArray(v)) v.forEach((row, i) => { if (row && typeof row === 'object' && !Array.isArray(row)) walk(row, `${pointer}/${i}`); });
       }
     };
     walk(tx.data);
     const rows = tx.data.line_items;
     const total = normalizeDecimal(tx.data.total_amount);
-    if (total !== null && Array.isArray(rows) && rows.length) {
+    if (!tx.field_types && total !== null && Array.isArray(rows) && rows.length) {
       const amounts = rows.map(row => row && typeof row === 'object' && !Array.isArray(row) ? normalizeDecimal(row.amount) : null);
       if (amounts.every((v): v is string => v !== null) && !decimalEquals(sumDecimals(amounts), total)) add('transaction', tx.transaction_id, 'TOTALS_MISMATCH', 'blocking', '/total_amount: line amounts do not match total.');
     }
@@ -77,7 +86,7 @@ export function rollup(batch: Batch): Batch {
 }
 
 const sameIssue = (a: Issue, b: Issue) => a.scope === b.scope && a.target_id === b.target_id && a.rule_code === b.rule_code && a.message === b.message;
-const MANAGED: Record<string, true> = { PAGE_LIMIT_EXCEEDED: true, MISSING_REQUIRED: true, INVALID_DECIMAL: true, STANDARDS_ISO8601: true, STANDARDS_ISO4217: true, TOTALS_MISMATCH: true, FIELD_WITHOUT_EVIDENCE: true, LOW_CONFIDENCE: true };
+const MANAGED: Record<string, true> = { PAGE_LIMIT_EXCEEDED: true, MISSING_REQUIRED: true, INVALID_DECIMAL: true, INVALID_INTEGER: true, STANDARDS_ISO8601: true, STANDARDS_ISO4217: true, TOTALS_MISMATCH: true, FIELD_WITHOUT_EVIDENCE: true, LOW_CONFIDENCE: true };
 export function refreshIssues(batch: Batch): Batch {
   const current = businessIssues(batch);
   for (const old of batch.issues) if (old.status === 'open' && Object.hasOwn(MANAGED, old.rule_code) && !current.some(i => sameIssue(i, old))) old.status = 'resolved';

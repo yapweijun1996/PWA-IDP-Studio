@@ -2,6 +2,7 @@ import type { Batch, Value, ReviewAction } from './types';
 import { canonicalValue } from './build';
 import { blockingIssues, refreshIssues, rollup } from './rules';
 import { validateBatch } from './validate';
+import { normalizeDecimal } from './decimal';
 
 export function recomputeIssues(batch: Batch): Batch {
   return refreshIssues(structuredClone(batch));
@@ -33,7 +34,12 @@ export function correctField(batch: Batch, transactionId: string, pointer: strin
   const key = keys[keys.length - 1];
   if (!parent || typeof parent !== 'object' || keys.some(k => ['__proto__', 'prototype', 'constructor'].includes(k))) throw new Error('Invalid field pointer');
   if (Array.isArray(parent) && (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= parent.length)) throw new Error('Invalid array index');
-  const value = canonicalValue(key, newValue);
+  const type = tx.field_types?.[pointer];
+  let value = canonicalValue(tx.field_types ? '' : key, newValue);
+  if (value !== null && value !== '') {
+    if (type === 'amount' || type === 'quantity') value = normalizeDecimal(value) ?? value;
+    if (type === 'integer' && (typeof value === 'string' || typeof value === 'number') && /^-?\d+$/.test(String(value).trim()) && Number.isSafeInteger(Number(value))) value = Number(value);
+  }
   Object.defineProperty(parent, key, { value, writable: true, enumerable: true, configurable: true });
   for (const ev of next.evidence.filter(e => e.transaction_id === transactionId && e.field_pointer === pointer)) {
     ev.value = value;

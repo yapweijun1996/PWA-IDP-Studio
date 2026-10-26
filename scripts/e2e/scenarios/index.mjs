@@ -46,6 +46,21 @@ async function pwa(b) {
 }
 export const scenarios = [
   { name: 'shell', async run({b}) { await shell(b); } },
+  { name: 'agent-tools', async run({b,mocks}) {
+    mocks.setVariant('agent-tools');
+    await drop(b, 'agent-tools.png'); await text(b, 'INV-E2E-001');
+    const requests = posts(mocks).map(r => JSON.parse(r.body));
+    assert.equal(requests.length, 2);
+    assert.ok(requests[0].tools.some(t => t.name === 'crop_zoom'));
+    const output = requests[1].input.find(item => item.type === 'function_call_output');
+    assert.ok(output, 'Tool result is sent to the next model turn');
+    assert.ok(Array.isArray(output.output) && output.output.some(part => part.type === 'input_image'), 'Tool result forwards the re-rendered image');
+    for (const payload of requests) assert.equal(Object.hasOwn(payload, 'max_output_tokens'), false);
+    const batch = (await batches(b)).find(v => v.source_files[0].filename === 'agent-tools.png');
+    checkEnvelope(batch);
+    assert.equal(batch.transactions[0].data.invoice_no, 'INV-E2E-001');
+    assert.notEqual(batch.transactions[0].status, 'approved');
+  } },
   { name: 'upload-demo', async run({b,mocks}) {
     await drop(b); await text(b, 'INV-E2E-001');
     const requests = posts(mocks); assert.equal(requests.length, 1);

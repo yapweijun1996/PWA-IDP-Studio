@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { Blob as NodeBlob } from 'node:buffer';
 import { countPages, pageManifest, renderFile } from './pdf';
+import { createPageSource } from './agent/pageSource';
 
 const fake = vi.hoisted(() => {
-  const render = vi.fn(() => ({ promise: Promise.resolve() }));
+  const render = vi.fn((_options: unknown) => ({ promise: Promise.resolve() }));
   const getPage = vi.fn(async () => ({ getViewport: ({ scale, rotation }: { scale: number; rotation?: number }) => ({ width: 595 * scale, height: 842 * scale, rotation }), render }));
   const destroy = vi.fn(async () => {});
   return { render, getPage, destroy, doc: { numPages: 30, getPage, destroy } };
@@ -29,4 +30,20 @@ it('renders only the configured prefix, preserving original page numbers', async
   expect(pages.map(p => p.page)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
   expect(fake.render).toHaveBeenCalledTimes(20);
   expect(fake.destroy).toHaveBeenCalledOnce();
+});
+it('re-renders cropped PDF regions at original-page scale while bounding output size', async () => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/jpeg;base64,AAAA');
+  const source = await createPageSource(new Blob(['pdf'], { type: 'application/pdf' }), { maxPages: 2 });
+  try {
+    const page = await source.render(2, { crop: { x: 0.2, y: 0.3, width: 0.2, height: 0.3 }, scale: 20, maxSide: 5000 });
+    expect(page.page).toBe(2);
+    expect(Math.max(page.width, page.height)).toBeLessThanOrEqual(2000);
+    const args = fake.render.mock.calls[0][0] as unknown as { canvas: HTMLCanvasElement; viewport: { width: number; height: number }; transform: number[] };
+    expect(args.viewport.width).toBeGreaterThan(page.width * 4);
+    expect(args.viewport.height).toBeGreaterThan(page.height * 3);
+    expect(args.transform[4]).toBeCloseTo(-args.viewport.width * 0.2);
+    expect(args.transform[5]).toBeCloseTo(-args.viewport.height * 0.3);
+    await expect(source.render(3)).rejects.toThrow(/outside/);
+    await expect(source.render(1, { crop: { x: 0.9, y: 0, width: 0.2, height: 1 } })).rejects.toThrow(/crop/);
+  } finally { await source.dispose(); }
 });

@@ -3,6 +3,8 @@ import { runExtraction } from './extract';
 import { fakeStream } from './fakeStream';
 import type { Settings } from './settings';
 import { validateBatch } from '../contract/validate';
+import type { PageSource } from './agent/pageSource';
+import type { AgentStep } from './agent/contract';
 
 const settings: Settings = { provider: 'openai', keys: { openai: 'sk-test' }, models: {}, maxPages: 20 };
 const pages = [{ page: 1, width: 10, height: 10, data: 'AAAA', mimeType: 'image/jpeg' as const }];
@@ -60,5 +62,62 @@ describe('runExtraction harness', () => {
     expect(batch.pages.filter(p => p.status === 'pending')).toHaveLength(29);
     expect(batch.batch.status).toBe('review_required');
     expect(batch.validation.export_eligible_transaction_ids).toEqual([]);
+  });
+  it('runs crop then submit and feeds tool-result images into the next turn', async () => {
+    const source: PageSource = { pageCount: 1, render: vi.fn(async () => pages[0]), textItems: async () => [], dispose: async () => {} };
+    const steps: AgentStep[] = [];
+    const replies = fakeStream([
+      [{ name: 'crop_zoom', arguments: { page: 1, ymin: 100, xmin: 100, ymax: 500, xmax: 500 } }],
+      [{ name: 'submit_result', arguments: { json: JSON.parse(valid) } }],
+    ]);
+    let requests = 0;
+    const batch = await runExtraction({ ...base, batchId: 'tool-loop', pageSource: source, onStep: step => steps.push(step), streamFn: (model, context, options) => {
+      if (++requests === 2) {
+        const result = context.messages.find(m => m.role === 'toolResult');
+        expect(result?.content).toContainEqual({ type: 'image', data: 'AAAA', mimeType: 'image/jpeg' });
+      }
+      return replies(model, context, options);
+    } });
+    expect(batch.transactions[0].data.order_no).toBe('SO-1');
+    expect(batch.transactions[0].status).not.toBe('approved');
+    expect(steps.filter(s => s.tool !== 'model').map(s => [s.tool, s.ok])).toEqual([['crop_zoom', true], ['submit_result', true]]);
+    expect(steps.filter(s => s.tool === 'model')).toHaveLength(2);
+    expect(requests).toBe(2);
+  });
+  it('lets the model correct a rejected submission in the same loop', async () => {
+    const replies = fakeStream([
+      [{ name: 'submit_result', arguments: { json: { document_type: 'unknown' } } }],
+      [{ name: 'submit_result', arguments: { json: JSON.parse(valid) } }],
+    ]);
+    let requests = 0;
+    const batch = await runExtraction({ ...base, batchId: 'tool-repair', streamFn: (model, context, options) => {
+      if (++requests === 2) expect(JSON.stringify(context.messages)).toContain('Invalid result: fields must be an array');
+      return replies(model, context, options);
+    } });
+    expect(batch.transactions[0].data.order_no).toBe('SO-1');
+    expect(requests).toBe(2);
+  });
+  it('stops repeated tool calls at the configured model-turn budget', async () => {
+    let requests = 0;
+    const replies = fakeStream([[{ name: 'submit_result', arguments: { json: {} } }]]);
+    await expect(runExtraction({ ...base, batchId: 'budget', maxSteps: 2, streamFn: (model, context, options) => {
+      requests++;
+      return replies(model, context, options);
+    } })).rejects.toThrow(/max steps \(2\)/);
+    expect(requests).toBe(2);
+  });
+  it('accepts a valid final submission exactly at the step limit', async () => {
+    const batch = await runExtraction({ ...base, batchId: 'last-step', maxSteps: 1, streamFn: fakeStream([[{ name: 'submit_result', arguments: { json: JSON.parse(valid) } }]]) });
+    expect(batch.transactions[0].data.order_no).toBe('SO-1');
+  });
+  it('aborts a stalled tool within the wall-clock guard', async () => {
+    vi.useFakeTimers();
+    try {
+      const source: PageSource = { pageCount: 1, render: () => new Promise(() => {}), textItems: async () => [], dispose: async () => {} };
+      const pending = runExtraction({ ...base, batchId: 'timeout', timeoutMs: 10, pageSource: source, streamFn: fakeStream([[{ name: 'get_page_image', arguments: { page: 1 } }]]) });
+      const assertion = expect(pending).rejects.toThrow(/timed out/);
+      await vi.advanceTimersByTimeAsync(11);
+      await assertion;
+    } finally { vi.useRealTimers(); }
   });
 });
