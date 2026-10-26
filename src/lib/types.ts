@@ -6,10 +6,12 @@ export const DOCUMENT_TYPES = [
   'credit_note',
   'payment_document',
   'delivery_order',
-  'receipt',
-  'other',
+  'sales_invoice',
+  'statement',
+  'unknown',
 ] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
+export type LegacyDocumentType = DocumentType | 'receipt' | 'other';
 
 /** [x0, y0, x1, y1], normalized 0..1 of the page, origin top-left. */
 export type BBox = [number, number, number, number];
@@ -24,9 +26,9 @@ export type DocStatus = 'processing' | 'review_required' | 'ready' | 'approved' 
 
 export interface LineItem {
   description?: string;
-  quantity?: number;
-  unit_price?: number;
-  amount?: number;
+  quantity?: number | string;
+  unit_price?: number | string;
+  amount?: number | string;
 }
 
 export interface Validation {
@@ -49,7 +51,7 @@ export interface AuditEntry {
 export interface Envelope {
   schema_version: '1.0';
   document_id: string;
-  document_type: DocumentType;
+  document_type: LegacyDocumentType;
   status: DocStatus;
   extraction: Record<string, unknown> & { line_items?: LineItem[] };
   evidence: Record<string, Evidence>;

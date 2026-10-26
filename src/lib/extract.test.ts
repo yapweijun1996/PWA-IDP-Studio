@@ -2,34 +2,39 @@ import { describe, expect, it } from 'vitest';
 import { runExtraction } from './extract';
 import { fakeStream } from './fakeStream';
 import type { Settings } from './settings';
+import { validateBatch } from '../contract/validate';
 
-const settings: Settings = { provider: 'openai', keys: { openai: 'sk-test' }, models: {} };
+const settings: Settings = { provider: 'openai', keys: { openai: 'sk-test' }, models: {}, maxPages: 20 };
 const pages = [{ page: 1, width: 10, height: 10, data: 'AAAA', mimeType: 'image/jpeg' as const }];
-const valid = JSON.stringify({
-  document_type: 'sales_order',
-  fields: [{ key: 'order_no', value: 'SO-1', page: 1, bbox: [1, 2, 30, 40], confidence: 0.9 }],
-  line_items: [],
-});
+const base = { createdAt: '2026-10-26T00:00:00Z', file: { file_id: 'f1', filename: 'order.png', media_type: 'image/png' as const, sha256: 'a'.repeat(64), size: 10 }, manifest: [{ page_number: 1, width: 10, height: 10 }], pages, settings };
+const valid = JSON.stringify({ document_type: 'sales_order', fields: [{ key: 'order_no', value: 'SO-1', page: 1, bbox: [1, 2, 30, 40], confidence: 0.9 }], line_items: [] });
 
 describe('runExtraction harness', () => {
-  it('returns an envelope from a valid reply', async () => {
-    const env = await runExtraction({ documentId: 'd1', pages, settings, streamFn: fakeStream([valid]) });
-    expect(env.document_type).toBe('sales_order');
-    expect(env.evidence.order_no.bbox).toEqual([0.002, 0.001, 0.04, 0.03]);
-    expect(env.model).toEqual({ provider: 'openai', model: 'gpt-5.4-mini' });
+  it('returns a batch from a valid reply with normalized evidence', async () => {
+    const batch = await runExtraction({ ...base, batchId: 'b1', streamFn: fakeStream([valid]) });
+    expect(batch.documents[0].document_type).toBe('sales_order');
+    expect(batch.evidence[0].method).toBe('vision_llm');
+    expect(batch.evidence[0].sources[0].bbox).toMatchObject({ x: 0.002, y: 0.001 });
+    expect(batch.evidence[0].sources[0].bbox.width).toBeCloseTo(0.038);
+    expect(batch.evidence[0].sources[0].bbox.height).toBeCloseTo(0.029);
+    expect(validateBatch(batch).ok).toBe(true);
   });
   it('repairs once after an invalid reply', async () => {
-    const env = await runExtraction({ documentId: 'd2', pages, settings, streamFn: fakeStream(['not json', valid]) });
-    expect(env.document_id).toBe('d2');
+    const batch = await runExtraction({ ...base, batchId: 'b2', streamFn: fakeStream(['not json', valid]) });
+    expect(batch.batch.batch_id).toBe('b2');
+    expect(validateBatch(batch).ok).toBe(true);
   });
   it('fails after a second invalid reply', async () => {
-    await expect(
-      runExtraction({ documentId: 'd3', pages, settings, streamFn: fakeStream(['nope', 'still nope']) }),
-    ).rejects.toThrow(/not valid/);
+    await expect(runExtraction({ ...base, batchId: 'b3', streamFn: fakeStream(['nope', 'still nope']) })).rejects.toThrow(/not valid/);
   });
   it('requires a BYOK key', async () => {
-    await expect(
-      runExtraction({ documentId: 'd4', pages, settings: { ...settings, keys: {} }, streamFn: fakeStream([valid]) }),
-    ).rejects.toThrow();
+    await expect(runExtraction({ ...base, batchId: 'b4', settings: { ...settings, keys: {} }, streamFn: fakeStream([valid]) })).rejects.toThrow();
+  });
+  it('uses the trusted manifest rather than model claims of complete processing', async () => {
+    const batch = await runExtraction({ ...base, batchId: 'b5', manifest: Array.from({ length: 30 }, (_, n) => ({ page_number: n + 1, width: 10, height: 10 })), streamFn: fakeStream([JSON.stringify({ ...JSON.parse(valid), processed_all_pages: true, status: 'approved' })]) });
+    expect(batch.pages).toHaveLength(30);
+    expect(batch.pages.filter(p => p.status === 'pending')).toHaveLength(29);
+    expect(batch.batch.status).toBe('review_required');
+    expect(batch.validation.export_eligible_transaction_ids).toEqual([]);
   });
 });

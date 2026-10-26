@@ -4,6 +4,8 @@ Import components from `src/ds`. Styles are loaded once by `src/main.tsx`: `toke
 
 Visit `#/design` for the interactive inventory. Home and Workspace retain their existing UI pending the Admin Panel phase; the shared shell, Settings and update notification use the DS now.
 
+Home lists canonical batches with physical page/document/transaction counts. Workspace uses the first transaction's exception-first view, immutable field corrections and explicit human approval. JSON switches between Clean JSON and Full JSON (batch); export/copy require transaction eligibility. Evidence overlays are read-only. Settings includes a clamped 1–500 page limit and startup migration counts. See [Local data model](DATA-MODEL.md).
+
 ## Theme and tokens
 
 `ThemeProvider` / `useTheme()` expose `theme` and `setTheme('light' | 'dark' | 'system')`. Default is light. Choice is stored as `idp-studio.theme`; blocked storage is tolerated. System mode listens for OS changes. The resolved theme is applied to the document element. The topbar's opaque safe-area background uses `--topbar`.

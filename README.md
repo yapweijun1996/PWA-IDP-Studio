@@ -4,8 +4,10 @@ Drop → Detect → Extract → Label → Review → Export JSON. Browser-first 
 
 - AI harness: `@mariozechner/pi-agent-core` + `@mariozechner/pi-ai` (browser). Providers: demo endpoint, OpenAI / OpenRouter / Gemini (BYOK).
 - Files, results and keys stay in this browser (IndexedDB / localStorage). Pages are sent only to the provider chosen in Settings.
-- BBoxes are drawn by the AI as read-only evidence: envelope format `[x0,y0,x1,y1]`, normalized 0..1, origin top-left.
+- BBoxes are drawn by the AI as read-only evidence; the canonical batch uses normalized `{x,y,width,height}` coordinates, origin top-left. Users correct values, never boxes.
 - The demo endpoint only serves the published origin (`https://yapweijun1996.github.io`), so test it on the deployed site; local tests use `src/lib/fakeStream.ts`.
+- Data uses the v2.0.0 Batch contract with decimal-string amounts, explicit issues and human reviews. All physical pages remain in the manifest; the configurable extraction limit defaults to 20 pages, and unprocessed pages block export.
+- IndexedDB upgrades preserve legacy rows and migrate available originals once. See [Local data model](docs/DATA-MODEL.md) for migration, validation and export behavior.
 
 ```bash
 npm ci && npm run dev      # local
@@ -26,4 +28,4 @@ Visit `#/design` for the component inventory. Public APIs live in `src/ds/index.
 theme/layout values in `src/ds/tokens.css`, component styles in
 `src/ds/components.css`. See [UI component contracts](docs/UI-COMPONENTS.md).
 `npm run check` runs types, icons, the per-file SSOT ratchet, and tests.
-Home and Workspace remain unchanged for the subsequent Admin Panel phase.
+Home and Workspace retain their existing layout with batch-backed data; the subsequent Admin Panel phase owns their design-system rewrite.

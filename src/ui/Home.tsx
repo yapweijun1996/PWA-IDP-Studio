@@ -2,15 +2,15 @@ import { useRef, useState } from 'react';
 import { providerInfo } from '../lib/providers';
 import { isSupported } from '../lib/pdf';
 import type { Settings } from '../lib/settings';
-import type { DocumentRecord } from '../lib/types';
+import type { Batch } from '../contract/types';
 import { go } from './useHash';
 import { Icon } from './Icon';
 
-const label = (d: DocumentRecord) =>
-  d.envelope.status === 'processing' ? 'Processing…' : d.envelope.status === 'failed' ? 'Failed' : d.envelope.status.replace('_', ' ');
+const label = (d: Batch) =>
+  d.batch.status === 'processing' ? 'Processing…' : d.batch.status === 'failed' ? 'Failed' : d.batch.status.replace(/_/g, ' ');
 
 export function Home(props: {
-  docs: DocumentRecord[];
+  docs: Batch[];
   settings: Settings;
   busy: string | null;
   onFiles: (files: File[]) => void;
@@ -25,7 +25,7 @@ export function Home(props: {
     const ok = files.filter(isSupported);
     setNote(
       ok.length < files.length
-        ? 'Some files were skipped. Supported: PDF, PNG, JPG, WebP (TIFF is not supported yet).'
+        ? 'Some files were skipped. Supported: PDF, PNG, JPG (WebP and TIFF are not supported by this contract yet).'
         : '',
     );
     if (ok.length) props.onFiles(ok);
@@ -61,13 +61,13 @@ export function Home(props: {
           type="file"
           hidden
           multiple
-          accept="application/pdf,image/png,image/jpeg,image/webp"
+          accept="application/pdf,image/png,image/jpeg"
           onChange={(e) => {
             accept(e.target.files);
             e.target.value = '';
           }}
         />
-        <small className="muted">PDF, PNG, JPG, WebP • multiple files • up to 6 pages each</small>
+        <small className="muted">PDF, PNG, JPG • multiple files • up to {props.settings.maxPages} pages sent per file; remaining pages require review</small>
       </div>
       {note && <p role="alert" className="warn">{note}</p>}
       <p className="muted disclosure">
@@ -81,14 +81,14 @@ export function Home(props: {
       ) : (
         <ul className="docs">
           {props.docs.slice(0, 20).map((d) => (
-            <li key={d.id}>
-              <a href={`#/doc/${d.id}`} onClick={() => go(`#/doc/${d.id}`)}>
+            <li key={d.batch.batch_id}>
+              <a href={`#/doc/${d.batch.batch_id}`} onClick={() => go(`#/doc/${d.batch.batch_id}`)}>
                 <Icon name="document" />
-                <strong>{d.name}</strong>
-                <span className="muted">{d.envelope.document_type.replace(/_/g, ' ')}</span>
-                <span className={`badge ${d.envelope.status}`}>
-                  {(d.envelope.status === 'ready' || d.envelope.status === 'approved') && <Icon name="check" size="sm" />}
-                  {(d.envelope.status === 'review_required' || d.envelope.status === 'failed') && <Icon name="alert" size="sm" />}
+                <strong>{d.source_files[0].filename}</strong>
+                <span className="muted">{d.documents[0]?.document_type.replace(/_/g, ' ') ?? 'Unclassified'} · {d.pages.length} pages · {d.documents.length} documents · {d.transactions.length} transactions</span>
+                <span className={`badge ${d.batch.status}`}>
+                  {(d.batch.status === 'validated' || d.batch.status === 'approved') && <Icon name="check" size="sm" />}
+                  {(d.batch.status === 'review_required' || d.batch.status === 'failed') && <Icon name="alert" size="sm" />}
                   {label(d)}
                 </span>
               </a>

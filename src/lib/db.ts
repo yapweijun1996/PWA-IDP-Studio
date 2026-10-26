@@ -1,15 +1,20 @@
 import type { DocumentRecord } from './types';
+import type { Batch } from '../contract/types';
+
+export interface BatchRecord { batch: Batch; createdAt: number }
 
 const DB_NAME = 'idp-studio';
 const DOCS = 'documents';
 const FILES = 'files';
+const BATCHES = 'batches';
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = () => {
-      req.result.createObjectStore(DOCS, { keyPath: 'id' });
-      req.result.createObjectStore(FILES);
+      if (!req.result.objectStoreNames.contains(DOCS)) req.result.createObjectStore(DOCS, { keyPath: 'id' });
+      if (!req.result.objectStoreNames.contains(FILES)) req.result.createObjectStore(FILES);
+      if (!req.result.objectStoreNames.contains(BATCHES)) req.result.createObjectStore(BATCHES, { keyPath: 'batch.batch.batch_id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -36,8 +41,6 @@ async function tx<T>(
   });
 }
 
-export const putDocument = (d: DocumentRecord) =>
-  tx([DOCS], 'readwrite', (t) => t.objectStore(DOCS).put(d));
 
 export const getDocument = (id: string) =>
   tx<DocumentRecord | undefined>([DOCS], 'readonly', (t) => t.objectStore(DOCS).get(id));
@@ -53,9 +56,24 @@ export const putFile = (id: string, blob: Blob) =>
 export const getFile = (id: string) =>
   tx<Blob | undefined>([FILES], 'readonly', (t) => t.objectStore(FILES).get(id));
 
-export async function deleteDocument(id: string): Promise<void> {
-  await tx([DOCS, FILES], 'readwrite', (t) => {
-    t.objectStore(FILES).delete(id);
-    return t.objectStore(DOCS).delete(id);
-  });
+
+/** Legacy documents remain read-only. New files use their immutable file_id as key. */
+export const getFileByFileId = getFile;
+
+export const putBatch = (batch: Batch) =>
+  tx([BATCHES], 'readwrite', t => t.objectStore(BATCHES).put({ batch, createdAt: Date.parse(batch.batch.created_at) } satisfies BatchRecord));
+
+export async function getBatch(id: string): Promise<Batch | undefined> {
+  const row = await tx<BatchRecord | undefined>([BATCHES], 'readonly', t => t.objectStore(BATCHES).get(id));
+  return row?.batch;
+}
+
+export async function listBatches(): Promise<Batch[]> {
+  const rows = await tx<BatchRecord[]>([BATCHES], 'readonly', t => t.objectStore(BATCHES).getAll());
+  return rows.sort((a, b) => b.createdAt - a.createdAt).map(row => row.batch);
+}
+
+/** Deletes only the batch snapshot; immutable originals and legacy rows are retained. */
+export async function deleteBatch(id: string): Promise<void> {
+  await tx([BATCHES], 'readwrite', t => t.objectStore(BATCHES).delete(id));
 }
