@@ -12,6 +12,7 @@
   --control-height: 40px; --control-sm: 32px; --control-lg: 48px; --row-normal: 40px; --row-compact: 32px;
   --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px; --motion-fast: 150ms; --motion-spin: 1s;
   --line: 1px; --focus-width: 2px; --scrim: #17203399; --dialog-width: 560px;
+  --stat-card-min: 200px; --batch-file-width: 20%;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;

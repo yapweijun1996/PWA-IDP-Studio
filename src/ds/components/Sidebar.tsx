@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '../../ui/Icon';
 import type { IconName } from '../../ui/icons.generated';
 import { IconButton } from './IconButton';
@@ -14,6 +14,7 @@ export function Sidebar({ items, footer, mobileOpen = false, onMobileClose, coll
   const collapsed = controlledCollapsed ?? localCollapsed;
   const toggle = () => { if (onToggle) onToggle(); else setLocalCollapsed(!collapsed); };
   const mobile = useMobile();
+  const reasonId = useId();
   const ref = useRef<HTMLElement>(null);
   const close = useCallback(() => onMobileClose?.(), [onMobileClose]);
   useModalFocus(mobile && mobileOpen, ref, close);
@@ -41,6 +42,7 @@ export function Sidebar({ items, footer, mobileOpen = false, onMobileClose, coll
               aria-label={rail ? item.label : undefined}
               aria-current={item.active ? 'page' : undefined}
               aria-disabled={item.disabled || undefined}
+              aria-describedby={item.disabled ? `${reasonId}-${item.href}` : undefined}
               onClick={event => {
                 if (item.disabled) event.preventDefault();
                 else if (mobile) close();
@@ -48,7 +50,7 @@ export function Sidebar({ items, footer, mobileOpen = false, onMobileClose, coll
               <Icon name={item.icon} />
               {!rail && <span>{item.label}</span>}
               {item.count !== undefined && !rail && <Badge>{item.count}</Badge>}
-              {item.disabled && !rail && <small>{reason}</small>}
+              {item.disabled && <><span id={`${reasonId}-${item.href}`} className="ds-visually-hidden">{reason}</span>{!rail && <Badge>Coming soon</Badge>}</>}
             </a>
           );
           return <Tooltip key={item.href}
