@@ -22,6 +22,17 @@ export const PROVIDERS: ProviderInfo[] = [
 
 export const providerInfo = (id: ProviderId) => PROVIDERS.find((p) => p.id === id)!;
 
+/** The demo gateway accepts only these Responses controls; BYOK payloads pass through. */
+export function sanitizePayload(provider: ProviderId, payload: unknown): unknown {
+  if (provider !== 'demo') return payload;
+  const source = (payload ?? {}) as Record<string, unknown>;
+  const sanitized: Record<string, unknown> = {};
+  for (const key of ['model', 'input', 'stream', 'instructions']) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) sanitized[key] = source[key];
+  }
+  return { ...sanitized, store: false };
+}
+
 const base = {
   reasoning: false,
   input: ['text', 'image'] as ('text' | 'image')[],

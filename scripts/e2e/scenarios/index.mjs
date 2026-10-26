@@ -50,6 +50,10 @@ export const scenarios = [
     await drop(b); await text(b, 'INV-E2E-001');
     const requests = posts(mocks); assert.equal(requests.length, 1);
     const r = requests[0]; assert.ok(r.body.includes('input_image')); assert.ok(Object.entries(r.headers).some(([k,v])=>k.toLowerCase()==='authorization' && v==='Bearer dmo_e2e_fake'));
+    assert.equal(new URL(r.url).pathname, '/demo/v1/responses');
+    const payload = JSON.parse(r.body);
+    assert.equal(Object.hasOwn(payload, 'max_output_tokens'), false);
+    assert.equal(payload.store, false);
     assert.ok(!JSON.stringify(mocks.requests).includes(TEST_KEY), 'No BYOK key in demo traffic');
     await home(b); await text(b, 'invoice.png');
     const stats = await b.eval(`[...document.querySelectorAll('dl')].map(e=>[e.querySelector('dt').textContent,e.querySelector('dd').textContent])`);

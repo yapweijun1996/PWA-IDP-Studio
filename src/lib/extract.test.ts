@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { runExtraction } from './extract';
 import { fakeStream } from './fakeStream';
 import type { Settings } from './settings';
@@ -23,6 +23,30 @@ describe('runExtraction harness', () => {
     const batch = await runExtraction({ ...base, batchId: 'b2', streamFn: fakeStream(['not json', valid]) });
     expect(batch.batch.batch_id).toBe('b2');
     expect(validateBatch(batch).ok).toBe(true);
+  });
+  it('sanitizes demo payloads on both initial and repair turns through Agent options', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      token: 'dmo_test', expires_at: '2099-01-01T00:00:00Z',
+    }), { status: 201 }));
+    const reply = fakeStream(['not json', valid]);
+    const payloads: unknown[] = [];
+    try {
+      const batch = await runExtraction({
+        ...base, batchId: 'demo-repair', settings: { ...settings, provider: 'demo' },
+        streamFn: async (model, context, options) => {
+          expect(options?.onPayload).toBeTypeOf('function');
+          const input = context.messages;
+          const payload = await options!.onPayload!({ model: model.id, input, stream: true, store: true, max_output_tokens: 8192, previous_response_id: 'forbidden' }, model);
+          expect(payload).toEqual({ model: model.id, input, stream: true, store: false });
+          payloads.push(payload);
+          return reply(model, context, options);
+        },
+      });
+      expect(payloads).toHaveLength(2);
+      expect(validateBatch(batch).ok).toBe(true);
+    } finally {
+      fetchMock.mockRestore();
+    }
   });
   it('fails after a second invalid reply', async () => {
     await expect(runExtraction({ ...base, batchId: 'b3', streamFn: fakeStream(['nope', 'still nope']) })).rejects.toThrow(/not valid/);

@@ -6,6 +6,8 @@ The application stores the **2.0.0 Batch contract**. One upload currently produc
 
 The renderer reads the complete physical page manifest before calling the provider. `maxPages` defaults to 20 and is clamped to 1–500. Only that prefix is sent. Remaining pages retain `pending` status and `review_pending` attribution, with one batch-level blocking `PAGE_LIMIT_EXCEEDED` issue. Model claims of complete processing or approval are ignored. PDF views and evidence use unrotated top-left coordinates.
 
+Demo requests allow only `model`, `input`, `stream`, `store`, and `instructions`, forcing `store:false` on initial and repair turns because the shared gateway rejects token limits and other unlisted controls; BYOK payloads are unchanged.
+
 Amounts, prices, totals and quantities are decimal strings (up to six fractional digits). Reconciliation uses the shared fixed-precision decimal helpers, with their default 0.01 tolerance. Invalid decimal text is preserved for correction and reported as `INVALID_DECIMAL` (error). Required values, real ISO dates, ISO currencies and totals mismatches produce blocking issues. Confidence below 0.85 produces an evidence warning; no bounding box produces an informational issue, not fabricated evidence.
 
 ## Review and export

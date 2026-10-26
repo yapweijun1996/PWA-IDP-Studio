@@ -1,6 +1,6 @@
 import { Agent, type AgentEvent, type StreamFn } from '@mariozechner/pi-agent-core';
 import { streamSimple, type AssistantMessage } from '@mariozechner/pi-ai';
-import { apiKeyFor, buildModel } from './providers';
+import { apiKeyFor, buildModel, sanitizePayload } from './providers';
 import type { RenderedPage } from './pdf';
 import type { Settings } from './settings';
 import { modelFor } from './settings';
@@ -56,6 +56,7 @@ export async function runExtraction(opts: ExtractOptions): Promise<Batch> {
     initialState: { systemPrompt: SYSTEM_PROMPT, model, tools: [] },
     streamFn: opts.streamFn ?? streamSimple,
     getApiKey: () => apiKeyFor(settings),
+    onPayload: (payload) => sanitizePayload(settings.provider, payload),
   });
   opts.signal?.addEventListener('abort', () => agent.abort());
   agent.subscribe((e: AgentEvent) => {

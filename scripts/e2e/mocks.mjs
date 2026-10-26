@@ -43,6 +43,9 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
     }
     if (variant === 'rate-limit') { await fulfill(429, JSON.stringify({ error: { message: 'E2E rate limit', type: 'rate_limit_error' } })); return; }
     if (r.method === 'POST' && ((u.hostname === 'api.openai.com' && u.pathname === '/v1/responses') || (u.hostname === 'gpt.yapweijun1996.com' && u.pathname === '/demo/v1/responses'))) {
+      if (u.hostname === 'gpt.yapweijun1996.com' && Object.hasOwn(JSON.parse(r.postData || '{}'), 'max_output_tokens')) {
+        await fulfill(400, JSON.stringify({ error: { message: 'max_output_tokens is disabled for the demo' } })); return;
+      }
       replies++;
       const text = variant === 'invalid' || (variant === 'repair' && replies === 1) ? 'not JSON: E2E invalid reply' : JSON.stringify(invoice(variant === 'bad'));
       await fulfill(200, responseStream(text), 'text/event-stream'); return;
