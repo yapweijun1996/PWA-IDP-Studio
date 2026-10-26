@@ -1,0 +1,32 @@
+{
+  "name": "pwa-idp-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "0.73.1",
+    "@mariozechner/pi-ai": "0.73.1",
+    "@opentelemetry/api": "1.10.0",
+    "pdfjs-dist": "5.7.284",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "fake-indexeddb": "^6.2.6",
+    "jsdom": "^27.0.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^3.2.7"
+  }
+}
