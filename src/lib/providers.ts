@@ -22,6 +22,8 @@ export const PROVIDERS: ProviderInfo[] = [
 
 export const providerInfo = (id: ProviderId) => PROVIDERS.find((p) => p.id === id)!;
 
+const isReasoningItem = (item: unknown) => (item as { type?: string } | null)?.type === 'reasoning';
+
 /** The demo gateway accepts only these Responses controls; BYOK payloads pass through. */
 export function sanitizePayload(provider: ProviderId, payload: unknown): unknown {
   if (provider !== 'demo') return payload;
@@ -30,6 +32,9 @@ export function sanitizePayload(provider: ProviderId, payload: unknown): unknown
   for (const key of ['model', 'input', 'stream', 'instructions', 'tools', 'tool_choice', 'parallel_tool_calls']) {
     if (Object.prototype.hasOwnProperty.call(source, key)) sanitized[key] = source[key];
   }
+  // The gateway forbids `include`, so replayed reasoning items would lack encrypted_content and are rejected
+  // ("omit the item otherwise"); tool turns work without them (probed 2026-10-27).
+  if (Array.isArray(sanitized.input) && sanitized.input.some(isReasoningItem)) sanitized.input = sanitized.input.filter(item => !isReasoningItem(item));
   return { ...sanitized, store: false };
 }
 

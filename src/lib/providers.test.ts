@@ -32,3 +32,14 @@ describe('diagnoseConnection', () => {
     expect(steps[1].detail).toContain('TypeError: Load failed');
   });
 });
+
+describe('demo payload reasoning items', () => {
+  it('drops replayed reasoning items (gateway rejects them without encrypted_content) but keeps tool items', () => {
+    const out = sanitizePayload('demo', { model: 'm', input: [{ role: 'user', content: 'x' }, { type: 'reasoning', id: 'rs_1', content: [], summary: [] }, { type: 'function_call', call_id: 'c', name: 'n', arguments: '{}' }, { type: 'function_call_output', call_id: 'c', output: 'ok' }], tools: [] }) as { input: { type?: string }[] };
+    expect(out.input.map(i => i.type ?? 'user')).toEqual(['user', 'function_call', 'function_call_output']);
+  });
+  it('leaves BYOK payloads untouched', () => {
+    const payload = { input: [{ type: 'reasoning', id: 'rs_1' }] };
+    expect(sanitizePayload('openai', payload)).toBe(payload);
+  });
+});

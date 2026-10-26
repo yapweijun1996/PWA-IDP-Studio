@@ -23,13 +23,17 @@ export function responseStream(text) {
 }
 export function toolResponseStream(name, args, id) {
   const item = { id: `fc_${id}`, type: 'function_call', call_id: id, name, arguments: JSON.stringify(args), status: 'completed' };
-  const response = { id: `resp_${id}`, object: 'response', created_at: Math.floor(Date.now() / 1000), status: 'completed', model: 'demo-auto', output: [item], usage: { input_tokens: 100, output_tokens: 100, total_tokens: 200, input_tokens_details: { cached_tokens: 0 }, output_tokens_details: { reasoning_tokens: 0 } } };
+  // The real gateway emits an empty reasoning item before every tool call.
+  const reasoning = { id: `rs_${id}`, type: 'reasoning', content: [], summary: [] };
+  const response = { id: `resp_${id}`, object: 'response', created_at: Math.floor(Date.now() / 1000), status: 'completed', model: 'demo-auto', output: [reasoning, item], usage: { input_tokens: 100, output_tokens: 100, total_tokens: 200, input_tokens_details: { cached_tokens: 0 }, output_tokens_details: { reasoning_tokens: 0 } } };
   const events = [
     ['response.created', { response: { ...response, status: 'in_progress', output: [] } }],
-    ['response.output_item.added', { output_index: 0, item: { ...item, arguments: '', status: 'in_progress' } }],
-    ['response.function_call_arguments.delta', { item_id: item.id, output_index: 0, delta: item.arguments }],
-    ['response.function_call_arguments.done', { item_id: item.id, output_index: 0, arguments: item.arguments }],
-    ['response.output_item.done', { output_index: 0, item }],
+    ['response.output_item.added', { output_index: 0, item: reasoning }],
+    ['response.output_item.done', { output_index: 0, item: reasoning }],
+    ['response.output_item.added', { output_index: 1, item: { ...item, arguments: '', status: 'in_progress' } }],
+    ['response.function_call_arguments.delta', { item_id: item.id, output_index: 1, delta: item.arguments }],
+    ['response.function_call_arguments.done', { item_id: item.id, output_index: 1, arguments: item.arguments }],
+    ['response.output_item.done', { output_index: 1, item }],
     ['response.completed', { response }],
   ];
   return events.map(([type, body], sequence_number) => `event: ${type}\ndata: ${JSON.stringify({ type, sequence_number, ...body })}\n\n`).join('');
@@ -62,6 +66,9 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
     if (r.method === 'POST' && ((u.hostname === 'api.openai.com' && u.pathname === '/v1/responses') || (u.hostname === 'gpt.yapweijun1996.com' && u.pathname === '/demo/v1/responses'))) {
       if (u.hostname === 'gpt.yapweijun1996.com' && Object.hasOwn(JSON.parse(r.postData || '{}'), 'max_output_tokens')) {
         await fulfill(400, JSON.stringify({ error: { message: 'max_output_tokens is disabled for the demo' } })); return;
+      }
+      if (u.hostname === 'gpt.yapweijun1996.com' && (JSON.parse(r.postData || '{}').input || []).some?.(item => item?.type === 'reasoning')) {
+        await fulfill(400, JSON.stringify({ error: { message: 'content is not allowed in reasoning items', code: 'DEMO_FIELD_DISABLED', type: 'invalid_request_error' } })); return;
       }
       replies++;
       if (variant === 'agent-tools') {
