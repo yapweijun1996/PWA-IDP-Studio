@@ -4,7 +4,7 @@ export function invoice(bad = false) {
   return { document_type: 'purchase_invoice', fields: Object.entries({ supplier_name: 'E2E Supplier', invoice_no: 'INV-E2E-001', invoice_date: bad ? '26/10/2026' : '2026-10-26', currency: 'SGD', total_amount: bad ? '12.00' : '10.00' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [{ description: 'E2E service', quantity: '1', unit_price: '10.00', amount: '10.00' }] };
 }
 export function targeted() {
-  return { document_type: 'unknown', fields: Object.entries({ document_no: 'DOC-TARGET-001', transaction_date: '2026-10-26', remarks: 'Targeted delivery' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [1, 2].map(n => ({ row_no: String(n), stock_code: `SKU-${n}`, stock_description: `Stock ${n}`, quantity: '2', uom: 'PCS', unit_price: '5.00', line_subtotal: '10.00' })) };
+  return { document_type: 'unknown', fields: Object.entries({ document_no: 'DOC-TARGET-001', transaction_date: '2026-10-26', remarks: 'Targeted delivery' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [1, 2].map(n => Object.fromEntries(Object.entries({ row_no: String(n), stock_code: `SKU-${n}`, stock_description: `Stock ${n}`, quantity: '2', uom: 'PCS', unit_price: '5.00', line_subtotal: '10.00' }).map(([key, value]) => [key, { value, page: 1, bbox: [300 + n * 50, 100, 340 + n * 50, 900], confidence: 0.98 }]))) };
 }
 export function responseStream(text) {
   const item = { id: 'msg_e2e', type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text, annotations: [] }] };
