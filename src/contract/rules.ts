@@ -11,7 +11,7 @@ export function businessIssues(batch: Batch): Issue[] {
     issues.push({ issue_id: `issue_${issues.length + 1}`, scope, target_id, rule_code, severity, message, status: 'open', waiver_review_id: null });
   };
   const pending = batch.pages.filter(p => p.status === 'pending');
-  if (pending.length) add('batch', batch.batch.batch_id, 'PAGE_LIMIT_EXCEEDED', 'blocking', `Page limit ${batch.pages.length - pending.length}; unprocessed pages: ${pending.map(p => p.page_number).join(', ')}.`);
+  if (pending.length) add('batch', batch.batch.batch_id, 'PAGE_LIMIT_EXCEEDED', 'blocking', `${batch.pages.length - pending.length} of ${batch.pages.length} pages processed; unprocessed pages: ${pending.map(p => p.page_number).join(', ')}.`);
   for (const tx of batch.transactions) {
     const doc = batch.documents.find(d => d.document_id === tx.document_id)!;
     for (const key of REQUIRED_FIELDS[doc.document_type]) {

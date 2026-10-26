@@ -77,3 +77,37 @@ export async function apiKeyFor(s: Settings): Promise<string> {
   if (!key) throw new Error(`Add your ${providerInfo(s.provider).label} key in Settings first.`);
   return key;
 }
+
+export interface DiagnosticStep { label: string; ok: boolean; detail: string }
+
+const describe = (e: unknown) => (e instanceof Error ? `${e.name}: ${e.message}` : String(e));
+
+/** Step-by-step reachability check so a failing device can show where the request stops. */
+export async function diagnoseConnection(s: Settings, fetchFn: typeof fetch = fetch.bind(globalThis)): Promise<DiagnosticStep[]> {
+  const steps: DiagnosticStep[] = [];
+  const run = async (label: string, fn: () => Promise<string>) => {
+    const started = Date.now();
+    try { steps.push({ label, ok: true, detail: `${await fn()} (${Date.now() - started} ms)` }); return true; }
+    catch (e) { steps.push({ label, ok: false, detail: `${describe(e)} (${Date.now() - started} ms)` }); return false; }
+  };
+  steps.push({ label: 'Browser', ok: navigator.onLine !== false, detail: `${navigator.onLine === false ? 'offline' : 'online'} · ${navigator.userAgent}` });
+  const recipientHost = { demo: DEMO_BASE, openai: 'https://api.openai.com', openrouter: 'https://openrouter.ai', gemini: 'https://generativelanguage.googleapis.com' }[s.provider];
+  if (!await run(`Reach ${new URL(recipientHost).host}`, async () => { await fetchFn(recipientHost, { mode: 'no-cors' }); return 'reachable'; })) return steps;
+  if (s.provider !== 'demo') return steps;
+  let token = '';
+  if (!await run('Demo session', async () => { demoToken = null; token = await demoApiKey(); return 'token issued'; })) return steps;
+  await run('Demo streaming request', async () => {
+    const res = await fetchFn(`${DEMO_BASE}/demo/v1/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ model: modelFor(s, 'demo'), input: 'Reply with OK.', stream: true, store: false }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const reader = res.body?.getReader();
+    if (!reader) return `HTTP ${res.status}, no stream support`;
+    const first = await reader.read();
+    await reader.cancel();
+    return `HTTP ${res.status}, stream ${first.done ? 'empty' : 'received'}`;
+  });
+  return steps;
+}

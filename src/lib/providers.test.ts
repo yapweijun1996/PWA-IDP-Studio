@@ -20,3 +20,14 @@ describe('sanitizePayload', () => {
     expect(sanitizePayload(provider, payload)).toBe(payload);
   });
 });
+
+describe('diagnoseConnection', () => {
+  it('stops at the first failing step and reports the error name', async () => {
+    const { diagnoseConnection } = await import('./providers');
+    const { loadSettings } = await import('./settings');
+    const failing = (async () => { throw new TypeError('Load failed'); }) as unknown as typeof fetch;
+    const steps = await diagnoseConnection({ ...loadSettings(), provider: 'demo' }, failing);
+    expect(steps.map(s => s.ok)).toEqual([true, false]);
+    expect(steps[1].detail).toContain('TypeError: Load failed');
+  });
+});

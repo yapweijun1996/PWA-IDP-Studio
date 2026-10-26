@@ -102,6 +102,16 @@ export const scenarios = [
     assert.ok(mocks.requests.some(r=>r.method==='POST'&&new URL(r.url).hostname==='openrouter.ai'));
     assert.equal((await batches(b)).find(v=>v.source_files[0].filename==='rate-limited.png').batch.status,'failed');
   } },
+  { name: 'network-failure-retry', async run({b,mocks}) {
+    mocks.setVariant('network-error');
+    await drop(b,'IMG_0454.png',undefined,{expectProcessed:false});
+    await b.wait('location.hash.startsWith("#/doc/")','workspace route'); await text(b,'Could not reach the AI service');
+    const page=await b.eval('document.body.innerText'); assert.ok(!page.includes('Page limit'),'no misleading page-limit message'); assert.ok(!page.includes('Upload the original again'),'no re-upload instruction');
+    const failed=(await batches(b)).find(v=>v.source_files[0].filename==='IMG_0454.png'); assert.equal(failed.batch.status,'failed'); assert.ok(!failed.issues.some(i=>i.rule_code==='PAGE_LIMIT_EXCEEDED'));
+    mocks.setVariant('valid'); await click(b,'Retry extraction'); await text(b,'INV-E2E-001');
+    const ok=(await batches(b)).find(v=>v.source_files[0].filename==='IMG_0454.png'); assert.equal(ok.batch.status==='failed',false); assert.equal(ok.batch.batch_id,failed.batch.batch_id);
+    assert.equal((await batches(b)).filter(v=>v.source_files[0].filename==='IMG_0454.png').length,1,'retry reuses the stored original, no duplicate');
+  } },
   { name: 'page-limit', async run({b,mocks}) {
     const pdf=makePDF(25).toString('base64'); await drop(b,'limited.pdf',pdf);
     const batch=await fullJSON(b); checkEnvelope(batch); assert.equal(batch.pages.length,25); assert.equal(batch.pages.filter(p=>p.status==='pending').length,5);

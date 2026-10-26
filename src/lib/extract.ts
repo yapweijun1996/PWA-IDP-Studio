@@ -4,6 +4,7 @@ import { apiKeyFor, buildModel, sanitizePayload } from './providers';
 import type { RenderedPage } from './pdf';
 import type { Settings } from './settings';
 import { modelFor } from './settings';
+import { friendlyProviderError } from './errors';
 import { checkModelOutput, parseModelJson } from './validate';
 import { DOCUMENT_TYPES } from './types';
 import { buildBatch, type BuildInput } from '../contract/build';
@@ -64,11 +65,13 @@ export async function runExtraction(opts: ExtractOptions): Promise<Batch> {
     if (e.type === 'message_update') onStatus?.('Extracting fields…');
   });
 
-  await agent.prompt(
+  const asFriendly = (e: unknown): never => { throw new Error(friendlyProviderError(String((e as Error)?.message ?? e), settings.provider)); };
+  try { await agent.prompt(
     `Extract this document (${pages.length} page${pages.length > 1 ? 's' : ''}).`,
     pages.map((p) => ({ type: 'image' as const, data: p.data, mimeType: p.mimeType })),
-  );
-  let reply = lastText(agent.state.messages);
+  ); } catch (e) { asFriendly(e); }
+  let reply: string;
+  try { reply = lastText(agent.state.messages); } catch (e) { return asFriendly(e); }
   for (let attempt = 0; ; attempt++) {
     try {
       const out = checkModelOutput(parseModelJson(reply));

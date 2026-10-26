@@ -41,6 +41,7 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
     if (r.method === 'POST' && u.hostname === 'gpt.yapweijun1996.com' && u.pathname === '/demo/session') {
       await fulfill(201, JSON.stringify({ token: 'dmo_e2e_fake', token_type: 'Bearer', expires_in: 900, expires_at: new Date(Date.now() + 900000).toISOString(), model: 'demo-auto' })); return;
     }
+    if (variant === 'network-error' && r.method === 'POST' && u.pathname.endsWith('/responses')) { await b.send('Fetch.failRequest', { requestId: e.requestId, errorReason: 'ConnectionReset' }); return; }
     if (variant === 'rate-limit') { await fulfill(429, JSON.stringify({ error: { message: 'E2E rate limit', type: 'rate_limit_error' } })); return; }
     if (r.method === 'POST' && ((u.hostname === 'api.openai.com' && u.pathname === '/v1/responses') || (u.hostname === 'gpt.yapweijun1996.com' && u.pathname === '/demo/v1/responses'))) {
       if (u.hostname === 'gpt.yapweijun1996.com' && Object.hasOwn(JSON.parse(r.postData || '{}'), 'max_output_tokens')) {

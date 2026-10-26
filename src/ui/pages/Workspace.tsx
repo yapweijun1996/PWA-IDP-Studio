@@ -12,7 +12,7 @@ export function downloadJSON(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
 }
-export function Workspace({ doc, onSaved, transactionId }: { doc: Batch; onSaved: (d: Batch) => void; transactionId?: string }) {
+export function Workspace({ doc, onSaved, transactionId, busy, onRetry }: { busy?: string | null; onRetry?: () => void; doc: Batch; onSaved: (d: Batch) => void; transactionId?: string }) {
   const [txId, setTxId] = useState(transactionId ?? doc.transactions[0]?.transaction_id);
   const tx = doc.transactions.find(t => t.transaction_id === txId) ?? doc.transactions[0];
   const [pages, setPages] = useState<RenderedPage[]>([]);
@@ -39,7 +39,16 @@ export function Workspace({ doc, onSaved, transactionId }: { doc: Batch; onSaved
     }).then(result => { if (live) setPages(result); }).catch(e => { if (live) setRenderError(String(e.message ?? e)); });
     return () => { live = false; };
   }, [file.file_id, previewLimit]);
-  if (!tx) return <section className="ds-sheet"><PageHeader title={file.filename} breadcrumb={<a href="#/documents">Documents</a>} /><Notice tone="warning">{doc.batch.status === 'processing' ? 'Processing has not produced a transaction yet.' : 'No extracted transactions. Upload the original again to retry.'}</Notice>{doc.issues.map(i => <Notice key={i.issue_id} tone="error">{i.message}</Notice>)}</section>;
+  if (!tx) {
+    const failure = doc.issues.find(i => i.rule_code === 'EXTRACTION_FAILED');
+    const working = doc.batch.status === 'processing' && !!busy;
+    return <section className="ds-sheet"><PageHeader title={file.filename} breadcrumb={<a href="#/documents">Documents</a>} />
+      {working ? <Notice tone="info">{busy}</Notice>
+        : failure ? <Notice tone="error">Extraction failed. {failure.message}</Notice>
+        : <Notice tone="warning">{doc.batch.status === 'processing' ? 'Processing was interrupted before it produced a transaction.' : 'No extracted transactions.'}</Notice>}
+      {!working && onRetry && <Button variant="primary" onClick={onRetry}>Retry extraction</Button>}
+    </section>;
+  }
   const view = transactionView(doc, tx.transaction_id);
   const eligible = validateBatch(doc).ok && exportEligibleTransactions(doc).includes(tx.transaction_id);
   const clean = JSON.stringify({ document_type: view.documentType, ...tx.data }, null, 2);

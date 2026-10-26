@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PROVIDERS, providerInfo } from '../../lib/providers';
+import { PROVIDERS, diagnoseConnection, providerInfo, type DiagnosticStep } from '../../lib/providers';
 import { clampMaxPages, DEFAULT_MODELS, loadSettings, saveSettings, type Settings } from '../../lib/settings';
 import type { ProviderId } from '../../lib/types';
 import { Button, Card, Dialog, Field, Input, PageHeader, Segmented, Select, Notice, useTheme, type Theme } from '../../ds';
@@ -12,6 +12,7 @@ export function SettingsPage({ settings, onChange, migration, batchCount = 0, on
   const [confirm, setConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState('');
+  const [diagnostics, setDiagnostics] = useState<DiagnosticStep[] | 'running'>();
   const { preferences, setPreferences } = usePreferences();
   const [sidebar, setSidebar] = useState(() => { try { return localStorage.getItem('idp-studio.sidebar') ?? 'expanded'; } catch { return 'expanded'; } });
   const info = providerInfo(s.provider);
@@ -27,6 +28,9 @@ export function SettingsPage({ settings, onChange, migration, batchCount = 0, on
       {info.needsKey && <Field label={`${info.label} API key`} hint={`Stored in this browser; sent only to ${info.recipient}.`}><Input type="password" autoComplete="off" value={s.keys[s.provider as Exclude<ProviderId, 'demo'>] ?? ''} onChange={e => set({ keys: { ...s.keys, [s.provider]: e.target.value } })} /></Field>}
       <Field label="Model"><Input value={s.models[s.provider] ?? ''} placeholder={DEFAULT_MODELS[s.provider]} onChange={e => set({ models: { ...s.models, [s.provider]: e.target.value } })} /></Field>
       <Button variant="primary" onClick={() => { saveSettings(s); onChange(s); setSaved(true); }}>Save extraction settings</Button>{saved && <Notice>Saved for this session. Browser persistence is used when available.</Notice>}
+      <Button disabled={diagnostics === 'running'} onClick={async () => { setDiagnostics('running'); setDiagnostics(await diagnoseConnection(s)); }}>Test connection</Button>
+      {diagnostics === 'running' && <Notice>Testing connection…</Notice>}
+      {Array.isArray(diagnostics) && <ul aria-label="Connection test results">{diagnostics.map(step => <li key={step.label}><strong>{step.ok ? 'OK' : 'Failed'}</strong> · {step.label}: {step.detail}</li>)}</ul>}
     </Card>
     <Card><h2>Appearance</h2><Segmented label="Theme" value={theme} onChange={value => setTheme(value as Theme)} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'system', label: 'System' }]} /><Segmented label="Sidebar default" value={sidebar} onChange={value => { setSidebar(value); try { localStorage.setItem('idp-studio.sidebar', value); } catch { /* Session only. */ } }} options={[{ value: 'expanded', label: 'Expanded' }, { value: 'collapsed', label: 'Collapsed' }]} /><p className="ds-muted">Sidebar default applies on the next app load. The menu toggle changes the current layout.</p></Card>
     <Card><h2>Data &amp; Storage</h2><p>{batchCount} batches stored in this browser.</p><p>{migration ? `v1 migration: ${migration.migrated} migrated, ${migration.skipped} skipped (missing or unsupported originals). Legacy records are retained.` : 'Checking legacy records…'}</p><Button variant="danger" onClick={() => setConfirm(true)}>Clear all local data</Button>{error && <Notice tone="error">{error}</Notice>}</Card>
