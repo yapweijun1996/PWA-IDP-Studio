@@ -12,4 +12,10 @@ npm ci && npm run dev      # local
 npm run typecheck && npm test && npm run build
 ```
 
+UI icons use the unchanged SVG sources in `icons/catalog/`. Run `npm run icons` to
+validate the catalog and regenerate `src/ui/icons.generated.ts`; `npm run check:icons`
+checks freshness without writing files and also runs automatically before builds.
+Use the typed `Icon` component with `sm`, `md`, or `lg` CSS-token sizes. Icons are
+decorative by default; pass `label` when an icon needs its own accessible name.
+
 Out of scope for this slice: TIFF input, Review Queue, Label Studio, Templates, Audit Logs pages.
