@@ -31,3 +31,4 @@ export * from './components/OnlineStatus';
 export * from './components/AppShell';
 export * from './components/Topbar';
 export * from './components/Sidebar';
+export * from './components/EvidenceViewer';

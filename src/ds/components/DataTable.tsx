@@ -21,13 +21,17 @@ export interface DataTableProps<T> {
   loading?: boolean;
   error?: string;
   emptyMessage?: string;
+  sort?: { key: string; direction: 'ascending' | 'descending' };
+  onSortChange?: (sort: { key: string; direction: 'ascending' | 'descending' }) => void;
 }
 /** Client-side stable sort; interactive row descendants retain their own activation. */
 export function DataTable<T>({
   caption, columns, rows, rowKey, onRowClick, selectedKey,
-  density = 'normal', loading, error, emptyMessage = 'No records',
+  density = 'normal', loading, error, emptyMessage = 'No records', sort: controlledSort, onSortChange,
 }: DataTableProps<T>) {
-  const [sort, setSort] = useState<{ key: string; direction: 'ascending' | 'descending' }>();
+  const [localSort, setLocalSort] = useState<{ key: string; direction: 'ascending' | 'descending' }>();
+  const sort = controlledSort ?? localSort;
+  const setSort = onSortChange ?? setLocalSort;
   const column = columns.find(item => item.key === sort?.key);
   const sortValue = column?.sortValue;
   const sorted = sortValue ? [...rows].sort((a, b) => {
@@ -41,9 +45,9 @@ export function DataTable<T>({
   return (
     <div className="ds-table-container" role="region" aria-label={caption}
       tabIndex={0} aria-busy={loading || undefined}>
-      {loading ? <Spinner label={`Loading ${caption}`} />
+      {loading ? <><Spinner label={`Loading ${caption}`} /><div className="ds-table-skeleton" aria-hidden="true">{[0, 1, 2].map(row => <span key={row} />)}</div></>
         : error ? <Notice tone="error">{error}</Notice>
-          : <table className={`ds-table ds-density-${density}`}>
+          : <><table className={`ds-table ds-density-${density}`}>
             <caption>{caption}</caption>
             <thead><tr>{columns.map(item => (
               <th key={item.key} scope="col"
@@ -60,7 +64,7 @@ export function DataTable<T>({
                 ) : item.label}
               </th>
             ))}</tr></thead>
-            <tbody>{sorted.length ? sorted.map(row => (
+            <tbody>{sorted.map(row => (
               <tr key={rowKey(row)} tabIndex={onRowClick ? 0 : undefined}
                 aria-selected={selectedKey === rowKey(row) || undefined}
                 className={onRowClick ? 'ds-clickable' : undefined}
@@ -76,8 +80,8 @@ export function DataTable<T>({
                 }}>
                 {columns.map(item => <td key={item.key}>{item.render(row)}</td>)}
               </tr>
-            )) : <tr><td colSpan={columns.length}><EmptyState title={emptyMessage} /></td></tr>}</tbody>
-          </table>}
+            ))}</tbody>
+          </table>{!sorted.length && <EmptyState title={emptyMessage} />}</>}
     </div>
   );
 }

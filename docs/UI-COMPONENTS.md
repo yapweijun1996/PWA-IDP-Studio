@@ -2,9 +2,9 @@
 
 Import components from `src/ds`. Styles are loaded once by `src/main.tsx`: `tokens.css` defines values, `components.css` defines components. The existing `src/ui/Icon.tsx` remains the only SVG implementation. No catalog changes or new icons.
 
-Visit `#/design` for the interactive inventory. Home and Workspace retain their existing UI pending the Admin Panel phase; the shared shell, Settings and update notification use the DS now.
+Visit `#/design` for the interactive inventory (also linked from Settings > About). Home, Documents, Review Queue, Workspace and Settings use the DS shell and components. Navigation is configured once in `src/ui/nav.ts`; unavailable features are disabled, with reasons.
 
-Home lists canonical batches with physical page/document/transaction counts. Workspace uses the first transaction's exception-first view, immutable field corrections and explicit human approval. JSON switches between Clean JSON and Full JSON (batch); export/copy require transaction eligibility. Evidence overlays are read-only. Settings includes a clamped 1–500 page limit and startup migration counts. See [Local data model](DATA-MODEL.md).
+Home uses `batchSummary` totals and reports physical-page coverage separately. Documents sorts before pagination using controlled DataTable sorting. Review Queue and its badge share the same exception-first transaction selector. Workspace supports transaction selection, required-reason corrections and explicit human approval. Clean JSON contains business data; Full evidence JSON contains the complete batch. Copy/export require current validation and transaction eligibility; pending pages remain blocking. See [Local data model](DATA-MODEL.md).
 
 ## Theme and tokens
 
@@ -14,7 +14,7 @@ Semantic tokens: `--background`, `--surface`, `--surface-alt`, `--text`, `--mute
 
 Layout: `--sidebar-expanded` 248px, `--sidebar-collapsed` 64px, `--topbar-height` 60px, `--workspace-padding` 24px/16px mobile, `--font-body` 14px, `--row-normal` 40px, `--row-compact` 32px, `--control-height` 40px/44px mobile. Scales: `--space-1` through `--space-8`, `--font-sm/body/lg/title`, `--radius-sm/md/lg/pill`, `--shadow-sm/lg`, `--z-sticky/popover/modal/toast`, `--icon-sm/md/lg`, `--motion-fast/spin`. Reduced motion makes motion durations zero.
 
-Legacy aliases `--bg`, `--warn`, `--ok`, `--bbox` exist only for the unmigrated Home/Workspace stylesheet. Values remain in the token file.
+The legacy UI stylesheet has zero rules. Icon sizing, global box sizing, responsive search wrapping, page evidence and JSON overflow live in the DS stylesheet. Legacy token aliases remain unused for compatibility with the existing token contract.
 
 ## Components
 
@@ -33,7 +33,7 @@ Legacy aliases `--bg`, `--warn`, `--ok`, `--bbox` exist only for the unmigrated 
 | Checkbox | Native input props plus visible `label`; native checkbox keyboard behavior. |
 | Segmented | `label`, `value`, `onChange(string)`, `options[{value,label,disabled?}]`; native radio inputs inside named radiogroup. |
 | Tabs | `label`, `value`, `onChange(id)`, `items[{id,label,content,disabled?}]`; roving tabindex, arrows/Home/End, linked tab panels. |
-| DataTable | `caption`, `columns[{key,label,render,sortValue?}]`, `rows`, `rowKey`; optional `onRowClick`, `selectedKey`, `density`, `loading`, `error`, `emptyMessage`. Sticky header, aria-sort, stable client sorting, keyboard Enter/Space row activation; nested controls are not intercepted. Horizontally scrollable named container. |
+| DataTable | `caption`, `columns[{key,label,render,sortValue?}]`, `rows`, `rowKey`; optional `onRowClick`, `selectedKey`, `density`, `loading`, `error`, `emptyMessage`. Optional controlled `sort` and `onSortChange` let consumers sort their entire result before pagination; uncontrolled sorting remains supported. Sticky header, aria-sort, stable client sorting, keyboard Enter/Space row activation; nested controls are not intercepted. Named scroll container; loading spinner plus decorative skeleton rows. |
 | Pagination | One-based `page`, `pageCount`, `onChange(page)`; named nav, disabled bounds and announced page status. |
 | Dialog | `open`, `onClose`, `title`, children; modal role, focus trap, Escape, outside backdrop, focus return, scroll lock; phone bottom sheet. |
 | Menu / Popover | `label`, `items[{label,onSelect,disabled?}]`; action-menu role, arrow/Home/End navigation, Escape/Tab and outside-pointer dismissal. Popover shares Menu implementation. |
@@ -48,9 +48,18 @@ Legacy aliases `--bg`, `--warn`, `--ok`, `--bbox` exist only for the unmigrated 
 | AppShell | `items`, children, optional `brand`, `search`, `right`, `footer`; layout only; owns drawer state. |
 | Topbar | `onMenuToggle`, optional `menuExpanded`, `brand`, `search`, `right`; sticky opaque safe-area surface. |
 | Sidebar | `items[{href,label,icon,active?,disabled?,reason?,count?}]`, optional `footer`, `mobileOpen`, `onMobileClose`, `onCollapsedChange`; optional `collapsed`/`onToggle` control the desktop rail. Desktop state stored at idp-studio.sidebar. Both rail widths expose toggle and aria-expanded. Named links/current page, disabled reasons, anchored rail tooltips. Phone drawer traps focus, locks scroll, closes on Escape and restores focus. |
+| EvidenceViewer | `pages[{number,src?,pending?}]`, current `page`, `onPageChange`, optional normalized `boxes[{id,label,x,y,width,height}]`, `selected`, `error`. Previous/next, page thumbnails, bounded zoom and fit-width. Pending pages are explicit placeholders. Boxes are named read-only images, never editable; selected evidence is emphasized. Selecting a field/page reopens a collapsed viewer. Scroll stays inside the viewer. |
 
 ## Ratchet
 
 `npm run check:ssot` scans production source files, excluding tests and generated icon paint. It compares each file/rule independently with `scripts/ssot-baseline.json`; new files have zero allowance. Do not increase allowances. When removing old violations, lower the committed baseline. CSS duplicate checking targets top-level single-class base definitions, including comma-separated groups and definitions across files; media/state/descendant overrides are intentionally allowed. `npm run check` runs typecheck, icon freshness, SSOT and tests. No dependencies are added.
 
 Contrast tests read `tokens.css` directly through `node:fs`, bypassing Vitest's CSS stubs. Dialog and drawer focus candidates are normalized to DOM order so selector-engine grouping cannot change Tab wrap targets.
+
+## Admin panel behavior
+
+- Settings General clamps extraction limits to 1–500; page sizes 10/25/50 and Comfortable/Compact density persist under `idp-studio.tables`. Comfortable maps to `--row-normal`, Compact to `--row-compact`. Sidebar default affects the next shell mount; the shell toggle changes the current state.
+- Storage adapters keep contract/library APIs unchanged. Upload deletion removes the batch and unshared originals. For migrated uploads it also deletes the matching legacy record and unshared legacy original, preventing startup migration from restoring the deleted upload; the dialog discloses this. Unrelated legacy rows and shared originals are retained. Clear-all removes all three IndexedDB stores and app-owned settings keys; confirmation describes reviews, credentials, originals and legacy data explicitly. Unrelated localStorage is untouched.
+- `src/ui/admin.test.tsx` exercises real fixture totals, type/name search and clear, sorting across page boundaries, filters, exception ordering, disabled navigation, evidence/page selection, correction reasons and audit history, approval gating, humanized issues, JSON variants, page-limit clamping, density persistence, confirmed clear, shared-original deletion safety and viewer navigation/zoom. Imported through `src/ui/behavior.test.ts` for the existing test discovery pattern.
+- Generic DS additions/bug fixes are covered by those behavioral cases: controlled sorting prevents page-local order errors; EvidenceViewer preserves normalized evidence while navigating physical pages; rejection notices use the shared Notice status semantics. Mobile search wraps instead of competing with the brand/status for a single narrow row. Table empty-state content sits outside the wide table so its explanation remains visible on phones; search tests cover empty-to-populated recovery.
+

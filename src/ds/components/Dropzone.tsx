@@ -1,6 +1,19 @@
 import { useId, useRef, useState } from 'react';
 import { Button } from './Button';
+import { Notice } from './Notice';
 import { Icon } from '../../ui/Icon';
 /** Accept supports extensions, MIME types and MIME wildcards for drop and chooser. */
 export function acceptsFile(file: File, accept = '') { return !accept.trim() || accept.split(',').some(raw => { const rule = raw.trim().toLowerCase(); return rule.startsWith('.') ? file.name.toLowerCase().endsWith(rule) : rule.endsWith('/*') ? file.type.toLowerCase().startsWith(rule.slice(0, -1)) : file.type.toLowerCase() === rule; }); }
-export function Dropzone({ onFiles, accept = '', multiple = false, hint = 'Choose files or drag them here', label = 'Upload documents' }: { onFiles: (files: File[]) => void; accept?: string; multiple?: boolean; hint?: string; label?: string }) { const ref = useRef<HTMLInputElement>(null); const id = useId(); const [over, setOver] = useState(false); const [rejected, setRejected] = useState(false); const report = (files: File[]) => { const valid = files.filter(file => acceptsFile(file, accept)); setRejected(valid.length !== files.length); const selected = multiple ? valid : valid.slice(0, 1); if (selected.length) onFiles(selected); }; return <section aria-label={label} className={`ds-dropzone ${over ? 'ds-over' : ''}`} onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOver(false); }} onDrop={event => { event.preventDefault(); setOver(false); report(Array.from(event.dataTransfer.files)); }}><Icon name="upload" size="lg" /><h2>{label}</h2><p id={id}>{hint}</p><input className="ds-visually-hidden" ref={ref} type="file" tabIndex={-1} aria-label={label} aria-describedby={id} accept={accept} multiple={multiple} onChange={event => { report(Array.from(event.target.files ?? [])); event.target.value = ''; }} /><Button variant="primary" aria-describedby={id} onClick={() => ref.current?.click()}>Choose files</Button>{rejected && <p role="status">Some files were not accepted. Allowed types: {accept}.</p>}</section>; }
+export function Dropzone({ onFiles, accept = '', multiple = false, hint = 'Choose files or drag them here', label = 'Upload documents' }: { onFiles: (files: File[]) => void; accept?: string; multiple?: boolean; hint?: string; label?: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const id = useId();
+  const [over, setOver] = useState(false);
+  const [rejected, setRejected] = useState(false);
+  const report = (files: File[]) => { const valid = files.filter(file => acceptsFile(file, accept)); setRejected(valid.length !== files.length); const selected = multiple ? valid : valid.slice(0, 1); if (selected.length) onFiles(selected); };
+  return <section aria-label={label} className={`ds-dropzone ${over ? 'ds-over' : ''}`} onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOver(false); }} onDrop={event => { event.preventDefault(); setOver(false); report(Array.from(event.dataTransfer.files)); }}>
+    <Icon name="upload" size="lg" /><h2>{label}</h2><p id={id}>{hint}</p>
+    <input className="ds-visually-hidden" ref={ref} type="file" tabIndex={-1} aria-label={label} aria-describedby={id} accept={accept} multiple={multiple} onChange={event => { report(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
+    <Button variant="primary" aria-describedby={id} onClick={() => ref.current?.click()}>Choose files</Button>
+    {rejected && <Notice>Some files were not accepted. Allowed types: {accept}. {hint}</Notice>}
+  </section>;
+}

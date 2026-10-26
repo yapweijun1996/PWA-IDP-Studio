@@ -20,7 +20,7 @@ checks freshness without writing files and also runs automatically before builds
 Use the typed `Icon` component with `sm`, `md`, or `lg` CSS-token sizes. Icons are
 decorative by default; pass `label` when an icon needs its own accessible name.
 
-Out of scope for this slice: TIFF input, Review Queue, Label Studio, Templates, Audit Logs pages.
+Supported uploads: PDF, PNG and JPG. TIFF and WebP are not supported. Label Studio, Templates, JSON Explorer, AI Agents and Validation are disabled navigation items with “Coming soon” explanations.
 
 ## Design system
 
@@ -28,4 +28,10 @@ Visit `#/design` for the component inventory. Public APIs live in `src/ds/index.
 theme/layout values in `src/ds/tokens.css`, component styles in
 `src/ds/components.css`. See [UI component contracts](docs/UI-COMPONENTS.md).
 `npm run check` runs types, icons, the per-file SSOT ratchet, and tests.
-Home and Workspace retain their existing layout with batch-backed data; the subsequent Admin Panel phase owns their design-system rewrite.
+The task-first admin panel uses the design system throughout. Routes: `#/` (upload and recent batches), `#/documents` (search, sort, filter, paginate and delete), `#/review` (exception-first transaction queue), `#/doc/:batchId/:transactionId?` (read-only page evidence, field corrections, human approval and gated JSON exports), and `#/settings`. Settings > About links to `#/design`.
+
+Search matches file names and document types on Home/Documents. Review counts come from live transactions, not sample data. Settings stores page size and Comfortable/Compact table density locally, alongside provider, page-limit and theme preferences. The shell persists its 248px/64px desktop sidebar and uses an accessible mobile drawer. Version comes from package.json; build ID is the short git SHA, or `dev` when git metadata is unavailable.
+
+UI storage adapters live in `src/ui/storage.ts` because the library exposes neither clear-all nor file-aware deletion. Deleting an upload removes its batch and unshared originals; a migrated upload's matching legacy source is also removed so startup migration cannot recreate it. Originals referenced by other batches or unrelated legacy records remain. Clear all local data explicitly deletes batches, originals, legacy documents, reviews, credentials and app preferences, not provider-side or unrelated browser data.
+
+`src/ui/behavior.test.ts` imports the JSX page scenarios because the existing Vitest include pattern discovers `.test.ts` files. The empty `src/ui/styles.css` is retained only because `src/main.tsx` imports it and is outside this change's permitted edit scope; all production UI rules are in the DS.

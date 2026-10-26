@@ -8,13 +8,17 @@ import { migrateStore } from '../lib/migrateStore';
 import { buildBatch } from '../contract/build';
 import { recomputeIssues } from '../contract/review';
 import type { Batch, MediaType } from '../contract/types';
-import { Home } from './Home';
-import { SettingsPage } from './Settings';
-import { AppShell, OnlineStatus } from '../ds';
+import { Home } from './pages/Home';
+import { SettingsPage } from './pages/Settings';
+import { Documents } from './pages/Documents';
+import { ReviewQueue } from './pages/ReviewQueue';
+import { navItems, reviewRows } from './nav';
+import { APP_VERSION, BUILD_ID } from './version';
+import { AppShell, Notice, OnlineStatus, SearchInput, Spinner } from '../ds';
 import { ComponentSheet } from '../ds/ComponentSheet';
 import { UpdatePrompt } from './UpdatePrompt';
 import { go, useRoute } from './useHash';
-import { Workspace } from './Workspace';
+import { Workspace } from './pages/Workspace';
 
 export function App() {
   const route = useRoute();
@@ -22,6 +26,8 @@ export function App() {
   const [docs, setDocs] = useState<Batch[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
   const [migration, setMigration] = useState<{ migrated: number; skipped: number }>();
   const [current, setCurrent] = useState<Batch | null | undefined>(undefined);
   const refresh = useCallback(async () => {
@@ -31,7 +37,7 @@ export function App() {
   }, []);
   useEffect(() => {
     let live = true;
-    migrateStore().then(result => { if (live) setMigration(result); return refresh(); }).catch(e => { if (live) setError(`Data migration: ${String(e.message ?? e)}`); });
+    migrateStore().then(result => { if (live) setMigration(result); return refresh(); }).catch(e => { if (live) setError(`Data migration: ${String(e.message ?? e)}`); }).finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
   }, [refresh]);
   useEffect(() => {
@@ -46,7 +52,11 @@ export function App() {
     if (busy) return;
     let first: string | null = null;
     setError('');
-    for (const file of files) {
+    for (const original of files) {
+      const inferred = ({ pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' } as Record<string, string>)[original.name.split('.').pop()?.toLowerCase() ?? ''];
+      const mime = original.type || inferred;
+      if (!['application/pdf', 'image/png', 'image/jpeg'].includes(mime)) { setError(`${original.name}: Supported types are PDF, PNG, JPG. TIFF and WebP are not supported.`); continue; }
+      const file = original.type ? original : new File([original], original.name, { type: mime });
       const id = `batch_${crypto.randomUUID()}`;
       const file_id = `file_${crypto.randomUUID()}`;
       const createdAt = new Date().toISOString();
@@ -82,22 +92,18 @@ export function App() {
   };
 
   let body;
-  if (route.name === 'settings') body = <SettingsPage settings={settings} onChange={setSettings} migration={migration} />;
+  if (route.name === 'settings') body = <SettingsPage settings={settings} onChange={setSettings} migration={migration} batchCount={docs.length} onCleared={async () => { setCurrent(undefined); setMigration({ migrated: 0, skipped: 0 }); await refresh(); }} />;
   else if (route.name === 'design') body = <ComponentSheet />;
+  else if (route.name === 'documents') body = <Documents docs={docs} search={search} loading={loading} onDeleted={refresh} />;
+  else if (route.name === 'review') body = <ReviewQueue docs={docs} loading={loading} />;
   else if (route.name === 'doc') {
-    if (current === undefined) body = <p className="page muted">Loading…</p>;
-    else if (current === null) body = <p className="page">Document not found. <a href="#/">Back</a></p>;
-    else if (current.batch.status === 'failed') body = <section className="page narrow"><h1>{current.source_files[0].filename}</h1><p className="warn" role="alert">Extraction failed: {current.issues.find(i => i.rule_code === 'EXTRACTION_FAILED')?.message}</p><a href="#/settings">Check settings</a></section>;
-    else if (current.batch.status === 'processing') body = <p className="page" role="status">{busy ?? 'Processing did not finish. Upload the original again to retry.'}</p>;
-    else body = <Workspace key={current.batch.batch_id} doc={current} onSaved={d => { setCurrent(d); void refresh(); }} />;
-  } else body = <Home docs={docs} settings={settings} busy={busy} onFiles={process} />;
+    if (current === undefined) body = <Spinner label="Loading document…" />;
+    else if (current === null) body = <Notice tone="error">Document not found. <a href="#/documents">Back to Documents</a></Notice>;
+    else body = <Workspace key={current.batch.batch_id} doc={current} transactionId={route.transactionId} onSaved={d => { setCurrent(d); void refresh(); }} />;
+  } else body = <Home docs={docs} settings={settings} busy={busy} search={search} loading={loading} onFiles={process} onDeleted={refresh} />;
   return (
-    <AppShell items={[
-      { href: '#/', label: 'Home', icon: 'home', active: route.name === 'home' },
-      { href: '#/settings', label: 'Settings', icon: 'settings', active: route.name === 'settings' },
-      { href: '#/design', label: 'Design system', icon: 'sliders', active: route.name === 'design' },
-    ]} right={<OnlineStatus />} footer="IDP Studio">
-      {error && <p role="alert" className="warn">{error}</p>}
+    <AppShell brand="IDP Studio" items={navItems(route.name, reviewRows(docs).length)} search={route.name === 'home' || route.name === 'documents' ? <SearchInput placeholder="Search documents…" value={search} onChange={setSearch} /> : undefined} right={<OnlineStatus />} footer={<>Version {APP_VERSION} · Build {BUILD_ID}</>}>
+      {error && <Notice tone="error">{error}</Notice>}
       {body}
       <UpdatePrompt />
     </AppShell>
