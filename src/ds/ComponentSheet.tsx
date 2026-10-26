@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Button, IconButton, Badge, StatusPill, Card, StatCard, PageHeader, Field, Input, SearchInput, Select, Checkbox, Segmented, Tabs, DataTable, Pagination, Dialog, Menu, Popover, Tooltip, Notice, Toast, Spinner, Progress, EmptyState, Dropzone, OnlineStatus, useTheme, type Theme, type Tone } from './index';
+import { Button, IconButton, Badge, StatusPill, Card, StatCard, PageHeader, Field, Input, SearchInput, Select, Checkbox, Segmented, Tabs, DataTable, Pagination, Dialog, Menu, Popover, Tooltip, Notice, Toast, Spinner, Progress, EmptyState, Dropzone, useTheme, type Theme, type Tone } from './index';
 /** Interactive inventory. The surrounding AppShell demonstrates Topbar and Sidebar. */
 export function ComponentSheet() {
   const { theme, setTheme } = useTheme();
@@ -7,7 +7,7 @@ export function ComponentSheet() {
   const close = useCallback(() => setOpen(false), []);
   const tones: Tone[] = ['neutral', 'info', 'success', 'warning', 'danger'];
   const columns = [{ key: 'name', label: 'File name', render: (row: { id: string; name: string }) => row.name, sortValue: (row: { name: string }) => row.name }];
-  return <div className="ds-sheet"><PageHeader breadcrumb={<a href="#/">Home</a>} title="Design system" description="Shared tokens, accessible controls and layout primitives." actions={<OnlineStatus />} />
+  return <div className="ds-sheet"><PageHeader breadcrumb={<a href="#/">Home</a>} title="Design system" description="Shared tokens, accessible controls and layout primitives." />
     <Card><h2>Theme</h2><Segmented label="Theme" value={theme} onChange={value => setTheme(value as Theme)} options={['light', 'dark', 'system'].map(value => ({ value, label: value }))} /><p>AppShell, Topbar and the persisted Sidebar surround this sheet. Use the rail toggle and mobile menu to exercise both layouts.</p></Card>
     <Card><h2>Buttons</h2><div className="ds-row">{(['primary', 'secondary', 'ghost', 'danger'] as const).map(variant => <Button key={variant} variant={variant} onClick={() => setToast(`${variant} activated`)}>{variant}</Button>)}{(['sm', 'md', 'lg'] as const).map(size => <Button key={size} size={size}>{size}</Button>)}<Button disabled>Disabled</Button><Button loading>Saving</Button><IconButton icon="settings" label="Settings example" onClick={() => setToast('Settings activated')} /></div></Card>
     <Card><h2>Badges and status</h2><div className="ds-row">{tones.map(tone => <Badge key={tone} tone={tone}>{tone}</Badge>)}{tones.map(tone => <StatusPill key={tone} tone={tone} icon={tone === 'success' ? 'check' : 'info'}>{tone} status</StatusPill>)}</div></Card>

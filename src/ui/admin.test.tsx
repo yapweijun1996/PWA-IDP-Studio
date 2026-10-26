@@ -24,7 +24,7 @@ let container: HTMLDivElement;
 let root: Root;
 const render = async (node: ReactNode) => { await act(async () => { root.render(node); }); };
 const click = async (element: Element) => { await act(async () => { element.dispatchEvent(new MouseEvent('click', { bubbles: true })); }); };
-const button = (text: string) => Array.from(document.querySelectorAll('button')).find(b => b.textContent === text)!;
+const button = (text: string) => Array.from(document.querySelectorAll('button')).find(b => b.textContent === text || b.getAttribute('aria-label') === text)!;
 const input = async (element: HTMLInputElement, value: string) => { await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(element, value); element.dispatchEvent(new Event('input', { bubbles: true })); }); };
 const select = async (element: HTMLSelectElement, value: string) => { await act(async () => { element.value = value; element.dispatchEvent(new Event('change', { bubbles: true })); }); };
 const fixture = (id: string, name = `${id}.pdf`) => { const value = invoiceInput(); value.batchId = id; value.file.file_id = `file_${id}`; value.file.filename = name; return buildBatch(value); };
@@ -41,6 +41,9 @@ it('Home stats use batchSummary; document type search and clear restore real upl
   await render(<Page />);
   const totals = batchSummary(docs);
   expect(Array.from(container.querySelectorAll('.ds-stat-value')).map(n => n.textContent)).toEqual([String(totals.pages), String(totals.documents), String(totals.transactions)]);
+  expect(Array.from(container.querySelectorAll('th')).map(n => n.textContent)).toContain('Actions');
+  await click(container.querySelector('[aria-label="Open alpha.pdf"]')!);
+  expect(location.hash).toContain('/doc/a');
   await input(container.querySelector('input[type="search"]')!, 'alpha');
   expect(container.querySelector('tbody')!.textContent).toContain('alpha.pdf'); expect(container.querySelector('tbody')!.textContent).not.toContain('beta.pdf');
   await click(container.querySelector('[aria-label="Clear search"]')!);
@@ -76,10 +79,19 @@ it('nav disables unavailable features with reasons and hides zero review badge',
   await render(<Sidebar items={navItems('home', 0)} />);
   for (const label of ['Label Studio', 'Templates', 'JSON Explorer', 'AI Agents', 'Validation']) {
     const link = Array.from(container.querySelectorAll('a')).find(n => n.querySelector('span')?.textContent === label)!;
-    expect(link.getAttribute('aria-disabled')).toBe('true'); expect(link.hasAttribute('href')).toBe(false); expect(link.querySelector('small')?.textContent).toContain('Coming soon');
+    expect(link.getAttribute('aria-disabled')).toBe('true'); expect(link.hasAttribute('href')).toBe(false); expect(link.querySelector('.ds-badge')?.textContent).toBe('Coming soon');
+    const description = document.getElementById(link.getAttribute('aria-describedby')!)!;
+    expect(description.textContent).toContain('Coming soon');
   }
   const review = Array.from(container.querySelectorAll('a')).find(a => a.querySelector('span')?.textContent === 'Review Queue')!;
   expect(review.querySelector('.ds-badge')).toBeNull();
+  await click(container.querySelector('[aria-label="Collapse sidebar"]')!);
+  const disabled = container.querySelector('[aria-label="Label Studio"]')!;
+  expect(disabled.querySelector('.ds-badge')).toBeNull();
+  await act(async () => { disabled.dispatchEvent(new FocusEvent('focusin', { bubbles: true })); });
+  const tooltip = container.querySelector('[role="tooltip"]')!;
+  expect(tooltip.textContent).toContain('Label Studio: Coming soon');
+  expect(disabled.getAttribute('aria-describedby')?.split(' ')).toContain(tooltip.id);
 });
 it('Workspace selects field evidence on its page, records reason and enables approval after correction', async () => {
   let original = fixture('review'); original.pages.push({ ...structuredClone(original.pages[0]), page_number: 2 }); original.source_files[0].page_count = 2;
@@ -92,6 +104,11 @@ it('Workspace selects field evidence on its page, records reason and enables app
   function Page() { const [doc, setDoc] = useState(original); return <Workspace doc={doc} onSaved={next => { saved = next; setDoc(next); }} />; }
   await render(<Page />);
   expect(button('Approve').disabled).toBe(true); expect(container.textContent).toContain('blocking issues before approval');
+  expect(container.querySelectorAll('.ds-notice')).toHaveLength(1);
+  expect(container.querySelector('.ds-notice')?.textContent).toContain('blockers.');
+  await click(container.querySelector('a[href="#workspace-issues"]')!);
+  expect(Array.from(container.querySelectorAll('[role="tab"]')).find(n => n.textContent?.startsWith('Issues'))?.getAttribute('aria-selected')).toBe('true');
+  await click(Array.from(container.querySelectorAll('[role="tab"]')).find(n => n.textContent === 'Fields')!);
   await click(button('Supplier name'));
   expect(container.textContent).toContain('Page 2 of 2');
   await vi.waitFor(() => expect(container.querySelector('[data-testid="bbox"]')?.getAttribute('aria-label')).toContain('Supplier name (selected)'));
