@@ -12,6 +12,12 @@ Amounts, prices, totals and quantities are decimal strings (up to six fractional
 
 Targeted extraction retains only selected profile keys. Generic row cells are stored as ordinary values in `data.line_items`, with separate pointer-addressed evidence. Header-only profiles omit rows. Optional transaction `required_fields` (JSON pointers) and `field_types` (pointer-to-type map) preserve profile requirements and types across issue recomputation and correction; they are not business data. Amount/quantity fields normalize to decimal strings, integer fields to safe integers, and dates to ISO dates. Missing required values remain null and create blocking `MISSING_REQUIRED` issues. Auto transactions omit this metadata and retain standard document rules.
 
+### Extraction modes and profile snapshots
+
+Home defaults to Auto (AI decides). Targeted sends a selected profile's header fields and repeating row columns. User profiles and the selected mode are stored in `idp-studio.profiles.v1` and `idp-studio.mode.v1` in localStorage. Builtins are read-only; duplication creates an independent user profile.
+
+Before extraction, `idp-studio.batch-modes.v1` records the used mode and a deep-copied profile keyed by batch id. Retry reads this snapshot, not the current Home selection or edited/deleted profile. This sidecar leaves the strict v2 envelope and IndexedDB schema unchanged. Workspace labels use the same snapshot; full evidence JSON remains the unmodified envelope. Targeted clean JSON exports transaction data without Auto's extra `document_type` wrapper. Clear all local data removes profiles, mode and snapshots. Blocked storage retains settings and snapshots for this session only.
+
 ## Review and export
 
 `correctField` returns a new batch, increments revisions, records a local-user review and marks existing evidence as human-corrected without changing its geometry. Corrections invalidate prior approval. `recomputeIssues` resolves obsolete issues and retains resolved/waived history; recurring conditions append new issues. `approveTransaction` refuses open blockers and records explicit human approval. Batch/document statuses and advisory validation are recomputed. Workspace JSON provides clean business data or the complete batch; export and copy are disabled for ineligible transactions. Evidence boxes remain read-only.

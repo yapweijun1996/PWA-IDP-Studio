@@ -1,3 +1,5 @@
+import { loadBatchMode, saveBatchMode } from '../lib/profiles';
+import type { AgentStep, ExtractionProfile } from '../lib/agent/contract';
 import { useCallback, useEffect, useState } from 'react';
 import { getBatch, getFile, listBatches, putBatch, putFile } from '../lib/db';
 import { runExtraction } from '../lib/extract';
@@ -26,6 +28,7 @@ export function App() {
   const [docs, setDocs] = useState<Batch[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [steps, setSteps] = useState<AgentStep[]>([]);
   const online = useOnlineStatus();
   const [offlineUpload, setOfflineUpload] = useState(false);
   useEffect(() => { if (online) setOfflineUpload(false); }, [online]);
@@ -52,12 +55,13 @@ export function App() {
   }, [route]);
 
   /** Renders pages and runs extraction for an already stored original; a failure keeps the batch as `failed` so it can be retried. */
-  const extractInto = async ({ file, info, manifest, id, createdAt, pending }: { file: File | Blob; info: Parameters<typeof buildBatch>[0]['file']; manifest: Parameters<typeof buildBatch>[0]['pages']; id: string; createdAt: string; pending: Batch }) => {
+  const extractInto = async ({ file, info, manifest, id, createdAt, pending, profile }: { file: File | Blob; info: Parameters<typeof buildBatch>[0]['file']; manifest: Parameters<typeof buildBatch>[0]['pages']; id: string; createdAt: string; pending: Batch; profile?: ExtractionProfile }) => {
     const name = info.filename;
     try {
       setBusy(`${name}: rendering pages…`);
+      setSteps([]);
       const pages = await renderFile(file, { maxPages: settings.maxPages });
-      const batch = await runExtraction({ batchId: id, createdAt, file: info, manifest, pages, settings, onStatus: m => setBusy(`${name}: ${m}`) });
+      const batch = await runExtraction({ batchId: id, createdAt, file: info, blob: file, profile, manifest, pages, settings, onStep: step => setSteps(previous => [...previous.slice(-19), step]), onStatus: m => setBusy(`${name}: ${m}`) });
       await putBatch(batch);
     } catch (e) {
       const failed = recomputeIssues({ ...pending, pages: pending.pages.map(p => ({ ...p, status: 'error' as const, unassigned_reason: 'review_pending' as const })) });
@@ -86,13 +90,14 @@ export function App() {
       pending.batch.status = 'processing';
       await putBatch(pending);
       await refresh();
-      await extractInto({ file: blob, info, manifest, id: batchId, createdAt: existing.batch.created_at, pending });
+      await extractInto({ file: blob, info, manifest, id: batchId, createdAt: existing.batch.created_at, pending, profile: loadBatchMode(batchId)?.profile });
       await refresh();
     } catch (e) { setError(String((e as Error).message)); }
     setBusy(null);
   };
 
-  const process = async (files: File[]) => {
+  const process = async (files: File[], selectedProfile?: ExtractionProfile) => {
+    const profile = selectedProfile ? structuredClone(selectedProfile) : undefined;
     if (navigator.onLine === false) { setOfflineUpload(true); return; }
     if (busy) return;
     let first: string | null = null;
@@ -116,11 +121,12 @@ export function App() {
         placeholder.transactions = [];
         const pending = recomputeIssues(placeholder);
         pending.batch.status = 'processing';
+        saveBatchMode(id, profile ? { kind: 'targeted', profileId: profile.id } : { kind: 'auto' }, profile);
         await putBatch(pending);
         setOfflineUpload(false);
         first ??= id;
         await refresh();
-        await extractInto({ file, info, manifest, id, createdAt, pending });
+        await extractInto({ file, info, manifest, id, createdAt, pending, profile });
         await refresh();
       } catch (e) { setError(`${file.name}: ${String((e as Error).message)}`); }
     }
@@ -136,8 +142,8 @@ export function App() {
   else if (route.name === 'doc') {
     if (current === undefined) body = <Spinner label="Loading document…" />;
     else if (current === null) body = <Notice tone="error">Document not found. <a href="#/documents">Back to Documents</a></Notice>;
-    else body = <Workspace key={current.batch.batch_id} doc={current} busy={busy} onRetry={() => retry(current.batch.batch_id)} transactionId={route.transactionId} onSaved={d => { setCurrent(d); void refresh(); }} />;
-  } else body = <Home onRetry={retry} docs={docs} settings={settings} busy={busy} search={search} loading={loading} offlineUpload={offlineUpload} onFiles={process} onDeleted={refresh} />;
+    else body = <Workspace steps={steps} key={current.batch.batch_id} doc={current} busy={busy} onRetry={() => retry(current.batch.batch_id)} transactionId={route.transactionId} onSaved={d => { setCurrent(d); void refresh(); }} />;
+  } else body = <Home steps={steps} onRetry={retry} docs={docs} settings={settings} busy={busy} search={search} loading={loading} offlineUpload={offlineUpload} onFiles={process} onDeleted={refresh} />;
   return (
     <AppShell brand="IDP Studio" items={navItems(route.name, reviewRows(docs).length)} search={route.name === 'home' || route.name === 'documents' ? <SearchInput placeholder="Search documents…" value={search} onChange={setSearch} /> : undefined} right={<OnlineStatus />} footer={<>Version {APP_VERSION} · Build {BUILD_ID}</>}>
       {error && <Notice tone="error">{error}</Notice>}

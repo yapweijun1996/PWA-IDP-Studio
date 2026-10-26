@@ -45,6 +45,22 @@ async function pwa(b) {
   await b.eval(`Promise.race([navigator.serviceWorker.ready.then(()=>true),new Promise((_,reject)=>setTimeout(()=>reject(new Error('SW ready timeout')),30000))])`);
 }
 export const scenarios = [
+  { name: 'targeted-mode', async run({b,mocks}) {
+    mocks.setVariant('targeted');
+    await radio(b, 'Extraction mode', 'targeted');
+    await b.eval(`(() => { const e = document.querySelector('main select'); e.value = 'doc-info-rows'; e.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await drop(b, 'targeted.png'); await text(b, 'DOC-TARGET-001');
+    for (const name of ['document_no','transaction_date','remarks','row_no','stock_code','stock_description','quantity','uom','unit_price','line_subtotal']) assert.ok(posts(mocks).some(r => r.body.includes(name)), `Prompt includes ${name}`);
+    for (const label of ['Document number','Transaction date','Remarks','Row number','Stock code','Stock description','Quantity','UOM','Unit price','Line subtotal']) await text(b, label);
+    assert.equal(await b.eval('document.querySelectorAll("table tbody tr").length'), 2);
+    await b.eval(`document.querySelector('button[aria-label="Edit Stock code row 1"]').click()`);
+    await field(b, 'Edit Stock code', 'SKU-EDIT'); await click(b, 'Save correction'); await text(b, 'SKU-EDIT');
+    await click(b, 'JSON');
+    const output = await b.eval('JSON.parse(document.querySelector("pre").textContent)');
+    assert.deepEqual(Object.keys(output).sort(), ['document_no','transaction_date','remarks','line_items'].sort());
+    assert.equal(output.line_items[0].stock_code, 'SKU-EDIT');
+    assert.deepEqual(Object.keys(output.line_items[0]).sort(), ['row_no','stock_code','stock_description','quantity','uom','unit_price','line_subtotal'].sort());
+  } },
   { name: 'shell', async run({b}) { await shell(b); } },
   { name: 'agent-tools', async run({b,mocks}) {
     mocks.setVariant('agent-tools');

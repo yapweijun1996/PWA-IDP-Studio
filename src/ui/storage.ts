@@ -1,3 +1,4 @@
+import { clearProfiles } from '../lib/profiles';
 import type { Batch } from '../contract/types';
 import type { BatchRecord } from '../lib/db';
 import type { DocumentRecord } from '../lib/types';
@@ -47,5 +48,6 @@ export function deleteLocalBatch(batch: Batch): Promise<void> {
 }
 export async function clearLocalData(): Promise<void> {
   await mutate(tx => { for (const name of ['batches', 'files', 'documents']) tx.objectStore(name).clear(); });
+  clearProfiles();
   for (const key of ['idp-studio.settings.v1', 'idp-studio.tables', 'idp-studio.theme', 'idp-studio.sidebar']) localStorage.removeItem(key);
 }

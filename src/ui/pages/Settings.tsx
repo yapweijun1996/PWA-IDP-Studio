@@ -1,3 +1,4 @@
+import { ProfileEditor } from '../ProfileEditor';
 import { useState } from 'react';
 import { PROVIDERS, diagnoseConnection, providerInfo, type DiagnosticStep } from '../../lib/providers';
 import { clampMaxPages, DEFAULT_MODELS, loadSettings, saveSettings, type Settings } from '../../lib/settings';
@@ -26,6 +27,7 @@ export function SettingsPage({ settings, onChange, migration, batchCount = 0, on
       <Field label="Default page size"><Select value={preferences.pageSize} onChange={e => setPreferences({ ...preferences, pageSize: Number(e.target.value) })}>{[10,25,50].map(n => <option key={n} value={n}>{n}</option>)}</Select></Field>
       <Segmented label="Table density" value={preferences.density} onChange={value => setPreferences({ ...preferences, density: value as 'comfortable' | 'compact' })} options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]} />
     </Card>
+    <ProfileEditor key={confirm ? 'clearing' : 'profiles'} />
     <Card><h2>AI provider</h2><Segmented label="AI provider" value={s.provider} onChange={value => set({ provider: value as ProviderId })} options={PROVIDERS.map(provider => ({ value: provider.id, label: provider.label }))} /><p className="ds-muted">Pages are sent to {info.recipient}.</p>
       {info.needsKey && <Field label={`${info.label} API key`} hint={`Stored in this browser; sent only to ${info.recipient}.`}><Input type="password" autoComplete="off" value={s.keys[s.provider as Exclude<ProviderId, 'demo'>] ?? ''} onChange={e => set({ keys: { ...s.keys, [s.provider]: e.target.value } })} /></Field>}
       <Field label="Model"><Input value={s.models[s.provider] ?? ''} placeholder={DEFAULT_MODELS[s.provider]} onChange={e => set({ models: { ...s.models, [s.provider]: e.target.value } })} /></Field>
@@ -45,7 +47,7 @@ export function SettingsPage({ settings, onChange, migration, batchCount = 0, on
       </div>
       <a href="#/design">Design system component sheet</a></Card>
     <Dialog open={confirm} onClose={() => !clearing && setConfirm(false)} title="Clear all local data?">
-      <p>This deletes all local batches, original files, legacy documents, review history, provider API keys, extraction settings, theme, sidebar and table preferences from this browser. Data held by providers and unrelated browser data are not deleted.</p>
+      <p>This deletes all local batches, original files, legacy documents, review history, provider API keys, extraction settings, extraction profiles and batch mode snapshots, theme, sidebar and table preferences from this browser. Data held by providers and unrelated browser data are not deleted.</p>
       <Button disabled={clearing} onClick={() => setConfirm(false)}>Cancel</Button><Button variant="danger" disabled={clearing} onClick={async () => { setClearing(true); try { await clearLocalData(); const defaults = loadSettings(); setS(defaults); onChange(defaults); setPreferences({ pageSize: 10, density: 'comfortable' }); setTheme('light'); setSidebar('expanded'); await onCleared?.(); setConfirm(false); } catch (e) { setError(String(e)); } finally { setClearing(false); } }}>Delete all local data</Button>
     </Dialog>
   </section>;
