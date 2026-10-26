@@ -1,0 +1,3 @@
+import { cloneElement, useId, type ReactElement, type InputHTMLAttributes } from 'react';
+/** Links label, hint and error to one input child. */
+export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: ReactElement<InputHTMLAttributes<HTMLInputElement>> }) { const id = useId(); return <div className="ds-field"><label htmlFor={id}>{label}</label>{cloneElement(children, { id, 'aria-describedby': hint || error ? `${id}-hint` : undefined, 'aria-invalid': error ? true : undefined })}{(hint || error) && <small id={`${id}-hint`} className={error ? 'ds-tone-danger' : 'ds-muted'}>{error ?? hint}</small>}</div>; }

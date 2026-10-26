@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { Button, Spinner, Toast } from '../ds';
 
 type Phase = 'idle' | 'updating' | 'failed';
 
@@ -23,18 +24,13 @@ export function UpdatePrompt() {
 
   return (
     <>
-      {phase === 'updating' && (
-        <div className="overlay" role="status" aria-live="polite">
-          <div className="spinner" />
-          <p>Updating IDP Studio…</p>
-        </div>
-      )}
-      <div className="toast" role="alert">
+      <Toast>
+        {phase === 'updating' && <Spinner label="Updating IDP Studio…" />}
         <span>{phase === 'failed' ? 'Update failed. Try again.' : 'New version available.'}</span>
-        <button className="btn primary" disabled={phase === 'updating'} onClick={update}>
+        <Button variant="primary" loading={phase === 'updating'} onClick={update}>
           {phase === 'failed' ? 'Retry' : 'Update now'}
-        </button>
-      </div>
+        </Button>
+      </Toast>
     </>
   );
 }

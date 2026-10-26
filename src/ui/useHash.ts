@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 
-export type Route = { name: 'home' } | { name: 'settings' } | { name: 'doc'; id: string };
+export type Route = { name: 'home' } | { name: 'settings' } | { name: 'design' } | { name: 'doc'; id: string };
 
 export function parse(hash: string): Route {
   const p = hash.replace(/^#\/?/, '').split('/');
   if (p[0] === 'settings') return { name: 'settings' };
+  if (p[0] === 'design') return { name: 'design' };
   if (p[0] === 'doc' && p[1]) return { name: 'doc', id: decodeURIComponent(p[1]) };
   return { name: 'home' };
 }

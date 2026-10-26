@@ -19,3 +19,11 @@ Use the typed `Icon` component with `sm`, `md`, or `lg` CSS-token sizes. Icons a
 decorative by default; pass `label` when an icon needs its own accessible name.
 
 Out of scope for this slice: TIFF input, Review Queue, Label Studio, Templates, Audit Logs pages.
+
+## Design system
+
+Visit `#/design` for the component inventory. Public APIs live in `src/ds/index.ts`;
+theme/layout values in `src/ds/tokens.css`, component styles in
+`src/ds/components.css`. See [UI component contracts](docs/UI-COMPONENTS.md).
+`npm run check` runs types, icons, the per-file SSOT ratchet, and tests.
+Home and Workspace remain unchanged for the subsequent Admin Panel phase.

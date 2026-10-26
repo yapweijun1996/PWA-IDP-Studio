@@ -1,0 +1,3 @@
+import { useId } from 'react';
+/** Native radios supply arrow navigation and exclusive selection. */
+export function Segmented({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: readonly { value: string; label: string; disabled?: boolean }[] }) { const name = useId(); return <div role="radiogroup" aria-label={label} className="ds-segmented">{options.map(option => <label key={option.value}><input type="radio" name={name} value={option.value} checked={value === option.value} disabled={option.disabled} onChange={() => onChange(option.value)} /><span>{option.label}</span></label>)}</div>; }
