@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "e2e": "node scripts/e2e.mjs",
+    "e2e:live": "node scripts/e2e.mjs --base-url=https://yapweijun1996.github.io/PWA-IDP-Studio/",
     "dev": "vite",
     "icons": "node scripts/build-icons.mjs",
     "check:icons": "node scripts/build-icons.mjs --check",

@@ -22,6 +22,8 @@ decorative by default; pass `label` when an icon needs its own accessible name.
 
 Supported uploads: PDF, PNG and JPG. TIFF and WebP are not supported. Label Studio, Templates, JSON Explorer, AI Agents and Validation are disabled navigation items with “Coming soon” explanations.
 
+Offline contract: the cached app shell and stored documents remain available, including review, editing, approval and export of stored batches (subject to validation gates). Uploads and AI extraction require a connection. Offline uploads are refused before anything is stored or sent, are never queued, and show a persistent warning until reconnection or a successful upload.
+
 ## Design system
 
 Visit `#/design` for the component inventory. Public APIs live in `src/ds/index.ts`;
@@ -35,3 +37,13 @@ Search matches file names and document types on Home/Documents. Review counts co
 UI storage adapters live in `src/ui/storage.ts` because the library exposes neither clear-all nor file-aware deletion. Deleting an upload removes its batch and unshared originals; a migrated upload's matching legacy source is also removed so startup migration cannot recreate it. Originals referenced by other batches or unrelated legacy records remain. Clear all local data explicitly deletes batches, originals, legacy documents, reviews, credentials and app preferences, not provider-side or unrelated browser data.
 
 `src/ui/behavior.test.ts` imports the JSX page scenarios because the existing Vitest include pattern discovers `.test.ts` files. The empty `src/ui/styles.css` is retained only because `src/main.tsx` imports it and is outside this change's permitted edit scope; all production UI rules are in the DS.
+
+## Browser E2E
+
+`npm run e2e` builds and tests the actual PWA in headless Chrome over CDP, without
+additional npm dependencies (Node 23+ and installed Chrome required).
+Use `npm run e2e -- --only=shell` for one scenario; `npm run e2e:live` runs only
+read-only deployed-site checks, with all provider calls blocked.
+Set `CHROME_PATH` for a non-default Chrome installation. Failures save screenshots,
+DOM text and redacted logs under `artifacts/e2e/`. See [E2E guide](docs/E2E.md)
+for scenario assertions, network safety, retry policy and limitations.

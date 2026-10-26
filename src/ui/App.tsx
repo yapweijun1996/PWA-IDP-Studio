@@ -14,7 +14,7 @@ import { Documents } from './pages/Documents';
 import { ReviewQueue } from './pages/ReviewQueue';
 import { navItems, reviewRows } from './nav';
 import { APP_VERSION, BUILD_ID } from './version';
-import { AppShell, Notice, OnlineStatus, SearchInput, Spinner } from '../ds';
+import { AppShell, Notice, OnlineStatus, SearchInput, Spinner, useOnlineStatus } from '../ds';
 import { ComponentSheet } from '../ds/ComponentSheet';
 import { UpdatePrompt } from './UpdatePrompt';
 import { go, useRoute } from './useHash';
@@ -26,6 +26,9 @@ export function App() {
   const [docs, setDocs] = useState<Batch[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const online = useOnlineStatus();
+  const [offlineUpload, setOfflineUpload] = useState(false);
+  useEffect(() => { if (online) setOfflineUpload(false); }, [online]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [migration, setMigration] = useState<{ migrated: number; skipped: number }>();
@@ -49,6 +52,7 @@ export function App() {
   }, [route]);
 
   const process = async (files: File[]) => {
+    if (navigator.onLine === false) { setOfflineUpload(true); return; }
     if (busy) return;
     let first: string | null = null;
     setError('');
@@ -72,6 +76,7 @@ export function App() {
         const pending = recomputeIssues(placeholder);
         pending.batch.status = 'processing';
         await putBatch(pending);
+        setOfflineUpload(false);
         first ??= id;
         await refresh();
         try {
@@ -100,7 +105,7 @@ export function App() {
     if (current === undefined) body = <Spinner label="Loading document…" />;
     else if (current === null) body = <Notice tone="error">Document not found. <a href="#/documents">Back to Documents</a></Notice>;
     else body = <Workspace key={current.batch.batch_id} doc={current} transactionId={route.transactionId} onSaved={d => { setCurrent(d); void refresh(); }} />;
-  } else body = <Home docs={docs} settings={settings} busy={busy} search={search} loading={loading} onFiles={process} onDeleted={refresh} />;
+  } else body = <Home docs={docs} settings={settings} busy={busy} search={search} loading={loading} offlineUpload={offlineUpload} onFiles={process} onDeleted={refresh} />;
   return (
     <AppShell brand="IDP Studio" items={navItems(route.name, reviewRows(docs).length)} search={route.name === 'home' || route.name === 'documents' ? <SearchInput placeholder="Search documents…" value={search} onChange={setSearch} /> : undefined} right={<OnlineStatus />} footer={<>Version {APP_VERSION} · Build {BUILD_ID}</>}>
       {error && <Notice tone="error">{error}</Notice>}

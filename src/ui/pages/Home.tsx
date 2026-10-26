@@ -4,10 +4,11 @@ import type { Settings } from '../../lib/settings';
 import { providerInfo } from '../../lib/providers';
 import { Card, Dropzone, Notice, PageHeader, Progress, StatCard } from '../../ds';
 import { BatchTable } from '../BatchTable';
-export function Home({ docs, settings, busy, onFiles, search = '', loading, onDeleted }: { docs: Batch[]; settings: Settings; busy: string | null; onFiles: (files: File[]) => void; search?: string; loading?: boolean; onDeleted?: () => void | Promise<void> }) {
+export function Home({ docs, settings, busy, onFiles, search = '', loading, onDeleted, offlineUpload = false }: { docs: Batch[]; settings: Settings; busy: string | null; onFiles: (files: File[]) => void; search?: string; loading?: boolean; onDeleted?: () => void | Promise<void>; offlineUpload?: boolean }) {
   const summary = batchSummary(docs);
   return <section className="ds-sheet">
     <PageHeader breadcrumb="Home" title="Upload Documents" description="Upload PDF, PNG or JPG files to extract and structure your documents using AI." />
+    {offlineUpload && <Notice tone="warning">You are offline. Uploads need a connection to the AI provider, so nothing was stored or sent. Your saved documents are still available.</Notice>}
     <Dropzone multiple accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" label="Drag and drop documents here" hint={`Supports PDF, PNG, JPG. Up to ${settings.maxPages} pages per file are processed. You can upload multiple files at once. TIFF and WebP are not supported.`} onFiles={onFiles} />
     <p>Pages are sent to <strong>{providerInfo(settings.provider).recipient}</strong>. <a href="#/settings">Change provider</a></p>
     {busy && <Notice><Progress label={busy} /></Notice>}

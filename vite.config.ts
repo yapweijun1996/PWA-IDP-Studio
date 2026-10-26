@@ -23,7 +23,7 @@ const base = '/PWA-IDP-Studio/';
 
 export default defineConfig({
   base,
-  define: { __APP_VERSION__: JSON.stringify(version), __BUILD_ID__: JSON.stringify(buildId()) },
+  define: { __APP_VERSION__: JSON.stringify(version), __BUILD_ID__: JSON.stringify(process.env.IDP_BUILD_ID || buildId()) },
   plugins: [
     react(),
     VitePWA({
