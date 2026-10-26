@@ -6,7 +6,8 @@ import { loadSettings, type Settings } from '../lib/settings';
 import type { DocumentRecord, Envelope } from '../lib/types';
 import { Home } from './Home';
 import { SettingsPage } from './Settings';
-import { Sidebar } from './Sidebar';
+import { AppShell, OnlineStatus } from '../ds';
+import { ComponentSheet } from '../ds/ComponentSheet';
 import { UpdatePrompt } from './UpdatePrompt';
 import { go, useRoute } from './useHash';
 import { Workspace } from './Workspace';
@@ -29,13 +30,11 @@ export function App() {
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [current, setCurrent] = useState<DocumentRecord | null | undefined>(undefined);
-  const [collapsed, setCollapsed] = useState(route.name === 'home');
 
   const refresh = useCallback(() => listDocuments().then(setDocs).catch(() => setDocs([])), []);
   useEffect(() => void refresh(), [refresh]);
 
   useEffect(() => {
-    setCollapsed(route.name === 'home');
     if (route.name !== 'doc') return setCurrent(undefined);
     let live = true;
     getDocument(route.id).then((d) => live && setCurrent(d ?? null));
@@ -69,6 +68,7 @@ export function App() {
 
   let body;
   if (route.name === 'settings') body = <SettingsPage settings={settings} onChange={setSettings} />;
+  else if (route.name === 'design') body = <ComponentSheet />;
   else if (route.name === 'doc') {
     if (current === undefined) body = <p className="page muted">Loading…</p>;
     else if (current === null) body = <p className="page">Document not found. <a href="#/">Back</a></p>;
@@ -79,11 +79,13 @@ export function App() {
   } else body = <Home docs={docs} settings={settings} busy={busy} onFiles={process} />;
 
   return (
-    <div className={`shell ${collapsed ? 'is-collapsed' : ''}`}>
-      <div className="safe-top" aria-hidden />
-      <Sidebar route={route} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
-      <main>{body}</main>
+    <AppShell items={[
+      { href: '#/', label: 'Home', icon: 'home', active: route.name === 'home' },
+      { href: '#/settings', label: 'Settings', icon: 'settings', active: route.name === 'settings' },
+      { href: '#/design', label: 'Design system', icon: 'sliders', active: route.name === 'design' },
+    ]} right={<OnlineStatus />} footer="IDP Studio">
+      {body}
       <UpdatePrompt />
-    </div>
+    </AppShell>
   );
 }

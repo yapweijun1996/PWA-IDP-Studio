@@ -11,7 +11,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "check:ssot": "node scripts/check-ssot.mjs",
+    "check": "npm run typecheck && npm run check:icons && npm run check:ssot && npm test"
   },
   "dependencies": {
     "@mariozechner/pi-agent-core": "0.73.1",

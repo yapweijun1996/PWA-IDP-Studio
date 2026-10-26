@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { PROVIDERS, providerInfo } from '../lib/providers';
 import { DEFAULT_MODELS, saveSettings, type Settings } from '../lib/settings';
 import type { ProviderId } from '../lib/types';
+import { Button, Card, Field, Input, PageHeader, Segmented, Notice, useTheme, type Theme } from '../ds';
 
 export function SettingsPage({ settings, onChange }: { settings: Settings; onChange: (s: Settings) => void }) {
   const [s, setS] = useState(settings);
   const [saved, setSaved] = useState(false);
   const info = providerInfo(s.provider);
+  const { theme, setTheme } = useTheme();
 
   const set = (patch: Partial<Settings>) => {
     setS({ ...s, ...patch });
@@ -14,43 +16,33 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
   };
 
   return (
-    <section className="page narrow">
-      <h1>Settings</h1>
-      <fieldset>
-        <legend>AI provider</legend>
-        {PROVIDERS.map((p) => (
-          <label key={p.id} className="radio">
-            <input type="radio" name="provider" checked={s.provider === p.id} onChange={() => set({ provider: p.id })} />
-            <span>
-              <strong>{p.label}</strong>
-              <small>Pages are sent to {p.recipient}</small>
-            </span>
-          </label>
-        ))}
-      </fieldset>
+    <section className="ds-sheet">
+      <PageHeader title="Settings" description="Provider credentials stay in this browser." />
+      <Card>
+      <h2>Appearance</h2>
+      <Segmented label="Theme" value={theme} onChange={value => setTheme(value as Theme)} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'system', label: 'System' }]} />
+      <h2>AI provider</h2>
+      <Segmented label="AI provider" value={s.provider} onChange={value => set({ provider: value as ProviderId })} options={PROVIDERS.map(provider => ({ value: provider.id, label: provider.label }))} />
+      <p className="ds-muted">Pages are sent to {info.recipient}.</p>
 
       {info.needsKey && (
-        <label className="field">
-          <span>{info.label} API key</span>
-          <input
+        <Field label={`${info.label} API key`} hint={`Stored only in this browser. Never sent anywhere except ${info.recipient}.`}>
+          <Input
             type="password"
             autoComplete="off"
             value={s.keys[s.provider as Exclude<ProviderId, 'demo'>] ?? ''}
             onChange={(e) => set({ keys: { ...s.keys, [s.provider]: e.target.value } })}
           />
-          <small>Stored only in this browser. Never sent anywhere except {info.recipient}.</small>
-        </label>
+        </Field>
       )}
-      <label className="field">
-        <span>Model</span>
-        <input
+      <Field label="Model">
+        <Input
           value={s.models[s.provider] ?? ''}
           placeholder={DEFAULT_MODELS[s.provider]}
           onChange={(e) => set({ models: { ...s.models, [s.provider]: e.target.value } })}
         />
-      </label>
-      <button
-        className="btn primary"
+      </Field>
+      <Button variant="primary"
         onClick={() => {
           saveSettings(s);
           onChange(s);
@@ -58,8 +50,9 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
         }}
       >
         Save
-      </button>
-      {saved && <span role="status" className="muted"> Saved.</span>}
+      </Button>
+      {saved && <Notice>Saved.</Notice>}
+      </Card>
     </section>
   );
 }
