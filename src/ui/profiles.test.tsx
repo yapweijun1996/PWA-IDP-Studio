@@ -49,6 +49,17 @@ it('creates a profile only after valid fields and duplicates a locked builtin', 
   expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Edit Document info')).toBe(false);
   expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Delete Document info')).toBe(false);
 });
+it('saves the row-transaction option in a custom profile snapshot', async () => {
+  await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
+  await click('Duplicate Document info + rows');
+  await act(async () => { const label = [...document.querySelectorAll('label')].find(l => l.textContent === 'Each row is a transaction')!; (label.control as HTMLInputElement).click(); });
+  await click('Save profile');
+  const profile = loadProfiles().find(p => p.name === 'Document info + rows copy')!;
+  expect(profile.rowsAsTransactions).toBe(true);
+  saveBatchMode('statement', { kind: 'targeted', profileId: profile.id }, profile);
+  saveProfiles([{ ...profile, rowsAsTransactions: false }]);
+  expect(loadBatchMode('statement')!.profile!.rowsAsTransactions).toBe(true);
+});
 it('confirms deletion and preserves the profile when cancelled', async () => {
   saveProfiles([{ ...BUILTIN_PROFILES[0], id: 'shipping', name: 'Shipping', builtin: false }]);
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));

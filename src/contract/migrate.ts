@@ -15,6 +15,7 @@ export function migrateV1Record(record: DocumentRecord, fileInfo: MigrationFileI
     batchId: `legacy_${record.id}`, createdAt: new Date(record.createdAt).toISOString(),
     file: fileInfo.file, pages: fileInfo.pages, renderedPageCount: Math.min(fileInfo.pages.length, Math.max(1, record.pageCount)),
     model: old.model,
+    rowsAsTransactions: false,
     output: {
       document_type: unmapped ? 'unknown' : old.document_type as BuildInput['output']['document_type'],
       fields: Object.entries(old.extraction).filter(([key]) => key !== 'line_items').map(([key, value]) => {

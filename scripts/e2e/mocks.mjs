@@ -7,6 +7,13 @@ export function invoice(bad = false) {
 export function targeted() {
   return { document_type: 'unknown', fields: Object.entries({ document_no: 'DOC-TARGET-001', transaction_date: '2026-10-26', remarks: 'Targeted delivery' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [1, 2].map(n => Object.fromEntries(Object.entries({ row_no: String(n), stock_code: `SKU-${n}`, stock_description: `Stock ${n}`, quantity: '2', uom: 'PCS', unit_price: '5.00', line_subtotal: '10.00' }).map(([key, value]) => [key, { value, page: 1, bbox: [300 + n * 50, 100, 340 + n * 50, 900], confidence: 0.98 }]))) };
 }
+export function statement() {
+  return {
+    document_type: 'statement',
+    fields: Object.entries({ supplier_name: 'E2E Bank', statement_date: '2026-10-27', period: 'October 2026', opening_balance: '0.00', closing_balance: '40.00', currency: 'SGD', total_amount: '40.00' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 1 })),
+    line_items: [1, 2, 3, 4].map(n => Object.fromEntries(Object.entries({ date: n === 3 ? '2026-02-30' : '2026-10-27', reference: `ENTRY-${n}`, description: `Statement entry ${n}`, amount: '10.00', balance: `${n * 10}.00` }).map(([key, value]) => [key, { value, page: 1, bbox: [200 + n * 100, 100, 250 + n * 100, 900], confidence: 1 }]))),
+  };
+}
 export function responseStream(text) {
   const item = { id: 'msg_e2e', type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text, annotations: [] }] };
   const response = { id: 'resp_e2e', object: 'response', created_at: Math.floor(Date.now() / 1000), status: 'completed', model: 'demo-auto', output: [item], usage: { input_tokens: 100, output_tokens: 100, total_tokens: 200, input_tokens_details: { cached_tokens: 0 }, output_tokens_details: { reasoning_tokens: 0 } } };
@@ -107,7 +114,7 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
           : toolResponseStream('crop_zoom', { page: 1, ymin: 100, xmin: 100, ymax: 500, xmax: 900, scale: 6 }, 'crop_e2e'), 'text/event-stream');
         return;
       }
-      const output = variant === 'targeted' || variant === 'validation-targeted' ? targeted() : invoice(variant === 'bad');
+      const output = variant === 'statement-entries' ? statement() : variant === 'targeted' || variant === 'validation-targeted' ? targeted() : invoice(variant === 'bad');
       if (variant === 'validation-targeted') {
         output.fields.find(f => f.key === 'document_no').value = '';
         output.fields.find(f => f.key === 'remarks').confidence = 0.5;

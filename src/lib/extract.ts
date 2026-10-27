@@ -28,6 +28,7 @@ Use the following JSON shape for submit_result (plain JSON text only if tools ar
 }
 Use these keys when present: ${AUTO_HEADER_KEYS.join(', ')}.
 Dates use YYYY-MM-DD; currency uses an ISO code.
+For statements, preserve supplier, statement_date, period, opening_balance, closing_balance, currency and total_amount as header fields. Extract every entry in line_items with date, reference, description, debit, credit, balance and amount when present. Statement row cells use {value,page,bbox,confidence}, with the same evidence coordinates as header fields.
 Never guess: use null with low confidence when a value is not readable. Amounts and quantities are decimal strings with no thousands separators. Never set approval or claim page coverage.`;
 
 export interface ExtractOptions {
@@ -107,7 +108,10 @@ export async function runExtraction(opts: ExtractOptions): Promise<Batch> {
     output = makeBatch(out);
     opts.onOutput?.(out);
   };
-  const makeBatch = (out: ModelOutput) => opts.absolutePages ? buildBatchFromSegments({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, segments: [{ pages: opts.absolutePages, output: out, boundary_status: 'confirmed' }], model: { provider: settings.provider, model: modelFor(settings, settings.provider) } }) : buildBatch({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, renderedPageCount: pages.length, output: out, model: { provider: settings.provider, model: modelFor(settings, settings.provider) } });
+  const makeBatch = (out: ModelOutput) => {
+    const input = { batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, rowsAsTransactions: opts.profile ? opts.profile.rowsAsTransactions === true : undefined, model: { provider: settings.provider, model: modelFor(settings, settings.provider) } };
+    return opts.absolutePages ? buildBatchFromSegments({ ...input, segments: [{ pages: opts.absolutePages, output: out, boundary_status: 'confirmed' }] }) : buildBatch({ ...input, renderedPageCount: pages.length, output: out });
+  };
   const targeted = opts.profile ? `
 TARGETED MODE. Extract ONLY these header fields: ${JSON.stringify(opts.profile.fields)}.
 Use the fields array from the JSON contract; include every selected key, null if absent.

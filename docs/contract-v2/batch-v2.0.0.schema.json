@@ -135,6 +135,7 @@
             "application/pdf",
             "image/png",
             "image/jpeg",
+            "image/webp",
             "image/tiff"
           ]
         },
@@ -459,6 +460,7 @@
             "credit_note",
             "bank_receipt",
             "payment_document",
+            "statement",
             "statement_entry",
             "unknown"
           ]

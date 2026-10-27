@@ -47,3 +47,17 @@ it('re-renders cropped PDF regions at original-page scale while bounding output 
     await expect(source.render(1, { crop: { x: 0.9, y: 0, width: 0.2, height: 1 } })).rejects.toThrow(/crop/);
   } finally { await source.dispose(); }
 });
+it('reads WebP dimensions and renders its decoded bitmap without changing the original media', async () => {
+  const image = { width: 320, height: 180, close: vi.fn() };
+  const decode = vi.fn(async () => image);
+  vi.stubGlobal('createImageBitmap', decode);
+  const drawImage = vi.fn();
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage } as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/jpeg;base64,AAAA');
+  const original = new Blob(['webp'], { type: 'image/webp' });
+  expect(await pageManifest(original)).toEqual([{ page_number: 1, width: 320, height: 180 }]);
+  expect(await renderFile(original, { maxPages: 1 })).toEqual([{ page: 1, width: 320, height: 180, data: 'AAAA', mimeType: 'image/jpeg' }]);
+  expect(drawImage).toHaveBeenCalledWith(image, 0, 0, 320, 180, 0, 0, 320, 180);
+  expect(original.type).toBe('image/webp');
+  expect(image.close).toHaveBeenCalledTimes(2);
+});

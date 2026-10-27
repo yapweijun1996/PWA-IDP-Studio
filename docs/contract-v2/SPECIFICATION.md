@@ -35,11 +35,15 @@ Use **JSON Schema Draft 2020-12** for structural contracts and separate determin
 
 A source PDF may hold multiple *logical documents*. A source page can hold a receipt and invoice in separate regions. Document pages need not be consecutive. A payment statement could be **one logical document with many transactions**; `transaction_type=statement_entry` is supported. A purchase invoice may have invoice body, continuation tables and supporting attachments on far-apart pages.
 
+Application extraction retains a statement summary as a `statement` header transaction and creates one `statement_entry` transaction for each extracted entry. Only entry transactions use `statement_entry`; all link through the document's `transaction_ids`. Targeted profiles retain a single transaction unless optional boolean `rowsAsTransactions` is true. Expansion is a build-time projection of merged rows, not a rewrite of saved model output.
+
 ## 4. Entity invariants
 
 **Batch:** `schema_version` exactly `2.0.0`; batch revision strictly positive; timestamps RFC 3339; status does not override child statuses.
 
 **Source files:** immutable file ID and actual SHA-256 of bytes; MIME type and physical page count; optional `storage_ref` resolves through the authorized local document store, never an arbitrary untrusted remote URL. For a browser-only/PWA deployment, use IndexedDB for blobs; only small preferences in localStorage.
+
+New uploads support PDF, PNG, JPEG and WebP (`image/webp` / `.webp`). TIFF remains in the stored contract media enum for existing records but is refused for new uploads.
 
 **Pages:** exactly one Page Manifest row for each `(file_id,page_number)` from `1..page_count`, including blank, failed and unassigned pages. The page must never silently disappear because OCR found no fields. The `regions[]` list supports multiple documents; intentional overlap must raise a warning unless explicitly recorded as shared source. The example validator checks page presence but does not attempt geometric overlap detection.
 
@@ -116,7 +120,7 @@ If an ERP accepts numeric JSON amounts, generate a **separate ERP adapter payloa
 | E02 | One 100-page invoice | One document, one transaction, 100 page refs |
 | E03 | Invoice A pages 1–3 and 50 | One document with non-contiguous refs |
 | E04 | Invoice and receipt sharing page 2 | Two document regions referencing page 2; two transactions |
-| E05 | One statement, 30 payment entries | One document, 30 transactions |
+| E05 | One statement, 30 payment entries | One document, one statement header and 30 statement-entry transactions |
 | E06 | Page 42 fails OCR | Page 42 retained; issue and export block where appropriate |
 | E07 | Same invoice number on two different vendors | Two separate docs; duplicates evaluated with scoped business key |
 | E08 | Same supplier/invoice/date uploaded twice | Duplicate candidate flagged; no automatic destructive deduplication |

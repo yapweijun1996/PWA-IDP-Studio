@@ -22,6 +22,8 @@ Amount/quantity values normalize to decimal strings; integers become safe intege
 
 The v2 transaction optionally stores `required_fields` (JSON pointers) and `field_types` (pointer-to-profile-type map), separate from business `data`. These preserve selected requirements/types across issue recomputation and human corrections without leaking profile metadata into exported business values. Auto transactions omit both properties and retain their existing business rules. Row evidence points into `/line_items/<index>/<key>`; generic row values remain schema-valid JSON records. Only the human review path can approve a transaction.
 
+Auto statement rows may carry `{value,page,bbox,confidence}` cells. The parser separates values from provenance. The builder retains the statement header as type `statement` and expands each row as `statement_entry`, with entry-relative field pointers. Targeted profiles opt in using optional boolean `rowsAsTransactions`; absence/false retains existing single-transaction behavior. The flag is supplied from the profile snapshot as a build option, not a mutation of stored model output.
+
 ## Provider image forwarding and payloads
 
 The installed pi-ai provider converters already forward tool-result images for every supported API:
@@ -51,7 +53,7 @@ Segmentation renders low-resolution images (640 pixels maximum side), supplies a
 
 `SegmentPlan.window` persists the segmentation size. A missing or changed size invalidates cached windows and results and forces re-segmentation, including plans stored before this property existed.
 
-Long documents are extracted sequentially using the provider's extraction chunk size: headers come only from the first chunk, rows concatenate in page order with absolute evidence and adjusted row pointers. Later chunks are explicitly prompted not to repeat earlier data. Targeted validation already accepts absent required values as null, not submission errors; required-pointer metadata survives merging and `MISSING_REQUIRED` is judged on the final merged batch. Known limitation: each segment produces one transaction, including statements with several entries; intra-document transaction splitting is not implemented.
+Long documents are extracted sequentially using the provider's extraction chunk size: headers come only from the first chunk, rows concatenate in page order with absolute evidence and adjusted row pointers. Later chunks are explicitly prompted not to repeat earlier data. Targeted validation already accepts absent required values as null, not submission errors; required-pointer metadata survives merging and `MISSING_REQUIRED` is judged on the final merged batch. Statement transactions expand only at batch build time after merging; persisted segment outputs remain unchanged. Retry/resume retains the same row identities for the same ordered input.
 
 
 ## Agent configuration and local observability

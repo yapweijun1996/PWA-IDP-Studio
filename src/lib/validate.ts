@@ -36,7 +36,15 @@ export function checkModelOutput(value: unknown): ModelOutput {
   });
   const line_items = Array.isArray(v.line_items) ? v.line_items : [];
   if (line_items.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw new Error('line_items must contain objects');
-  return { document_type: type, fields, line_items: line_items as LineItem[] };
+  const rowEvidence: NonNullable<ModelOutput['rowEvidence']> = [];
+  const rows = line_items.map((row, index) => Object.fromEntries(Object.entries(row).map(([key, cell]) => {
+    if (!cell || typeof cell !== 'object' || Array.isArray(cell) || !Object.hasOwn(cell, 'value')) return [key, cell];
+    const metadata = cell as Record<string, unknown>;
+    const confidence = Number(metadata.confidence);
+    rowEvidence.push({ row: index, key, page: Number.isInteger(metadata.page) && (metadata.page as number) > 0 ? metadata.page as number : 1, bbox: metadata.bbox, confidence: Number.isFinite(confidence) ? Math.min(1, Math.max(0, confidence)) : 0 });
+    return [key, metadata.value ?? null];
+  })));
+  return { document_type: type, fields, line_items: rows, ...(rowEvidence.length ? { rowEvidence } : {}) };
 }
 
 /** Targeted output uses the same header array; row cells carry value and evidence. */
@@ -80,7 +88,7 @@ export function checkProfileOutput(value: unknown, profile: ExtractionProfile): 
   output.rowEvidence = [];
   if (!profile.rowFields.length && output.line_items.length) throw new Error('Rows are not allowed by this profile');
   output.includeRows = profile.rowFields.length > 0;
-  output.line_items = output.line_items.map((row, index) => {
+  output.line_items = ((raw.line_items ?? []) as Record<string, unknown>[]).map((row, index) => {
     const record = row as Record<string, unknown>;
     for (const key of Object.keys(record)) if (!profile.rowFields.some(f => f.key === key)) throw new Error(`Unexpected row key: ${key}`);
     return Object.fromEntries(profile.rowFields.map(f => {

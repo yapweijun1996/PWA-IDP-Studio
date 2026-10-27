@@ -21,7 +21,7 @@ checks freshness without writing files and also runs automatically before builds
 Use the typed `Icon` component with `sm`, `md`, or `lg` CSS-token sizes. Icons are
 decorative by default; pass `label` when an icon needs its own accessible name.
 
-Supported uploads: PDF, PNG and JPG. TIFF and WebP are not supported. Label Studio, Templates, JSON Explorer, AI Agents and Validation are disabled navigation items with “Coming soon” explanations.
+Supported uploads: PDF, PNG, JPG and WebP. TIFF is not supported for new uploads.
 
 Offline contract: the cached app shell and stored documents remain available, including review, editing, approval and export of stored batches (subject to validation gates). Uploads and AI extraction require a connection. Offline uploads are refused before anything is stored or sent, are never queued, and show a persistent warning until reconnection or a successful upload.
 

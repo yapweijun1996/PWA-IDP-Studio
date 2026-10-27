@@ -35,7 +35,7 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
     const keys = new Set(plan.segments.map(s => s.pages.join(',')));
     for (let i = results.length - 1; i >= 0; i--) if (!keys.has(results[i].pages.join(','))) results.splice(i, 1);
   };
-  const build = () => buildBatchFromSegments({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, model: { provider: opts.settings.provider, model: modelFor(opts.settings, opts.settings.provider) }, unknownPages: plan.unassigned, segments: plan.segments.flatMap(s => {
+  const build = () => buildBatchFromSegments({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, rowsAsTransactions: opts.profile ? opts.profile.rowsAsTransactions === true : undefined, model: { provider: opts.settings.provider, model: modelFor(opts.settings, opts.settings.provider) }, unknownPages: plan.unassigned, segments: plan.segments.flatMap(s => {
     const result = results.find(r => r.pages.join(',') === s.pages.join(','));
     return result?.output ? [{ pages: s.pages, output: result.output, boundary_status: s.boundary_status }] : [];
   }), failedPages: [...plan.failed, ...results.filter(r => !r.output).flatMap(r => r.pages)] });

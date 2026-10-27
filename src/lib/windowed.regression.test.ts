@@ -124,6 +124,25 @@ it('chunks long segments in order and offsets row evidence and profile pointers'
   expect(s.images.every(image => image.data === '')).toBe(true);
 });
 
+it('expands statement rows after chunk merge and resumes without altering cached outputs', async () => {
+  const count = MAX_EXTRACT_PAGES + 1;
+  const rowOutput = (page: number) => JSON.stringify({ document_type: 'statement', fields: page === 1 ? [{ key: 'closing_balance', value: '20.00', page, bbox: [0, 0, 100, 100], confidence: 1 }] : [], line_items: [{ description: { value: `Entry page ${page}`, page, bbox: [100, 100, 200, 200], confidence: 1 }, amount: { value: '10.00', page, bbox: [100, 100, 200, 200], confidence: 1 }, balance: { value: page === 1 ? '10.00' : '20.00', page, bbox: [100, 100, 200, 200], confidence: 1 } }] });
+  const s = setup(count, [decisions(range(1, SEGMENT_WINDOW)), decisions(range(SEGMENT_WINDOW, count)), rowOutput(1), rowOutput(count)]);
+  const result = await runWindowedExtraction(s.opts);
+  expect(result.batch.documents[0].transaction_ids).toEqual(['t_1', 't_1_entry_1', 't_1_entry_2']);
+  expect(result.batch.transactions.map(t => t.data)).toEqual([{ closing_balance: '20.00' }, { description: 'Entry page 1', amount: '10.00', balance: '10.00' }, { description: `Entry page ${count}`, amount: '10.00', balance: '20.00' }]);
+  expect(result.results[0].output!.line_items).toEqual(result.batch.transactions.slice(1).map(t => t.data));
+  expect(result.results[0].output!.rowEvidence!.map(e => [e.row, e.page])).toEqual([[0, 1], [0, 1], [0, 1], [1, count], [1, count], [1, count]]);
+  const snapshot = structuredClone(result.results);
+  const retry = setup(count, []);
+  const resumed = await runWindowedExtraction({ ...retry.opts, plan: result.plan, results: result.results });
+  expect(resumed.batch.transactions).toEqual(result.batch.transactions);
+  expect(resumed.results).toEqual(snapshot);
+  expect(result.results).toEqual(snapshot);
+  expect(retry.stats().calls).toBe(0);
+  expect(validateBatch(resumed.batch).ok).toBe(true);
+});
+
 it('uses unchanged single pass without segmentation and releases caller-owned images', async () => {
   const s = setup(SINGLE_PASS_PAGES, [output(1)]);
   const result = await runWindowedExtraction(s.opts);

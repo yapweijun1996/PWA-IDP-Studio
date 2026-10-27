@@ -199,7 +199,6 @@ it('keeps empty split data blocked when reclassified as a statement', () => {
   const changed = setDocumentType(split, created.document_id, 'statement', 'Statement section');
   const confirmed = confirmBoundary(changed, created.document_id, 'Confirmed');
   const empty = confirmed.transactions.find(t => t.document_id === created.document_id && !Object.keys(t.data).length)!;
-  expect(empty.transaction_type).toBe('statement_entry');
   expect(empty.status).toBe('review_required');
   expect(exportEligibleTransactions(confirmed)).not.toContain(empty.transaction_id);
   expect(confirmed.issues.some(i => i.target_id === empty.transaction_id && i.rule_code === 'MISSING_REQUIRED' && i.status === 'open')).toBe(true);

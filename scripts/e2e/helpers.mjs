@@ -19,7 +19,7 @@ export async function drop(b, name = 'invoice.png', base64, { expectProcessed = 
   await b.eval(`(async () => {
     let blob;
     if (${js(base64 || null)}) blob = new Blob([Uint8Array.from(atob(${js(base64 || '')}), c => c.charCodeAt(0))], {type:'application/pdf'});
-    else { const canvas = document.createElement('canvas'); canvas.width=200; canvas.height=200; const c=canvas.getContext('2d'); c.fillStyle='white'; c.fillRect(0,0,200,200); c.fillStyle='black'; c.fillText('E2E Invoice 10.00',10,30); blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png')); }
+    else { const canvas = document.createElement('canvas'); canvas.width=200; canvas.height=200; const c=canvas.getContext('2d'); c.fillStyle='white'; c.fillRect(0,0,200,200); c.fillStyle='black'; c.fillText('E2E Invoice 10.00',10,30); blob=await new Promise(resolve=>canvas.toBlob(resolve,${js(name.toLowerCase().endsWith('.webp') ? 'image/webp' : 'image/png')})); }
     const dataTransfer=new DataTransfer(); dataTransfer.items.add(new File([blob],${js(name)},{type:blob.type}));
     const zone=document.querySelector('section[aria-label="Drag and drop documents here"]'); if(!zone) throw new Error('Missing dropzone'); zone.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer}));
   })()`);

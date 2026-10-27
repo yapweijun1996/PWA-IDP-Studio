@@ -156,9 +156,9 @@ export function App() {
     let first: string | null = null;
     setError('');
     for (const original of files) {
-      const inferred = ({ pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' } as Record<string, string>)[original.name.split('.').pop()?.toLowerCase() ?? ''];
+      const inferred = ({ pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' } as Record<string, string>)[original.name.split('.').pop()?.toLowerCase() ?? ''];
       const mime = original.type || inferred;
-      if (!['application/pdf', 'image/png', 'image/jpeg'].includes(mime)) { setError(`${original.name}: Supported types are PDF, PNG, JPG. TIFF and WebP are not supported.`); continue; }
+      if (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(mime)) { setError(`${original.name}: Supported types are PDF, PNG, JPG, WebP. TIFF is not supported.`); continue; }
       const file = original.type ? original : new File([original], original.name, { type: mime });
       const id = `batch_${crypto.randomUUID()}`;
       const file_id = `file_${crypto.randomUUID()}`;

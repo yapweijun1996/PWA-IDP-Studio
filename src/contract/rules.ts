@@ -5,7 +5,7 @@ import { validateBatch, exportEligibleTransactions } from './validate';
 import { ruleCatalogEntry } from './ruleCatalog';
 
 export const pointerFor = (key: string) => '/' + key.replace(/~/g, '~0').replace(/\//g, '~1');
-export const decimalKey = (key: string) => /(amount|price|total|quantity)/i.test(key);
+export const decimalKey = (key: string) => /(amount|price|total|quantity)/i.test(key) || /^(debit|credit|(?:opening_|closing_|running_)?balance)$/.test(key);
 export function businessIssues(batch: Batch): Issue[] {
   const issues: Issue[] = [];
   const add = (scope: Issue['scope'], target_id: string, rule_code: string, severity: Issue['severity'], message: string) => {
@@ -18,7 +18,9 @@ export function businessIssues(batch: Batch): Issue[] {
   for (const doc of batch.documents) if (doc.boundary_status === 'needs_review') add('document', doc.document_id, 'BOUNDARY_UNCERTAIN', 'blocking', 'Document boundary needs review.');
   for (const tx of batch.transactions) {
     const doc = batch.documents.find(d => d.document_id === tx.document_id)!;
-    const required = tx.required_fields ?? REQUIRED_FIELDS[doc.document_type].map(pointerFor);
+    const entry = tx.transaction_type === 'statement_entry';
+    const required = tx.required_fields ?? (entry ? [] : REQUIRED_FIELDS[doc.document_type].map(pointerFor));
+    if (entry && ![tx.data.amount, tx.data.total_amount, tx.data.debit, tx.data.credit, tx.data.description].some(v => v !== undefined && v !== null && String(v).trim() !== '')) add('transaction', tx.transaction_id, 'MISSING_REQUIRED', 'blocking', '/amount: entry needs an amount or description.');
     for (const pointer of required) {
       let value: Value | undefined = tx.data;
       for (const part of pointer.slice(1).split('/')) {
@@ -32,8 +34,8 @@ export function businessIssues(batch: Batch): Issue[] {
         const pointer = prefix + pointerFor(key);
         const type = tx.field_types?.[pointer];
         const present = v !== null && v !== '';
-        if ((tx.field_types ? present && (type === 'amount' || type === 'quantity') : decimalKey(key)) && normalizeDecimal(v) === null) add('transaction', tx.transaction_id, 'INVALID_DECIMAL', 'error', `${pointer}: invalid decimal.`);
-        if ((tx.field_types ? present && type === 'date' : key.endsWith('_date')) && !isIsoDate(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO8601', 'blocking', `${pointer}: not ISO 8601.`);
+        if ((tx.field_types ? present && (type === 'amount' || type === 'quantity') : decimalKey(key) && (!entry || present)) && normalizeDecimal(v) === null) add('transaction', tx.transaction_id, 'INVALID_DECIMAL', 'error', `${pointer}: invalid decimal.`);
+        if ((tx.field_types ? present && type === 'date' : (key.endsWith('_date') && (!entry || present)) || (entry && key === 'date' && present)) && !isIsoDate(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO8601', 'blocking', `${pointer}: not ISO 8601.`);
         if (present && type === 'integer' && (typeof v !== 'number' || !Number.isSafeInteger(v))) add('transaction', tx.transaction_id, 'INVALID_INTEGER', 'blocking', `${pointer}: not an integer.`);
         if (!tx.field_types && key === 'currency' && !isIsoCurrency(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO4217', 'blocking', `${pointer}: not ISO 4217.`);
         if (Array.isArray(v)) v.forEach((row, i) => { if (row && typeof row === 'object' && !Array.isArray(row)) walk(row, `${pointer}/${i}`); });
@@ -50,6 +52,14 @@ export function businessIssues(batch: Batch): Issue[] {
       const pointer = pointerFor(key);
       if (!tx.field_evidence[pointer]?.length) add('transaction', tx.transaction_id, 'FIELD_WITHOUT_EVIDENCE', 'info', `${pointer}: no bounding box evidence.`);
     }
+  }
+  for (const doc of batch.documents) {
+    const transactions = batch.transactions.filter(t => t.document_id === doc.document_id);
+    const header = transactions.find(t => t.transaction_type !== 'statement_entry');
+    const entries = transactions.filter(t => t.transaction_type === 'statement_entry');
+    const closing = normalizeDecimal(header?.data.closing_balance);
+    const balances = entries.map(t => normalizeDecimal(t.data.running_balance ?? t.data.balance));
+    if (header && closing !== null && balances.length && balances.every((v): v is string => v !== null) && !decimalEquals(balances[balances.length - 1]!, closing)) add('transaction', header.transaction_id, 'TOTALS_MISMATCH', 'blocking', '/closing_balance: final running balance does not match closing balance.');
   }
   for (const ev of batch.evidence) if (ev.confidence < 0.85 && ev.review_status === 'unreviewed') add('evidence', ev.evidence_id, 'LOW_CONFIDENCE', 'warning', `${ev.field_pointer}: confidence below 0.85.`);
   return issues;

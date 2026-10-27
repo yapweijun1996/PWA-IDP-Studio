@@ -18,8 +18,8 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-async function seedV1() {
-  const record: DocumentRecord = { id: 'old', name: 'old.pdf', mime: 'application/pdf', size: 3, createdAt: Date.parse('2026-10-26T00:00:00Z'), pageCount: 1, envelope: { schema_version: '1.0', document_id: 'old', document_type: 'other', status: 'ready', extraction: { amount: 1 }, evidence: {}, model: null, audit: [], validation: { schema_valid: true, totals_match: null, missing_required: [], low_confidence: [], standards_issues: [], needs_review: false } } };
+async function seedV1(mime = 'application/pdf') {
+  const record: DocumentRecord = { id: 'old', name: mime === 'image/webp' ? 'old.webp' : 'old.pdf', mime, size: 3, createdAt: Date.parse('2026-10-26T00:00:00Z'), pageCount: 1, envelope: { schema_version: '1.0', document_id: 'old', document_type: 'other', status: 'ready', extraction: { amount: 1 }, evidence: {}, model: null, audit: [], validation: { schema_valid: true, totals_match: null, missing_required: [], low_confidence: [], standards_issues: [], needs_review: false } } };
   await new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('idp-studio', 1);
     request.onupgradeneeded = () => {
@@ -32,7 +32,7 @@ async function seedV1() {
       const tx = db.transaction(['documents', 'files'], 'readwrite');
       tx.objectStore('documents').put(record);
       tx.objectStore('documents').put({ ...record, id: 'missing' });
-      tx.objectStore('files').put(new Blob(['abc'], { type: 'application/pdf' }), 'old');
+      tx.objectStore('files').put(new Blob(['abc'], { type: mime }), 'old');
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => reject(tx.error);
     };
@@ -53,6 +53,14 @@ it('upgrades a real v1 store, retains originals, records fallback and skips abse
   await deleteBatch('legacy_old');
   expect(await getBatch('legacy_old')).toBeUndefined();
   expect(await getFile('old')).toBeDefined();
+});
+it('migrates legacy WebP without relabeling the original media', async () => {
+  await seedV1('image/webp');
+  expect(await migrateStore()).toEqual({ migrated: 1, skipped: 1 });
+  const batch = (await getBatch('legacy_old'))!;
+  expect(batch.source_files[0]).toMatchObject({ filename: 'old.webp', media_type: 'image/webp' });
+  expect((await getFile(batch.source_files[0].file_id))!.type).toBe('image/webp');
+  expect(validateBatch(batch).ok).toBe(true);
 });
 it('stores batches under batch_id and hashes original bytes', async () => {
   const batch = buildBatch(invoiceInput());

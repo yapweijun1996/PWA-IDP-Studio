@@ -9,7 +9,7 @@ export interface RenderedPage {
   mimeType: 'image/jpeg';
 }
 
-export const SUPPORTED = ['application/pdf', 'image/png', 'image/jpeg'];
+export const SUPPORTED = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
 
 export function isSupported(file: File): boolean {
   return SUPPORTED.includes(file.type);

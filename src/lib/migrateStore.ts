@@ -18,8 +18,8 @@ async function migrate(): Promise<{ migrated: number; skipped: number }> {
     if (await getBatch(`legacy_${record.id}`)) continue;
     const blob = await getFile(record.id);
     if (!blob) { skipped++; continue; }
-    // v2 cannot mislabel WebP bytes as JPEG. Preserve unsupported legacy originals.
-    if (!['application/pdf', 'image/png', 'image/jpeg', 'image/tiff'].includes(blob.type || record.mime)) { skipped++; continue; }
+    // Preserve original media identities, including legacy TIFF records.
+    if (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/tiff'].includes(blob.type || record.mime)) { skipped++; continue; }
     let pages;
     let dimensionsFallback = false;
     try { pages = await pageManifest(blob); }

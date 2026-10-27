@@ -121,14 +121,31 @@ it('Workspace selects field evidence on its page, records reason and enables app
   expect(saved?.reviews.at(-1)?.reason).toBe('Checked original'); expect(button('Approve').disabled).toBe(false);
   await click(button('Approve')); await vi.waitFor(() => expect(saved?.transactions[0].status).toBe('approved'));
 });
-it('Home rejects TIFF and WebP through a visible notice without uploading them', async () => {
+it('Home accepts WebP by MIME or extension while rejecting TIFF in the same selection', async () => {
   const accepted: File[][] = [];
   await render(<Home docs={[]} settings={loadSettings()} busy={null} onFiles={files => accepted.push(files)} />);
+  const webp = new File(['webp'], 'scan.webp', { type: 'image/webp' });
+  const inferred = new File(['webp'], 'SCAN.WEBP');
+  const tiff = new File(['tiff'], 'scan.tiff', { type: 'image/tiff' });
   const chooser = container.querySelector('input[type="file"]')!;
-  Object.defineProperty(chooser, 'files', { configurable: true, value: [new File(['tiff'], 'scan.tiff', { type: 'image/tiff' }), new File(['webp'], 'scan.webp', { type: 'image/webp' })] });
+  Object.defineProperty(chooser, 'files', { configurable: true, value: [webp, inferred, tiff] });
   await act(async () => { chooser.dispatchEvent(new Event('change', { bubbles: true })); });
-  expect(accepted).toEqual([]);
-  expect(container.querySelector('.ds-notice')?.textContent).toContain('TIFF and WebP are not supported');
+  expect(accepted).toEqual([[webp, inferred]]);
+});
+it('Workspace searches hundreds of statement entries grouped under their document', async () => {
+  const source = invoiceInput();
+  source.output = { document_type: 'statement', fields: [], line_items: Array.from({ length: 300 }, (_, i) => ({ description: `Payment ${i + 1}`, reference: `REF-${i + 1}` })) };
+  const batch = buildBatch(source);
+  await render(<Workspace doc={batch} onSaved={() => {}} />);
+  expect(container.querySelectorAll('select optgroup option')).toHaveLength(301);
+  const search = [...container.querySelectorAll('input')].find(element => element.id === [...container.querySelectorAll('label')].find(l => l.textContent === 'Search transactions')?.htmlFor)!;
+  await input(search, 'REF-299');
+  expect([...container.querySelectorAll('select option')].map(option => (option as HTMLOptionElement).value)).toEqual(['t_1', 't_1_entry_299']);
+  await select(container.querySelector('select')!, 't_1_entry_299');
+  expect(container.textContent).toContain('Payment 299');
+  expect(button('Approve').disabled).toBe(false);
+  expect(batchSummary([batch]).transactions).toBe(301);
+  expect(reviewRows([batch])).toEqual([]);
 });
 it('Workspace humanizes issues and switches clean and evidence JSON', async () => {
   const doc = fixture('json'); await render(<Workspace doc={doc} onSaved={() => {}} />);

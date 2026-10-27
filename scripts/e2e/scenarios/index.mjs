@@ -47,6 +47,51 @@ async function pwa(b) {
   await b.eval(`Promise.race([navigator.serviceWorker.ready.then(()=>true),new Promise((_,reject)=>setTimeout(()=>reject(new Error('SW ready timeout')),30000))])`);
 }
 export const scenarios = [
+  { name: 'statement-entries', async run({b,mocks}) {
+    mocks.setVariant('statement-entries');
+    await drop(b, 'statement.png'); await text(b, 'E2E Bank');
+    const batch = (await batches(b)).find(v => v.source_files[0].filename === 'statement.png');
+    checkEnvelope(batch);
+    assert.equal(batch.documents.length, 1);
+    assert.equal(batch.transactions.length, 5);
+    assert.deepEqual(batch.documents[0].transaction_ids, batch.transactions.map(t => t.transaction_id));
+    assert.deepEqual(batch.validation.export_eligible_transaction_ids, ['t_1', 't_1_entry_1', 't_1_entry_2', 't_1_entry_4']);
+    assert.deepEqual(await b.eval(`[...document.querySelectorAll('main select optgroup option')].map(e=>e.value)`), batch.documents[0].transaction_ids);
+    await field(b, 'Search transactions', 'ENTRY-3');
+    assert.deepEqual(await b.eval(`[...document.querySelectorAll('main select option')].map(e=>e.value)`), ['t_1', 't_1_entry_3']);
+    await field(b, 'Search transactions', '');
+    await b.eval(`(() => { const select=document.querySelector('main select');select.value='t_1_entry_3';select.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await text(b, 'Statement entry 3'); await click(b, 'JSON');
+    assert.equal(await buttonDisabled(b, 'Download JSON'), true);
+    await route(b, `#/doc/${batch.batch.batch_id}/t_1_entry_1`, 'statement.png');
+    await click(b, 'Fields'); await text(b, 'Statement entry 1'); await click(b, 'JSON');
+    assert.equal(await buttonDisabled(b, 'Download JSON'), false);
+    await route(b, '#/review', 'Review Queue');
+    assert.equal(await b.eval('document.querySelectorAll("main tbody tr").length'), 1);
+    await text(b, 'Date must be a valid YYYY-MM-DD date');
+    await route(b, '#/json-explorer', 'JSON Explorer');
+    await text(b, 't_1_entry_4');
+    await b.eval('window.__statementURL = URL.createObjectURL; URL.createObjectURL = blob => { window.__statementBlob = blob; return window.__statementURL.call(URL, blob); };');
+    try {
+      await click(b, 'Download full JSON');
+      const downloaded = await b.eval('window.__statementBlob.text().then(JSON.parse)');
+      assert.deepEqual(downloaded.transactions, batch.transactions);
+      assert.deepEqual(downloaded.documents[0].transaction_ids, batch.documents[0].transaction_ids);
+    } finally { await b.eval('URL.createObjectURL = window.__statementURL; delete window.__statementURL; delete window.__statementBlob;'); }
+  } },
+  { name: 'upload-types', async run({b}) {
+    await drop(b, 'scan.webp'); await text(b, 'INV-E2E-001');
+    const batch = (await batches(b)).find(v => v.source_files[0].filename === 'scan.webp');
+    checkEnvelope(batch);
+    assert.equal(batch.source_files[0].media_type, 'image/webp');
+    assert.equal(batch.pages.length, 1);
+    assert.equal(batch.validation.structural_valid, true);
+    await home(b);
+    await b.eval(`(() => { const dataTransfer=new DataTransfer();dataTransfer.items.add(new File(['unsupported'],'scan.tiff',{type:'image/tiff'}));document.querySelector('section[aria-label="Drag and drop documents here"]').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer})); })()`);
+    await text(b, 'Some files were not accepted.');
+    await text(b, 'TIFF is not supported.');
+    assert.equal((await batches(b)).length, 1);
+  } },
   { name: 'label-studio', async run({b,mocks}) {
     mocks.setVariant('windowed');
     await drop(b,'labels.pdf',makePDF(30).toString('base64'));

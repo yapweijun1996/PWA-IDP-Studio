@@ -1,5 +1,5 @@
 export type BatchStatus = 'processing' | 'review_required' | 'validated' | 'partially_approved' | 'approved' | 'failed';
-export type MediaType = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/tiff';
+export type MediaType = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/webp' | 'image/tiff';
 export type RegionRole = 'full_page' | 'sub_document' | 'attachment' | 'table' | 'other';
 export type PageRotation = 0 | 90 | 180 | 270;
 export type PageStatus = 'pending' | 'classified' | 'error';
@@ -7,7 +7,7 @@ export type UnassignedReason = 'blank' | 'unknown' | 'ocr_failed' | 'review_pend
 export type DocumentType = 'purchase_invoice' | 'sales_invoice' | 'purchase_order' | 'sales_order' | 'delivery_order' | 'credit_note' | 'bank_receipt' | 'payment_document' | 'statement' | 'unknown';
 export type DocumentStatus = 'draft' | 'validated' | 'review_required' | 'approved' | 'rejected';
 export type TransactionStatus = DocumentStatus;
-export type TransactionType = Exclude<DocumentType, 'statement'> | 'statement_entry';
+export type TransactionType = DocumentType | 'statement_entry';
 export type BoundaryStatus = 'confirmed' | 'needs_review';
 export type EvidenceMethod = 'ocr' | 'vision_llm' | 'native_text' | 'human';
 export type EvidenceReviewStatus = 'unreviewed' | 'confirmed' | 'corrected' | 'rejected';

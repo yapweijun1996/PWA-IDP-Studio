@@ -77,7 +77,6 @@ describe('buildBatch', () => {
       input.output = { document_type, fields: [], line_items: [] };
       const b = buildBatch(input);
       expect(b.documents[0].classification_confidence).toBe(0.5);
-      expect(b.transactions[0].transaction_type).toBe(document_type === 'statement' ? 'statement_entry' : 'unknown');
       expect(b.issues).toEqual([]);
       expect(validateBatch(b).ok).toBe(true);
     }

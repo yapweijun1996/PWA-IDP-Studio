@@ -9,6 +9,7 @@ function save(key: string, value: unknown): void { session.set(key, value); try 
 export function validateProfile(profile: ExtractionProfile): string[] {
   const errors: string[] = [];
   if (typeof profile.name !== 'string' || !profile.name.trim()) errors.push('Enter a profile name.');
+  if (profile.rowsAsTransactions !== undefined && typeof profile.rowsAsTransactions !== 'boolean') errors.push('rowsAsTransactions must be a boolean.');
   const fields = [...(profile.fields ?? []), ...(profile.rowFields ?? [])];
   if (fields.length < 1 || fields.length > 30) errors.push('Use 1–30 fields in total.');
   const seen = new Set<string>();
@@ -40,7 +41,7 @@ export function clearProfiles(): void { for (const key of PROFILE_KEYS) { sessio
 
 /** Portable profile file; built-in exports become editable on import. */
 export function exportProfiles(profiles: ExtractionProfile[]): string {
-  return JSON.stringify({ idp_studio_profiles: 1, profiles: profiles.map(({ id, name, fields, rowFields }) => ({ id, name, fields, rowFields })) }, null, 2);
+  return JSON.stringify({ idp_studio_profiles: 1, profiles: profiles.map(({ id, name, fields, rowFields, rowsAsTransactions }) => ({ id, name, fields, rowFields, ...(rowsAsTransactions !== undefined ? { rowsAsTransactions } : {}) })) }, null, 2);
 }
 export function parseProfileImport(text: string): { profiles: ExtractionProfile[]; errors: string[] } {
   const errors: string[] = [];
@@ -53,7 +54,7 @@ export function parseProfileImport(text: string): { profiles: ExtractionProfile[
   const profiles: ExtractionProfile[] = [];
   value.profiles.forEach((p: unknown, index: number) => {
     const prefix = `Profile ${index + 1}: `;
-    if (!object(p) || Object.keys(p).some(k => !['id', 'name', 'fields', 'rowFields', 'builtin'].includes(k)) || typeof p.id !== 'string' || !p.id.trim() || typeof p.name !== 'string' || !Array.isArray(p.fields) || !Array.isArray(p.rowFields) || (p.builtin !== undefined && typeof p.builtin !== 'boolean')) {
+    if (!object(p) || Object.keys(p).some(k => !['id', 'name', 'fields', 'rowFields', 'rowsAsTransactions', 'builtin'].includes(k)) || typeof p.id !== 'string' || !p.id.trim() || typeof p.name !== 'string' || !Array.isArray(p.fields) || !Array.isArray(p.rowFields) || (p.builtin !== undefined && typeof p.builtin !== 'boolean')) {
       errors.push(`${prefix}Expected id, name, header fields and row columns.`); return;
     }
     if ([...p.fields, ...p.rowFields].some(f => !object(f) || Object.keys(f).some(k => !['key', 'label', 'type', 'required'].includes(k)) || (f.required !== undefined && typeof f.required !== 'boolean'))) {

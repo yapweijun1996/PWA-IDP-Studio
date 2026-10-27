@@ -28,6 +28,7 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, steps = 
   const [draft, setDraft] = useState('');
   const [reason, setReason] = useState('Manual correction');
   const [copied, setCopied] = useState(false);
+  const [transactionSearch, setTransactionSearch] = useState('');
   const file = doc.source_files[0];
   const previewLimit = doc.pages.reduce((max, p) => p.file_id === file.file_id && p.status === 'classified' ? Math.max(max, p.page_number) : max, 0);
   useEffect(() => { setTxId(transactionId ?? doc.transactions[0]?.transaction_id); setSelected(undefined); setEditing(undefined); }, [transactionId, doc.batch.batch_id]);
@@ -78,7 +79,7 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, steps = 
     {busy && <Notice><Progress label={busy} /><ul role="status" aria-live="polite" aria-label="Agent activity">{steps.map((step, i) => <li key={i}>{step.summary}</li>)}</ul></Notice>}
     {!busy && onRetry && doc.pages.some(p => p.status !== 'classified') && <Button onClick={onRetry}>Retry extraction</Button>}
     {error && <Notice tone="error">{error}</Notice>}{copied && <Notice>JSON copied.</Notice>}
-    {doc.transactions.length > 1 && <Field label="Transaction"><Select value={tx.transaction_id} onChange={e => { setTxId(e.target.value); setSelected(undefined); setEditing(undefined); }}>{doc.transactions.map(t => <option key={t.transaction_id} value={t.transaction_id}>{t.transaction_id} · {readable(t.transaction_type)}</option>)}</Select></Field>}
+    {doc.transactions.length > 1 && <div className="ds-sheet"><Field label="Search transactions"><Input value={transactionSearch} onChange={e => setTransactionSearch(e.target.value)} /></Field><Field label="Transaction"><Select value={tx.transaction_id} onChange={e => { setTxId(e.target.value); setSelected(undefined); setEditing(undefined); }}>{doc.documents.map(document => <optgroup key={document.document_id} label={`${document.document_id} · ${readable(document.document_type)}`}>{doc.transactions.filter(t => t.document_id === document.document_id && (t.transaction_id === tx.transaction_id || `${t.transaction_id} ${t.transaction_type} ${JSON.stringify(t.data)}`.toLowerCase().includes(transactionSearch.toLowerCase()))).map(t => <option key={t.transaction_id} value={t.transaction_id}>{t.transaction_id} · {readable(t.transaction_type)}</option>)}</optgroup>)}</Select></Field></div>}
     <div className="ds-grid"><Card><EvidenceViewer pages={doc.pages.filter(p => p.file_id === file.file_id).map(p => { const rendered = pages.find(r => r.page === p.page_number); return { number: p.page_number, pending: p.status !== 'classified', src: rendered ? `data:${rendered.mimeType};base64,${rendered.data}` : undefined }; })} page={page} onPageChange={setPage} selected={selectedField?.pointer} error={renderError} boxes={view.fields.filter(f => f.evidence?.page === page).map(f => ({ id: f.pointer, label: readable(f.key), ...f.evidence!.bbox }))} /></Card>
     <Card><div id="workspace-issues"><Tabs label="Transaction details" value={tab} onChange={setTab} items={[
       { id: 'fields', label: 'Fields', content: fieldContent },

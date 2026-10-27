@@ -41,7 +41,7 @@ export function setDocumentType(batch: Batch, documentId: string, type: Document
   doc.schema_id = `erp.${type}`;
   doc.schema_version = '1.0.0';
   for (const tx of next.transactions.filter(t => t.document_id === documentId)) {
-    tx.transaction_type = type === 'statement' ? 'statement_entry' : type;
+    tx.transaction_type = type === 'statement' && tx.transaction_type === 'statement_entry' ? 'statement_entry' : type;
     delete tx.required_fields;
     delete tx.field_types;
     if (!Object.keys(tx.data).length && !REQUIRED_FIELDS[type].length) tx.required_fields = ['/document_no'];
@@ -93,6 +93,7 @@ export function splitDocument(batch: Batch, documentId: string, atPage: LayoutPa
   for (const tx of [...next.transactions.filter(t => t.document_id === documentId)]) {
     const evidence = next.evidence.filter(e => e.transaction_id === tx.transaction_id);
     if (evidence.some(e => e.sources.some(s => moved.has(key(s))) && e.sources.some(s => !moved.has(key(s))))) throw new Error('Cannot split evidence spanning both sides of the boundary');
+    if (tx.transaction_type === 'statement_entry' && evidence.some(e => e.sources.some(s => moved.has(key(s)))) && evidence.some(e => e.sources.some(s => !moved.has(key(s))))) throw new Error('Cannot split a statement entry across documents');
     const moving = evidence.filter(e => e.sources.length && e.sources.every(s => moved.has(key(s))));
     if (!moving.length) continue;
     let destination = tx;
@@ -120,7 +121,7 @@ export function splitDocument(batch: Batch, documentId: string, atPage: LayoutPa
   touch(next, created);
   const emptyId = id('transaction');
   created.transaction_ids.push(emptyId);
-  next.transactions.push({ transaction_id: emptyId, document_id: newId, transaction_type: doc.document_type === 'statement' ? 'statement_entry' : doc.document_type, status: 'review_required', business_key: null, data: {}, field_evidence: {}, revision: 1, required_fields: [...required], ...(template?.field_types ? { field_types: structuredClone(template.field_types) } : {}) });
+  next.transactions.push({ transaction_id: emptyId, document_id: newId, transaction_type: doc.document_type, status: 'review_required', business_key: null, data: {}, field_evidence: {}, revision: 1, required_fields: [...required], ...(template?.field_types ? { field_types: structuredClone(template.field_types) } : {}) });
   return finish(next, 'split', documentId, reason);
 }
 export function mergeDocuments(batch: Batch, ids: string[], reason: string): Batch {

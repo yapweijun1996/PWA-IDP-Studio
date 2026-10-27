@@ -13,6 +13,8 @@ export interface BuildInput {
   renderedPageCount: number;
   model: { provider: string; model: string } | null;
   output: ModelOutput;
+  /** Omitted in Auto; Targeted must explicitly opt in. */
+  rowsAsTransactions?: boolean;
 }
 
 /** JSON-safe values only; amount/quantity fields retain invalid text for review. */
@@ -42,7 +44,7 @@ function buildDocumentBatch(input: BuildInput): Batch {
     source_files: [{ file_id: file.file_id, filename: file.filename, media_type: file.media_type, sha256: file.sha256, page_count: input.pages.length, storage_ref: file.file_id }],
     pages: input.pages.map(p => ({ ...p, file_id: file.file_id, rotation: 0, status: p.page_number <= input.renderedPageCount ? 'classified' : 'pending', regions: p.page_number <= input.renderedPageCount ? [{ region_id: `r_${documentId}_${p.page_number}`, document_id: documentId, role: 'full_page', bbox: { x: 0, y: 0, width: 1, height: 1 } }] : [], unassigned_reason: p.page_number <= input.renderedPageCount ? null : 'review_pending' })),
     documents: [{ document_id: documentId, document_type: output.document_type, status: 'validated', page_refs: input.pages.filter(p => p.page_number <= input.renderedPageCount).map(p => ({ file_id: file.file_id, page_number: p.page_number, region_id: `r_${documentId}_${p.page_number}` })), transaction_ids: [transactionId], classification_confidence: output.fields.length ? output.fields.reduce((s, f) => s + f.confidence, 0) / output.fields.length : 0.5, boundary_status: 'confirmed', schema_id: `erp.${output.document_type}`, schema_version: '1.0.0' }],
-    transactions: [{ transaction_id: transactionId, document_id: documentId, transaction_type: output.document_type === 'statement' ? 'statement_entry' : output.document_type, status: 'validated', business_key: null, data: {}, field_evidence: {}, revision: 1 }],
+    transactions: [{ transaction_id: transactionId, document_id: documentId, transaction_type: output.document_type, status: 'validated', business_key: null, data: {}, field_evidence: {}, revision: 1 }],
     evidence: [], issues: [], reviews: [],
     validation: { structural_valid: false, reference_valid: false, coverage_valid: false, business_rules_valid: false, export_eligible_transaction_ids: [], validated_at: null, validator_version: '1.0.0' },
   };
@@ -126,6 +128,31 @@ export function buildBatchFromSegments(input: SegmentBuildInput): Batch {
     }
     template.documents.push(doc);
     template.transactions.push(tx);
+    if (input.rowsAsTransactions ?? segment.output.document_type === 'statement') {
+      const rows = tx.data.line_items;
+      if (Array.isArray(rows)) for (const [rowIndex, row] of rows.entries()) {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+        const entryId = `${transactionId}_entry_${rowIndex + 1}`;
+        const prefix = `/line_items/${rowIndex}/`;
+        const entry: Batch['transactions'][number] = {
+          transaction_id: entryId, document_id: documentId, transaction_type: 'statement_entry',
+          status: 'validated', business_key: null, data: row, field_evidence: {}, revision: 1,
+          required_fields: (tx.required_fields ?? []).filter(p => p.startsWith(prefix)).map(p => p.slice(prefix.length - 1)),
+          ...(tx.field_types ? { field_types: Object.fromEntries(Object.entries(tx.field_types).filter(([p]) => p.startsWith(prefix)).map(([p, type]) => [p.slice(prefix.length - 1), type])) } : {}),
+        };
+        for (const ev of template.evidence.filter(e => e.transaction_id === transactionId && e.field_pointer.startsWith(prefix))) {
+          delete tx.field_evidence[ev.field_pointer];
+          ev.transaction_id = entryId;
+          ev.field_pointer = ev.field_pointer.slice(prefix.length - 1);
+          entry.field_evidence[ev.field_pointer] = [ev.evidence_id];
+        }
+        doc.transaction_ids.push(entryId);
+        template.transactions.push(entry);
+      }
+      delete tx.data.line_items;
+      if (tx.required_fields) tx.required_fields = tx.required_fields.filter(p => !p.startsWith('/line_items/'));
+      if (tx.field_types) tx.field_types = Object.fromEntries(Object.entries(tx.field_types).filter(([p]) => !p.startsWith('/line_items/')));
+    }
   }
   refreshIssues(template);
   const result = validateBatch(template);

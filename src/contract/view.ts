@@ -15,7 +15,7 @@ export function transactionView(batch: Batch, transactionId: string) {
   const issues = batch.issues.filter(i => i.scope === 'batch' || i.target_id === transactionId || i.target_id === doc.document_id || batch.evidence.some(e => e.evidence_id === i.target_id && e.transaction_id === transactionId));
   const required = tx.required_fields
     ? tx.required_fields.filter(p => /^\/[^/]+$/.test(p)).map(p => p.slice(1).replace(/~1/g, '/').replace(/~0/g, '~'))
-    : REQUIRED_FIELDS[doc.document_type];
+    : tx.transaction_type === 'statement_entry' ? [] : REQUIRED_FIELDS[doc.document_type];
   const keys = [...new Set([...Object.keys(tx.data).filter(k => k !== 'line_items'), ...required])];
   const fields: FieldView[] = keys.map(key => {
     const pointer = pointerFor(key);

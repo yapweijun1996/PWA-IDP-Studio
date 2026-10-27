@@ -23,6 +23,8 @@ export interface ExtractionProfile {
   fields: ProfileField[];
   /** columns of the repeating rows; empty array means "no rows wanted" */
   rowFields: ProfileField[];
+  /** Build each repeating row as an independently reviewed transaction. */
+  rowsAsTransactions?: boolean;
   builtin?: boolean;
 }
 
