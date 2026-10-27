@@ -18,6 +18,10 @@ Label Studio uses a zero-minimum sheet track and document-rail track so intrinsi
 
 `src/ui/labelStudio.test.tsx`, imported by the existing behavior test entrypoint, covers reason gating, confirmation persistence/refresh, batch defaulting and post-review selection stability, approved locks, storage errors, split/merge/assignment and visible/off-screen thumbnail lifecycle. Layout contract tests cover the small fixture and the 100-page edge-case fixture, including unknown-document refusals and unchanged input on approved-document refusals.
 
+Validation (`#/validation`) aggregates all stored batches: open severity counters, waived/resolved counts, per-rule affected batches, Workspace issue links and severity/rule/batch/status filters. Export readiness uses authoritative validation and transaction eligibility. The searchable rule catalog shares labels and waiver policy with contract rules. Waive/Reopen uses a reason Dialog (minimum ten trimmed characters); mandatory integrity and extraction issues show an explanation instead. Per-batch and all-batch revalidation persist refreshed issues and report before/after open counts plus integrity errors. Existing DS components provide all controls; no new reusable component.
+
+Validation distinguishes loading from an empty local store and leaves storage failures visible without closing the review Dialog. Its scoped `ds-validation` grid uses a zero-minimum track so wide tables scroll inside their DS containers instead of widening the viewport; filter fields use the responsive DS grid. `src/ui/validation.test.tsx` covers cross-batch counters, filters, transaction links, catalog details, waiver persistence/reopening, per-batch versus all-batch revalidation, storage failures and empty/loading states.
+
 ## Theme and tokens
 
 `ThemeProvider` / `useTheme()` expose `theme` and `setTheme('light' | 'dark' | 'system')`. Default is light. Choice is stored as `idp-studio.theme`; blocked storage is tolerated. System mode listens for OS changes. The resolved theme is applied to the document element. The topbar's opaque safe-area background uses `--topbar`.

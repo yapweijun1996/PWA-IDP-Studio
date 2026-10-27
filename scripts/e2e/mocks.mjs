@@ -107,7 +107,11 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
           : toolResponseStream('crop_zoom', { page: 1, ymin: 100, xmin: 100, ymax: 500, xmax: 900, scale: 6 }, 'crop_e2e'), 'text/event-stream');
         return;
       }
-      const output = variant === 'targeted' ? targeted() : invoice(variant === 'bad');
+      const output = variant === 'targeted' || variant === 'validation-targeted' ? targeted() : invoice(variant === 'bad');
+      if (variant === 'validation-targeted') {
+        output.fields.find(f => f.key === 'document_no').value = '';
+        output.fields.find(f => f.key === 'remarks').confidence = 0.5;
+      }
       output.fields.forEach(field => { field.page = start; });
       if (variant === 'six-page') {
         output.document_type = 'unknown';

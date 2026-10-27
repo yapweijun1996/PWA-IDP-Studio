@@ -87,6 +87,8 @@ a { color: var(--primary); }
 .ds-nav[aria-disabled="true"] { color: var(--disabled); cursor: not-allowed; }
 .ds-workspace { flex: 1; min-width: 0; padding: var(--workspace-padding); padding-bottom: max(var(--workspace-padding), env(safe-area-inset-bottom)); }
 .ds-sheet { display: grid; gap: var(--space-5); }
+.ds-validation { min-width: 0; grid-template-columns: minmax(0, 1fr); overflow-wrap: anywhere; }
+.ds-validation .ds-field { min-width: 0; }
 .ds-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sidebar-expanded)), 1fr)); gap: var(--space-4); }
 .ds-stat-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--stat-card-min)), 1fr)); }
 .ds-viewer-toolbar { display: flex; align-items: center; gap: var(--space-1); white-space: nowrap; }

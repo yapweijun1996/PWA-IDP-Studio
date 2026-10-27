@@ -2,6 +2,7 @@ import type { Batch, Issue, Transaction, Value } from './types';
 import { normalizeDecimal, sumDecimals, decimalEquals } from './decimal';
 import { REQUIRED_FIELDS, isIsoDate, isIsoCurrency } from '../lib/standards';
 import { validateBatch, exportEligibleTransactions } from './validate';
+import { ruleCatalogEntry } from './ruleCatalog';
 
 export const pointerFor = (key: string) => '/' + key.replace(/~/g, '~0').replace(/\//g, '~1');
 export const decimalKey = (key: string) => /(amount|price|total|quantity)/i.test(key);
@@ -89,10 +90,9 @@ export function rollup(batch: Batch): Batch {
 }
 
 const sameIssue = (a: Issue, b: Issue) => a.scope === b.scope && a.target_id === b.target_id && a.rule_code === b.rule_code && a.message === b.message;
-const MANAGED: Record<string, true> = { BOUNDARY_UNCERTAIN: true, PAGES_FAILED: true, PAGE_LIMIT_EXCEEDED: true, MISSING_REQUIRED: true, INVALID_DECIMAL: true, INVALID_INTEGER: true, STANDARDS_ISO8601: true, STANDARDS_ISO4217: true, TOTALS_MISMATCH: true, FIELD_WITHOUT_EVIDENCE: true, LOW_CONFIDENCE: true };
 export function refreshIssues(batch: Batch): Batch {
   const current = businessIssues(batch);
-  for (const old of batch.issues) if (old.status === 'open' && Object.hasOwn(MANAGED, old.rule_code) && !current.some(i => sameIssue(i, old))) old.status = 'resolved';
+  for (const old of batch.issues) if (old.status === 'open' && ruleCatalogEntry(old.rule_code)?.autoResolves && !current.some(i => sameIssue(i, old))) old.status = 'resolved';
   for (const issue of current) {
     if (batch.issues.some(old => sameIssue(old, issue) && (old.status === 'open' || old.status === 'waived'))) continue;
     let n = batch.issues.length + 1;

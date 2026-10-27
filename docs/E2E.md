@@ -53,6 +53,7 @@ Offline contract: once cached, the app shell and stored documents remain availab
 | `templates` | Exact Templates h1 route readiness; locked built-ins and standards reference; phone/desktop overflow, including the editor; header/row profile creation and editing; built-in duplication; single-profile and all-custom versioned Blob JSON export (capture restored afterward); conflict cancellation and import as copy; next-upload Targeted selection and actual header/row extraction matching the existing targeted mock's keys; cancelled and confirmed deletion; Settings link card without the inline editor. |
 | `upload-demo` | In-page canvas PNG dropped through DataTransfer; real extraction and workspace; input_image and demo Bearer token; no BYOK fixture key; Home lists batch and all three stat cards show 1; table opens workspace. |
 | `review-flow` | Invalid date and mismatched totals block approval with visible reason; readable Issues title; date correction resolves its issue but leaves totals blocking; total correction enables approval; Approved status; Clean/Full JSON differ; v2 envelope keys and references, correction/approval reviews and revision increments; selecting date highlights read-only evidence on page 1; no draw/move/resize control. |
+| `validation` | Default and targeted missing-required uploads; Workspace Full JSON issues match stored issues; exact `Validation` h1 route target; cross-batch severity counts and export eligibility; batch/rule filters and transaction links; short-reason refusal; low-confidence reason waiver and persisted review link; waiver survives revalidate-all; audited reopen; missing-required waiver prohibition; revalidate all and retained issue status; catalog search/details; desktop and phone overflow in light/dark. |
 | `repair-turn` | First invalid response is repaired by a second request; two invalid responses give a visible error Notice and failed batch with no fabricated transactions. |
 | `byok` | OpenAI settings use a synthetic key only in api.openai.com Authorization, never URL/body; key absent from all IndexedDB stores after reload (localStorage persistence is intentionally allowed); missing key gives actionable message and no request; second provider OpenRouter receives mocked 429 and fails without fabricated data. |
 | `page-limit` | Generated 25-page PDF with limit 12; first 12 classified, last 13 pending, blocking PAGE_LIMIT_EXCEEDED, approval/download disabled. Raise limit to 25 and retry the same batch without re-upload. |
@@ -75,6 +76,12 @@ CDP Log entries, including intentional HTTP 429 resource errors, are retained in
 artifacts but are not treated as JavaScript console calls. The suite asserts
 observable behavior; it does not import app code, expose new production hooks,
 or patch the extraction/storage implementation.
+
+The `route` helper matches an exact `h1`, not arbitrary body text. Validation's
+route heading is `Validation`; `Export eligibility` is a subsection (`h2`) and
+must be checked separately with `text`. Waiting for that subsection as an `h1`
+never succeeds, even when the page mounts correctly. Revalidation checks also
+wait for the action to be enabled again before inspecting persisted batches.
 
 The Full JSON checks are deliberately a bounded contract smoke, not a second
 implementation of the entire AJV/reference validator. They check required
