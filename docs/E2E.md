@@ -49,6 +49,7 @@ Offline contract: once cached, the app shell and stored documents remain availab
 
 | Scenario | Assertions |
 | --- | --- |
+| `ai-agents` | Saves max turns 3 and disables crop_zoom; agent-tools request omits the disabled tool; persisted run details include steps/outcome; outcome filter, defaults reset and clear-all history removal. |
 | `shell` | Upload Documents and gateway disclosure; exact nine-item navigation order; four actual routes; nine enabled links with the nine hrefs and no disabled items; expanded sidebar; footer version/build `e2e-1`; no console errors or uncaught page errors. |
 | `templates` | Exact Templates h1 route readiness; locked built-ins and standards reference; phone/desktop overflow, including the editor; header/row profile creation and editing; built-in duplication; single-profile and all-custom versioned Blob JSON export (capture restored afterward); conflict cancellation and import as copy; next-upload Targeted selection and actual header/row extraction matching the existing targeted mock's keys; cancelled and confirmed deletion; Settings link card without the inline editor. |
 | `upload-demo` | In-page canvas PNG dropped through DataTransfer; real extraction and workspace; input_image and demo Bearer token; no BYOK fixture key; Home lists batch and all three stat cards show 1; table opens workspace. |

@@ -93,3 +93,7 @@ Copy pointer/value first attempts synchronous copying from a temporary selected 
 
 The ComponentSheet includes an interactive tree. JSON Explorer uses the same component for full envelopes, shared Workspace transaction exports, evidence, issues, reviews and advisory validation. Only the selected scope mounts a tree, with top-level containers initially expanded; selecting another batch, scope or transaction resets the tree. An empty Transaction scope has no tree, search or transaction selector and disables Download full JSON; the Full batch scope still permits inspection and download of the envelope. Full JSON copy remains available in every scope. Its validation card recomputes `validateBatch` independently of stored flags. The page never changes evidence, review state or IndexedDB.
 
+
+## AI Agents
+
+`AiAgents` uses existing DS Card, Field, Input, Checkbox, Select, Button, Notice, EmptyState and Toast components. Configuration saves explicitly; Reset to defaults persists defaults and announces through Toast. Tool sections show executable descriptions and TypeBox parameters without a second prose catalog. Provider limits are read-only. Run history has loading/error/empty states, an outcome filter, and inline details with timestamps, phase counts, a step timeline and document link. No editable evidence geometry or extracted payload is displayed in traces.

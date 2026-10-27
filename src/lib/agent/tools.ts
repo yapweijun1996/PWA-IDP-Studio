@@ -52,6 +52,7 @@ export function createExtractionTools(options: {
   submit: (json: unknown) => void;
   maxImages?: number;
   decoder?: CodeDecoder;
+  enabled?: Partial<Record<'read_text_layer' | 'crop_zoom' | 'scan_codes', boolean>>;
 }): AgentTool<any>[] {
   const { source } = options;
   let images = 0;
@@ -95,5 +96,13 @@ export function createExtractionTools(options: {
       try { options.submit(typeof p.json === 'string' ? JSON.parse(p.json) : p.json); return { ...text('Accepted for validation and human review.'), terminate: true }; }
       catch (error) { return text(`Invalid result: ${(error as Error).message}. Correct and call submit_result again.`); }
     } }),
-  ];
+  ].filter(tool => options.enabled?.[tool.name as 'read_text_layer' | 'crop_zoom' | 'scan_codes'] !== false || tool.name === 'get_page_image' || tool.name === 'submit_result');
+}
+
+/** Metadata is projected from the executable definitions, never maintained separately. */
+export function extractionToolCatalog() {
+  return createExtractionTools({
+    source: { pageCount: 0, async render() { throw new Error('Catalog only'); }, async textItems() { return []; }, async dispose() {} },
+    submit() {},
+  }).map(({ name, description, parameters }) => ({ name, description, parameters }));
 }

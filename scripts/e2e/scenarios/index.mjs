@@ -286,6 +286,31 @@ export const scenarios = [
     await click(b, 'Evidence');
     await b.wait(`!!document.querySelector('[role="tab"][aria-selected="true"]')&&[...document.querySelectorAll('[role="tab"]')].some(e=>e.textContent==='Evidence'&&e.getAttribute('aria-selected')==='true')`, 'large batch click responsive', 2000);
     assert.ok(Date.now() - started < 2000, '30-page Explorer opens and handles a click within 2 seconds');
+  } },
+  { name: 'ai-agents', async run({b,mocks}) {
+    await route(b, '#/ai-agents', 'AI Agents');
+    await field(b, 'Maximum model turns', '3');
+    await b.eval(`(() => { const label = [...document.querySelectorAll('label')].find(e => e.textContent === 'crop_zoom'); label.querySelector('input').click(); })()`);
+    await click(b, 'Save agent configuration');
+    await text(b, 'Agent configuration saved.');
+    mocks.setVariant('agent-tools');
+    await home(b); await drop(b, 'agents-history.png'); await text(b, 'INV-E2E-001');
+    assert.ok(posts(mocks).every(r => !JSON.parse(r.body).tools.some(t => t.name === 'crop_zoom')));
+    await route(b, '#/ai-agents', 'AI Agents');
+    await b.wait(`[...document.querySelectorAll('button')].some(e => e.textContent.startsWith('agents-history.png ·'))`, 'saved run');
+    await b.eval(`[...document.querySelectorAll('button')].find(e => e.textContent.startsWith('agents-history.png ·')).click()`);
+    await b.wait(`!!document.querySelector('ol[aria-label="Step timeline"]')`, 'step timeline');
+    assert.ok(await b.eval('document.querySelectorAll("ol[aria-label=\\"Step timeline\\"] li").length > 0'));
+    const outcome = await b.eval(`document.querySelector('[aria-label="Run details"] p').textContent.split(' · ')[0]`);
+    await b.eval(`(() => { const e = document.querySelector('main select'); e.value = 'cancelled'; e.dispatchEvent(new Event('change', {bubbles:true})); })()`);
+    await text(b, 'No runs');
+    await b.eval(`(() => { const e = document.querySelector('main select'); e.value = ${js(outcome)}; e.dispatchEvent(new Event('change', {bubbles:true})); })()`);
+    await text(b, 'agents-history.png');
+    await click(b, 'Reset to defaults');
+    assert.equal(await b.eval('Number(document.querySelector("main input[type=number]").value)'), 8);
+    assert.equal(await b.eval(`JSON.parse(localStorage.getItem('idp-studio.agent-config.v1')).tools.crop_zoom`), true);
+    await settings(b); await click(b, 'Clear all local data'); await click(b, 'Delete all local data');
+    await route(b, '#/ai-agents', 'AI Agents'); await text(b, 'No runs');
     await overflow(b);
   } },
   { name: 'targeted-mode', async run({b,mocks}) {

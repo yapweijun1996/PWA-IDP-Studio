@@ -5,18 +5,19 @@ import type { DocumentRecord } from '../lib/types';
 // ES2022 target does not provide Promise.withResolvers; IndexedDB completes through events.
 function mutate(run: (tx: IDBTransaction) => void): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('idp-studio', 3);
+    const request = indexedDB.open('idp-studio', 4);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains('documents')) db.createObjectStore('documents', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');
       if (!db.objectStoreNames.contains('batches')) db.createObjectStore('batches', { keyPath: 'batch.batch.batch_id' });
       if (!db.objectStoreNames.contains('windowed')) db.createObjectStore('windowed');
+      if (!db.objectStoreNames.contains('runs')) db.createObjectStore('runs', { keyPath: 'id' });
     };
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result;
-      const tx = db.transaction(['batches', 'files', 'documents', 'windowed'], 'readwrite');
+      const tx = db.transaction(['batches', 'files', 'documents', 'windowed', 'runs'], 'readwrite');
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
       try { run(tx); } catch (error) { tx.abort(); reject(error); }
@@ -45,11 +46,14 @@ export function deleteLocalBatch(batch: Batch): Promise<void> {
       }
       batches.delete(batch.batch.batch_id);
       tx.objectStore('windowed').delete(batch.batch.batch_id);
+      const runs = tx.objectStore('runs');
+      const request = runs.getAll();
+      request.onsuccess = () => { for (const run of request.result as { id: string; batchId: string }[]) if (run.batchId === batch.batch.batch_id) runs.delete(run.id); };
     };
   });
 }
 export async function clearLocalData(): Promise<void> {
-  await mutate(tx => { for (const name of ['batches', 'files', 'documents', 'windowed']) tx.objectStore(name).clear(); });
+  await mutate(tx => { for (const name of ['batches', 'files', 'documents', 'windowed', 'runs']) tx.objectStore(name).clear(); });
   clearProfiles();
-  for (const key of ['idp-studio.settings.v1', 'idp-studio.tables', 'idp-studio.theme', 'idp-studio.sidebar']) localStorage.removeItem(key);
+  for (const key of ['idp-studio.agent-config.v1', 'idp-studio.settings.v1', 'idp-studio.tables', 'idp-studio.theme', 'idp-studio.sidebar']) localStorage.removeItem(key);
 }
