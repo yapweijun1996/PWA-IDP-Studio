@@ -49,6 +49,7 @@ Offline contract: once cached, the app shell and stored documents remain availab
 
 | Scenario | Assertions |
 | --- | --- |
+| `ai-agents` | Saves max turns 3 and disables crop_zoom; agent-tools request omits the disabled tool; persisted run details include steps/outcome; outcome filter, defaults reset and clear-all history removal. |
 | `shell` | Upload Documents and gateway disclosure; exact nine-item navigation order; four actual routes; nine enabled links with the nine hrefs and no disabled items; expanded sidebar; footer version/build `e2e-1`; no console errors or uncaught page errors. |
 | `upload-demo` | In-page canvas PNG dropped through DataTransfer; real extraction and workspace; input_image and demo Bearer token; no BYOK fixture key; Home lists batch and all three stat cards show 1; table opens workspace. |
 | `review-flow` | Invalid date and mismatched totals block approval with visible reason; readable Issues title; date correction resolves its issue but leaves totals blocking; total correction enables approval; Approved status; Clean/Full JSON differ; v2 envelope keys and references, correction/approval reviews and revision increments; selecting date highlights read-only evidence on page 1; no draw/move/resize control. |

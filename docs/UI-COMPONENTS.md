@@ -69,3 +69,7 @@ Contrast tests read `tokens.css` directly through `node:fs`, bypassing Vitest's 
 - Upload tables retain all seven columns. At desktop widths (1024px and above), fixed table layout wraps long filenames, dates, headings and status text without clipping pills; narrower screens retain the local scroller. Recent uploads exposes named Open icon buttons; Documents retains its Open/Delete menu.
 - Workspace combines approval/export blockers into one counted notice linking to Issues. Viewer controls are one compact icon-button row; initial zoom and Fit width both size evidence to its pane. The component-sheet header relies on the shell's OnlineStatus rather than repeating it.
 
+
+## AI Agents
+
+`AiAgents` uses existing DS Card, Field, Input, Checkbox, Select, Button, Notice, EmptyState and Toast components. Configuration saves explicitly; Reset to defaults persists defaults and announces through Toast. Tool sections show executable descriptions and TypeBox parameters without a second prose catalog. Provider limits are read-only. Run history has loading/error/empty states, an outcome filter, and inline details with timestamps, phase counts, a step timeline and document link. No editable evidence geometry or extracted payload is displayed in traces.

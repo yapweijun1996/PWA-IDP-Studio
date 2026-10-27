@@ -6,14 +6,14 @@ import { DOCUMENT_TYPES, type DocumentType } from '../types';
 import { parseModelJson } from '../validate';
 import type { ExtractOptions } from '../extract';
 import { releasePageImages, type PageSource } from './pageSource';
-
-export const BOUNDARY_MIN_CONFIDENCE = 0.7;
+import { BOUNDARY_MIN_CONFIDENCE, loadAgentConfig } from '../agentConfig';
+export { BOUNDARY_MIN_CONFIDENCE } from '../agentConfig';
 export interface PageDecision { page: number; document_type: DocumentType; starts_new_document: boolean; confidence: number }
 export interface Segment { pages: number[]; document_type: DocumentType; boundary_status: 'confirmed' | 'needs_review'; confidence: number }
 export interface SegmentWindow { pages: number[]; decisions: PageDecision[]; error?: string }
 export interface SegmentPlan { pageCount: number; window: number; windows: SegmentWindow[]; segments: Segment[]; unassigned: number[]; failed: number[] }
 
-export function stitchSegments(windows: SegmentWindow[], pageCount: number): Segment[] {
+export function stitchSegments(windows: SegmentWindow[], pageCount: number, threshold = BOUNDARY_MIN_CONFIDENCE): Segment[] {
   const decisions = new Map<number, PageDecision>();
   for (const window of windows) {
     if (window.error) continue;
@@ -24,7 +24,7 @@ export function stitchSegments(windows: SegmentWindow[], pageCount: number): Seg
     const decision = decisions.get(page);
     if (!decision) continue;
     const previous = segments.at(-1);
-    if (!previous || previous.pages.at(-1) !== page - 1 || decision.starts_new_document || page === 1) segments.push({ pages: [page], document_type: decision.document_type, confidence: decision.confidence, boundary_status: decision.confidence < BOUNDARY_MIN_CONFIDENCE ? 'needs_review' : 'confirmed' });
+    if (!previous || previous.pages.at(-1) !== page - 1 || decision.starts_new_document || page === 1) segments.push({ pages: [page], document_type: decision.document_type, confidence: decision.confidence, boundary_status: decision.confidence < threshold ? 'needs_review' : 'confirmed' });
     else previous.pages.push(page);
   }
   for (const segment of segments) {
@@ -37,9 +37,10 @@ export function stitchSegments(windows: SegmentWindow[], pageCount: number): Seg
 
 export async function segmentPages(opts: Omit<ExtractOptions, 'pages'> & { source: PageSource; plan?: SegmentPlan; onWindow?: (plan: SegmentPlan) => void }): Promise<SegmentPlan> {
   const windowSize = imageLimits(opts.settings.provider).window;
+  const config = opts.agentConfig ?? loadAgentConfig(opts.settings.provider);
   const plan: SegmentPlan = opts.plan?.window === windowSize ? structuredClone(opts.plan) : { pageCount: opts.plan?.pageCount ?? opts.manifest.length, window: windowSize, windows: [], segments: [], unassigned: [], failed: [] };
   const update = () => {
-    plan.segments = stitchSegments(plan.windows, plan.pageCount);
+    plan.segments = stitchSegments(plan.windows, plan.pageCount, config.boundaryConfidence);
     const covered = new Set(plan.segments.flatMap(s => s.pages));
     plan.failed = [...new Set(plan.windows.filter(w => w.error).flatMap(w => w.pages.filter((p, i) => (i > 0 || p === 1) && !covered.has(p))))];
     plan.unassigned = [...new Set(plan.windows.filter(w => !w.error).flatMap(w => w.pages.filter((p, i) => (i > 0 || p === 1) && !covered.has(p) && !plan.failed.includes(p))))];
@@ -68,7 +69,7 @@ export async function segmentPages(opts: Omit<ExtractOptions, 'pages'> & { sourc
       const guard = new Promise<never>((_, r) => { reject = r; });
       const abort = () => { agent.abort(); reject(new Error('Segmentation aborted')); };
       opts.signal?.addEventListener('abort', abort, { once: true });
-      const timer = setTimeout(() => { agent.abort(); reject(new Error('Segmentation timed out')); }, opts.timeoutMs ?? 120000);
+      const timer = setTimeout(() => { agent.abort(); reject(new Error('Segmentation timed out')); }, opts.timeoutMs ?? config.timeoutSeconds * 1000);
       try {
         opts.signal?.throwIfAborted();
         for (let attempt = 0; attempt < 2; attempt++) {
@@ -92,6 +93,7 @@ export async function segmentPages(opts: Omit<ExtractOptions, 'pages'> & { sourc
       if ((error as { name?: string })?.name === 'AbortError') throw error;
       window.error = friendlyProviderError(String(error), opts.settings.provider);
     } finally { await releasePageImages(opts.source, images); }
+    opts.onStep?.({ at: Date.now(), tool: 'segmentation', summary: window.error ? 'Segmentation window failed' : 'Segmentation window completed', ok: !window.error });
     plan.windows = plan.windows.filter(w => w.pages[0] !== start).concat(window).sort((a, b) => a.pages[0] - b.pages[0]);
     update();
     if (pages.at(-1) === plan.pageCount) break;

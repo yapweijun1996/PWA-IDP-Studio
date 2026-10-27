@@ -3,6 +3,8 @@ import type { AgentStep, ExtractionProfile } from '../lib/agent/contract';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getBatch, getFile, getWindowedState, listBatches, putBatch, putFile, putWindowedProgress, type WindowedState } from '../lib/db';
 import { runWindowedExtraction } from '../lib/windowed';
+import { putRun, type RunTrace } from '../lib/db';
+import { modelFor } from '../lib/settings';
 import { imageLimits } from '../lib/providers';
 import { pageManifest } from '../lib/pdf';
 import { loadSettings, type Settings } from '../lib/settings';
@@ -69,15 +71,19 @@ export function App() {
     extraction.current = controller;
     let writes = Promise.resolve();
     let latest = pending;
+    const trace: RunTrace = { id: crypto.randomUUID(), batchId: id, filename: info.filename, provider: settings.provider, model: modelFor(settings, settings.provider), mode: profile?.name ?? 'auto', started: Date.now(), ended: 0, segmentationWindows: 0, documentsExtracted: 0, documentsFailed: 0, steps: [], outcome: 'failed', error: '' };
     try {
       setBusy(`${info.filename}: starting extraction…`);
       setSteps([]);
       setNotice('');
       const result = await runWindowedExtraction({ batchId: id, createdAt, file: info, blob: file, profile, manifest, settings, ...state, signal: controller.signal,
-        onStep: step => setSteps(previous => [...previous.slice(-19), step]),
+        onStep: step => { if (trace.steps.length < 200) trace.steps.push(step); setSteps(previous => [...previous.slice(-19), step]); },
         onStatus: m => { if (manifest.length <= imageLimits(settings.provider).singlePassPages) setBusy(`${info.filename}: ${m}`); else if (/^(Segmenting window|Extracting document) /.test(m)) setBusy(m); },
         onProgress: progress => {
           latest = progress.batch;
+          trace.segmentationWindows = progress.plan.windows.length;
+          trace.documentsExtracted = progress.results.filter(r => r.output).length;
+          trace.documentsFailed = progress.results.filter(r => !r.output).length;
           setBusy(progress.phase === 'segmenting' ? `Segmenting window ${progress.done}/${progress.total}` : `Extracting document ${progress.done}/${progress.total}`);
           writes = writes.then(async () => {
             await putWindowedProgress(progress.batch, { plan: progress.plan, results: progress.results });
@@ -87,8 +93,14 @@ export function App() {
       });
       await writes;
       await putWindowedProgress(result.batch, { plan: result.plan, results: result.results });
+      trace.segmentationWindows = result.plan.windows.length;
+      trace.documentsExtracted = result.results.filter(r => r.output).length;
+      trace.documentsFailed = result.results.filter(r => !r.output).length;
+      trace.outcome = result.batch.batch.status === 'validated' ? 'validated' : result.batch.batch.status === 'failed' ? 'failed' : 'review_required';
       if (controller.signal.aborted) setNotice('Extraction cancelled. Finished documents are saved; remaining pages are pending. Retry extraction to continue.');
     } catch (e) {
+      trace.error = String((e as Error).message);
+      trace.documentsFailed = Math.max(1, trace.documentsFailed);
       await writes;
       if (controller.signal.aborted) {
         latest.batch.status = 'review_required';
@@ -103,7 +115,12 @@ export function App() {
         failed.issues.push({ issue_id: 'extraction_failed', scope: 'batch', target_id: id, rule_code: 'EXTRACTION_FAILED', severity: 'blocking', message: String((e as Error).message), status: 'open', waiver_review_id: null });
         await putBatch(failed);
       }
-    } finally { extraction.current = null; }
+    } finally {
+      extraction.current = null;
+      trace.ended = Date.now();
+      if (controller.signal.aborted) trace.outcome = 'cancelled';
+      try { await putRun(trace); } catch (error) { setError(`Run history could not be saved: ${String(error)}`); }
+    }
     return controller.signal.aborted;
   };
 

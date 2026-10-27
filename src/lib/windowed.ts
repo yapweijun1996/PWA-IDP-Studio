@@ -7,6 +7,7 @@ import { modelFor } from './settings';
 import { imageLimits } from './providers';
 import type { ModelOutput } from './validate';
 import type { Batch } from '../contract/types';
+import { loadAgentConfig } from './agentConfig';
 export { BOUNDARY_MIN_CONFIDENCE } from './agent/segment';
 export type { Segment, SegmentPlan } from './agent/segment';
 export interface SegmentResult { pages: number[]; output: ModelOutput | null; error?: string }
@@ -14,6 +15,7 @@ export interface WindowedProgress { phase: 'segmenting' | 'extracting'; done: nu
 export type WindowedOptions = Omit<ExtractOptions, 'pages'> & { plan?: SegmentPlan; results?: SegmentResult[]; onProgress?: (progress: WindowedProgress) => void };
 
 export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ batch: Batch; plan: SegmentPlan; results: SegmentResult[] }> {
+  opts = { ...opts, agentConfig: opts.agentConfig ?? loadAgentConfig(opts.settings.provider) };
   opts.signal?.throwIfAborted();
   const blob = opts.blob ?? (!opts.pageSource ? await getFileByFileId(opts.file.file_id) : undefined);
   if (!opts.pageSource && !blob) throw new Error('Original file unavailable');
@@ -24,7 +26,7 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
   if (plan.pageCount !== pageCount) {
     plan.pageCount = pageCount;
     plan.windows = plan.windows.filter(w => w.pages.every(p => p <= pageCount) && (w.pages.length === limits.window || w.pages.at(-1) === pageCount));
-    plan.segments = stitchSegments(plan.windows, pageCount);
+    plan.segments = stitchSegments(plan.windows, pageCount, opts.agentConfig!.boundaryConfidence);
     plan.failed = plan.failed.filter(p => p <= pageCount);
     plan.unassigned = plan.unassigned.filter(p => p <= pageCount);
   }
