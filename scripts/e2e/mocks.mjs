@@ -74,10 +74,13 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
       }
       const payload = JSON.parse(r.postData || '{}');
       const prompt = JSON.stringify(payload.input ?? []);
+      if (u.hostname === 'gpt.yapweijun1996.com' && (prompt.match(/"type"\s*:\s*"input_image"/g) ?? []).length > 4) {
+        await fulfill(400, JSON.stringify({ error: { message: 'demo image page limit exceeded', code: 'DEMO_IMAGE_COUNT_EXCEEDED', type: 'invalid_request_error' } })); return;
+      }
       if (JSON.stringify(payload).includes('Segment documents.')) {
         const pages = [...new Set([...prompt.matchAll(/Page (\d+):/g)].map(m => Number(m[1])))];
         await fulfill(200, responseStream(JSON.stringify({ pages: pages.map(page => ({
-          page, document_type: 'purchase_invoice', starts_new_document: (page - 1) % 5 === 0,
+          page, document_type: variant === 'six-page' ? 'unknown' : 'purchase_invoice', starts_new_document: variant === 'six-page' ? page === 1 : (page - 1) % 5 === 0,
           confidence: variant === 'windowed' && page === 11 ? 0.5 : 1,
         })) })), 'text/event-stream');
         return;
@@ -100,6 +103,14 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
       }
       const output = variant === 'targeted' ? targeted() : invoice(variant === 'bad');
       output.fields.forEach(field => { field.page = start; });
+      if (variant === 'six-page') {
+        output.document_type = 'unknown';
+        output.fields = start === 1 ? [{ key: 'reference', value: 'SIX-PAGES', page: 1, bbox: [100, 100, 200, 500], confidence: 1 }] : [];
+        output.line_items = [{ description: `Pages ${start}-${start + 1}`, quantity: '1', unit_price: '10.00', amount: '10.00' }];
+      } else if (JSON.stringify(payload).includes('Earlier pages of this same document')) {
+        output.fields = [];
+        output.line_items = [];
+      }
       const text = variant === 'invalid' || (variant === 'repair' && replies === 1) ? 'not JSON: E2E invalid reply' : JSON.stringify(output);
       await fulfill(200, responseStream(text), 'text/event-stream'); return;
     }
@@ -109,6 +120,13 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
   b.on('Fetch.requestPaused', e => { const p = handle(e); pending.add(p); p.finally(() => pending.delete(p)).catch(() => {}); return p; });
   // Catch all destinations, not only provider patterns: an unexpected host must never receive bytes.
   await b.send('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
-  return { requests, violations, extractionPages, setVariant(value) { variant = value; replies = 0; attempts.clear(); }, async assertSafe() { await Promise.all([...pending]); assert.deepEqual(violations, [], 'Unexpected network destinations/endpoints'); } };
+  return { requests, violations, extractionPages, setVariant(value) { variant = value; replies = 0; attempts.clear(); }, async assertSafe() {
+    await Promise.all([...pending]);
+    assert.deepEqual(violations, [], 'Unexpected network destinations/endpoints');
+    for (const request of requests) if (new URL(request.url).hostname === 'gpt.yapweijun1996.com' && new URL(request.url).pathname.endsWith('/responses')) {
+      const input = JSON.stringify(JSON.parse(request.body || '{}').input ?? []);
+      assert.ok((input.match(/"type"\s*:\s*"input_image"/g) ?? []).length <= 4, 'Demo request exceeded four images including tool outputs');
+    }
+  } };
 }
 export function redact(value) { return String(value).replaceAll(TEST_KEY, '[REDACTED]').replace(/Bearer\s+[^\s"',}]+/gi, 'Bearer [REDACTED]').replace(/sk-[a-zA-Z0-9_-]+/g, '[REDACTED]'); }

@@ -1,6 +1,6 @@
 import { Agent, type AgentEvent, type StreamFn } from '@mariozechner/pi-agent-core';
 import { streamSimple, createAssistantMessageEventStream, type AssistantMessage } from '@mariozechner/pi-ai';
-import { apiKeyFor, buildModel, sanitizePayload } from './providers';
+import { apiKeyFor, buildModel, imageLimits, sanitizePayload } from './providers';
 import type { RenderedPage } from './pdf';
 import type { Settings } from './settings';
 import { modelFor } from './settings';
@@ -51,6 +51,8 @@ export interface ExtractOptions {
   pageSource?: PageSource;
   decoder?: CodeDecoder;
   absolutePages?: number[];
+  /** Earlier pages of this document have already been extracted. */
+  continuation?: boolean;
   onOutput?: (output: ModelOutput) => void;
 }
 
@@ -111,7 +113,7 @@ ${opts.profile.rowFields.length ? 'Include line_items rows when present.' : 'Do 
 Types: amount/quantity decimal strings, integer safe integers, date ISO YYYY-MM-DD, text/code strings.
 Do not add unselected keys. document_type is still required and may be unknown.` : '';
   const agent = new Agent({
-    initialState: { systemPrompt: SYSTEM_PROMPT + TOOL_PROMPT + targeted, model, tools: createExtractionTools({ source, submit, maxImages: opts.maxToolImages, decoder: opts.decoder }) },
+    initialState: { systemPrompt: SYSTEM_PROMPT + TOOL_PROMPT + targeted + (opts.continuation ? '\nEarlier pages of this same document were already processed. Return only rows and fields found on these pages; use null/[] otherwise. Do not repeat earlier header data or rows.' : ''), model, tools: createExtractionTools({ source, submit, maxImages: opts.maxToolImages ?? imageLimits(settings.provider).toolImages, decoder: opts.decoder }) },
     toolExecution: 'sequential',
     streamFn: (requestModel, context, options) => {
       if (!stopped && !output) return (opts.streamFn ?? streamSimple)(requestModel, context, options);

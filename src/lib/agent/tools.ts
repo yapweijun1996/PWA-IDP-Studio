@@ -3,6 +3,7 @@ import { Type, type TSchema } from 'typebox';
 import { Check } from 'typebox/value';
 import type { Crop, PageSource } from './pageSource';
 import type { RenderedPage } from '../pdf';
+import { imageLimits } from '../providers';
 
 export interface DecodedCode { format: string; text: string; bbox: Crop }
 export type CodeDecoder = (image: RenderedPage) => Promise<DecodedCode[]>;
@@ -54,7 +55,7 @@ export function createExtractionTools(options: {
 }): AgentTool<any>[] {
   const { source } = options;
   let images = 0;
-  const limit = options.maxImages ?? 12;
+  const limit = options.maxImages ?? imageLimits('openai').toolImages;
   if (!Number.isInteger(limit) || limit < 1) throw new Error('Image budget must be positive');
   const render = async (page: number, crop?: Crop, scale?: number, maxSide?: number, signal?: AbortSignal) => {
     signal?.throwIfAborted();

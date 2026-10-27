@@ -55,7 +55,8 @@ Offline contract: once cached, the app shell and stored documents remain availab
 | `repair-turn` | First invalid response is repaired by a second request; two invalid responses give a visible error Notice and failed batch with no fabricated transactions. |
 | `byok` | OpenAI settings use a synthetic key only in api.openai.com Authorization, never URL/body; key absent from all IndexedDB stores after reload (localStorage persistence is intentionally allowed); missing key gives actionable message and no request; second provider OpenRouter receives mocked 429 and fails without fabricated data. |
 | `page-limit` | Generated 25-page PDF with limit 12; first 12 classified, last 13 pending, blocking PAGE_LIMIT_EXCEEDED, approval/download disabled. Raise limit to 25 and retry the same batch without re-upload. |
-| `windowed-multi-doc` | Generated 30-page PDF, six five-page documents, uncertain boundary at page 11, extraction failure for pages 16–20. Reload and Retry make exactly one call for the failed segment. Full page coverage, absolute evidence and document-scoped approval/export blockers. |
+| `windowed-multi-doc` | Generated 30-page PDF, six five-page documents, uncertain boundary at page 11, extraction failure for pages 16–20. Reload and Retry make exactly three two-page-or-smaller extraction calls for the failed document. Full page coverage, absolute evidence and document-scoped approval/export blockers. |
+| `demo-six-page-document` | Six-page demo document: two segmentation windows, three two-page extraction chunks, one document with first-chunk headers and three merged rows. |
 | `migration` | Before first app load, seed actual v1 documents/files database with legacy envelope and PNG blob on an empty same-origin resource; app upgrades and lists legacy batch; second startup does not duplicate it; original document/blob rows remain. |
 | `theme-sidebar` | Light default; Dark survives reload; System follows live light/dark emulation changes; collapsed sidebar survives reload; rail tooltip opens independently on focus and hover. |
 | `mobile` | Phone touch/UA, 390×844; Home, Documents, Review Queue, real workspace, Settings and Design system have no horizontal overflow; drawer opens; Tab/Shift-Tab wrap; Escape closes and restores trigger focus. |
@@ -113,9 +114,9 @@ The deployed build ID need not equal the local deterministic fixture ID.
 
 Only GET/HEAD requests to the supplied origin are allowed through. Provider
 calls, cross-origin destinations and same-origin mutations are blocked and fail
-the run. No live gateway draft is sent. All twelve local scenarios are reported
+the run. No live gateway draft is sent. All local scenarios are reported
 SKIP with an explicit live-mode reason. `--only=live-read-only` is supported
-with `--base-url`; local mode accepts one of the twelve local scenario names.
+with `--base-url`; local mode accepts any registered local scenario name.
 Unknown names/options fail instead of silently running no tests.
 
 ## Diagnostics and verification status
@@ -149,3 +150,5 @@ shell, but this tool runtime denied writes to `node_modules/.vite-temp` and
 scenario smoke against the existing `dist/` was also attempted without a build;
 the runtime denied the loopback server's `listen` with `EPERM`. No new browser
 passes are claimed.
+
+The demo gateway mock counts every `input_image` in the complete request input, including `function_call_output` parts, rejects more than four with HTTP 400 `DEMO_IMAGE_COUNT_EXCEEDED`, and asserts that no app request exceeded four images. Demo uses four-page segmentation windows with one-page overlap and two-page extraction chunks.

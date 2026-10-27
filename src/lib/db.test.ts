@@ -4,10 +4,11 @@ import { buildBatch } from '../contract/build';
 import { invoiceInput } from '../contract/fixtures';
 import { deleteBatch, getBatch, getWindowedState, putWindowedProgress, type WindowedState } from './db';
 import { clearLocalData, deleteLocalBatch } from '../ui/storage';
+import { imageLimits } from './providers';
 
 beforeEach(async () => { await clearLocalData(); });
 const state: WindowedState = {
-  plan: { pageCount: 1, windows: [], segments: [{ pages: [1], document_type: 'purchase_invoice', boundary_status: 'confirmed', confidence: 1 }], failed: [], unassigned: [] },
+  plan: { pageCount: 1, window: imageLimits('demo').window, windows: [], segments: [{ pages: [1], document_type: 'purchase_invoice', boundary_status: 'confirmed', confidence: 1 }], failed: [], unassigned: [] },
   results: [{ pages: [1], output: { document_type: 'purchase_invoice', fields: [], line_items: [] } }],
 };
 it('restores the matching batch and outputs, replaces failed results and isolates batch deletion', async () => {

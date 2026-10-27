@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizePayload } from './providers';
+import { imageLimits, sanitizePayload } from './providers';
 
 const forbidden = ['max_output_tokens', 'max_tokens', 'previous_response_id', 'temperature', 'top_p', 'prompt_cache_key', 'include', 'reasoning', 'service_tier', 'metadata'];
 
@@ -42,4 +42,12 @@ describe('demo payload reasoning items', () => {
     const payload = { input: [{ type: 'reasoning', id: 'rs_1' }] };
     expect(sanitizePayload('openai', payload)).toBe(payload);
   });
+});
+
+it.each(['demo', 'openai', 'openrouter', 'gemini'] as const)('defines image batching for %s', provider => {
+  const limits = imageLimits(provider);
+  expect(limits).toEqual(provider === 'demo'
+    ? { requestImages: 4, window: 4, extractPages: 2, toolImages: 2, singlePassPages: 2 }
+    : { requestImages: Infinity, window: 10, extractPages: 10, toolImages: 12, singlePassPages: 10 });
+  expect(limits.extractPages + limits.toolImages).toBeLessThanOrEqual(limits.requestImages);
 });

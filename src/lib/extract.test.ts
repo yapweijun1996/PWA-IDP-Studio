@@ -5,6 +5,7 @@ import type { Settings } from './settings';
 import { validateBatch } from '../contract/validate';
 import type { PageSource } from './agent/pageSource';
 import type { AgentStep } from './agent/contract';
+import { imageLimits } from './providers';
 
 const settings: Settings = { provider: 'openai', keys: { openai: 'sk-test' }, models: {}, maxPages: 20 };
 const pages = [{ page: 1, width: 10, height: 10, data: 'AAAA', mimeType: 'image/jpeg' as const }];
@@ -120,4 +121,22 @@ describe('runExtraction harness', () => {
       await assertion;
     } finally { vi.useRealTimers(); }
   });
+});
+
+it.each([
+  ['demo', undefined, 2], ['openai', undefined, 12], ['openrouter', undefined, 12], ['gemini', undefined, 12], ['demo', 1, 1],
+] as const)('uses %s tool budget (override=%s)', async (provider, maxToolImages, expected) => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ token: 'dmo_budget', expires_at: '2099-01-01T00:00:00Z' }), { status: 201 }));
+  const source: PageSource = { pageCount: 1, render: vi.fn(async () => pages[0]), textItems: async () => [], dispose: async () => {} };
+  const replies = fakeStream([
+    Array.from({ length: expected + 1 }, () => ({ name: 'get_page_image', arguments: { page: 1 } })),
+    [{ name: 'submit_result', arguments: { json: JSON.parse(valid) } }],
+  ]);
+  try {
+    await runExtraction({ ...base, batchId: 'tool-budget', settings: { ...settings, provider, keys: { openai: 'test', openrouter: 'test', gemini: 'test' } }, maxToolImages, pageSource: source, streamFn: (model, context, options) => {
+      expect((JSON.stringify(context.messages).match(/"type":"image"/g) ?? []).length).toBeLessThanOrEqual(imageLimits(provider).requestImages);
+      return replies(model, context, options);
+    } });
+    expect(source.render).toHaveBeenCalledTimes(expected);
+  } finally { fetchMock.mockRestore(); }
 });

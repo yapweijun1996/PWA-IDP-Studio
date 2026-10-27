@@ -176,8 +176,8 @@ export const scenarios = [
     assert.equal(batch.documents.length,6);
     assert.deepEqual(batch.documents.flatMap(d=>d.page_refs.map(p=>p.page_number)),Array.from({length:30},(_,i)=>i+1));
     assert.ok(batch.pages.every(p=>p.status==='classified'));
-    assert.equal(posts(mocks).length-before,1,'No segmentation or completed-segment model calls on retry');
-    assert.deepEqual(mocks.extractionPages.slice(extracted),[16]);
+    assert.equal(posts(mocks).length-before,3,'Only the failed document is retried in two-page chunks');
+    assert.deepEqual(mocks.extractionPages.slice(extracted),[16,18,20]);
     assert.deepEqual([...new Set(batch.evidence.flatMap(e=>e.sources.map(s=>s.page_number)))],[1,6,11,16,21,26]);
     const uncertain=batch.documents.find(d=>d.boundary_status==='needs_review');
     assert.ok(uncertain);
@@ -188,6 +188,19 @@ export const scenarios = [
     await b.wait(`[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Approve'&&!e.disabled)`,'unaffected document approval');
     await click(b,'Approve'); await click(b,'JSON');
     assert.equal(await buttonDisabled(b,'Download JSON'),false,'Boundary blocker belongs only to the uncertain document');
+  } },
+  { name: 'demo-six-page-document', async run({b,mocks}) {
+    mocks.setVariant('six-page');
+    await drop(b,'six-pages.pdf',makePDF(6).toString('base64'));
+    const batch=(await batches(b)).find(v=>v.source_files[0].filename==='six-pages.pdf');
+    checkEnvelope(batch);
+    assert.equal(batch.documents.length,1);
+    assert.deepEqual(batch.documents[0].page_refs.map(p=>p.page_number),[1,2,3,4,5,6]);
+    assert.equal(batch.transactions[0].data.reference,'SIX-PAGES');
+    assert.deepEqual(batch.transactions[0].data.line_items.map(row=>row.description),['Pages 1-2','Pages 3-4','Pages 5-6']);
+    assert.deepEqual(mocks.extractionPages,[1,3,5]);
+    assert.equal(posts(mocks).length,5,'Two segmentation windows and three extraction chunks');
+    await mocks.assertSafe();
   } },
   { name: 'migration', beforeLoad: true, async run({b,url}) {
     // A same-origin empty resource allows seeding BEFORE any application JavaScript executes.

@@ -1,20 +1,17 @@
 import { Agent } from '@mariozechner/pi-agent-core';
 import { streamSimple } from '@mariozechner/pi-ai';
-import { apiKeyFor, buildModel, sanitizePayload } from '../providers';
+import { apiKeyFor, buildModel, imageLimits, sanitizePayload } from '../providers';
 import { friendlyProviderError } from '../errors';
 import { DOCUMENT_TYPES, type DocumentType } from '../types';
 import { parseModelJson } from '../validate';
 import type { ExtractOptions } from '../extract';
 import { releasePageImages, type PageSource } from './pageSource';
 
-export const SEGMENT_WINDOW = 10;
-export const SINGLE_PASS_PAGES = 10;
-export const MAX_EXTRACT_PAGES = 12;
 export const BOUNDARY_MIN_CONFIDENCE = 0.7;
 export interface PageDecision { page: number; document_type: DocumentType; starts_new_document: boolean; confidence: number }
 export interface Segment { pages: number[]; document_type: DocumentType; boundary_status: 'confirmed' | 'needs_review'; confidence: number }
 export interface SegmentWindow { pages: number[]; decisions: PageDecision[]; error?: string }
-export interface SegmentPlan { pageCount: number; windows: SegmentWindow[]; segments: Segment[]; unassigned: number[]; failed: number[] }
+export interface SegmentPlan { pageCount: number; window: number; windows: SegmentWindow[]; segments: Segment[]; unassigned: number[]; failed: number[] }
 
 export function stitchSegments(windows: SegmentWindow[], pageCount: number): Segment[] {
   const decisions = new Map<number, PageDecision>();
@@ -39,7 +36,8 @@ export function stitchSegments(windows: SegmentWindow[], pageCount: number): Seg
 }
 
 export async function segmentPages(opts: Omit<ExtractOptions, 'pages'> & { source: PageSource; plan?: SegmentPlan; onWindow?: (plan: SegmentPlan) => void }): Promise<SegmentPlan> {
-  const plan: SegmentPlan = opts.plan ? structuredClone(opts.plan) : { pageCount: opts.manifest.length, windows: [], segments: [], unassigned: [], failed: [] };
+  const windowSize = imageLimits(opts.settings.provider).window;
+  const plan: SegmentPlan = opts.plan?.window === windowSize ? structuredClone(opts.plan) : { pageCount: opts.plan?.pageCount ?? opts.manifest.length, window: windowSize, windows: [], segments: [], unassigned: [], failed: [] };
   const update = () => {
     plan.segments = stitchSegments(plan.windows, plan.pageCount);
     const covered = new Set(plan.segments.flatMap(s => s.pages));
@@ -47,14 +45,14 @@ export async function segmentPages(opts: Omit<ExtractOptions, 'pages'> & { sourc
     plan.unassigned = [...new Set(plan.windows.filter(w => !w.error).flatMap(w => w.pages.filter((p, i) => (i > 0 || p === 1) && !covered.has(p) && !plan.failed.includes(p))))];
     opts.onWindow?.(structuredClone(plan));
   };
-  for (let start = 1; start <= plan.pageCount; start += SEGMENT_WINDOW - 1) {
+  for (let start = 1; start <= plan.pageCount; start += windowSize - 1) {
     opts.signal?.throwIfAborted();
-    const pages = Array.from({ length: Math.min(SEGMENT_WINDOW, plan.pageCount - start + 1) }, (_, i) => start + i);
+    const pages = Array.from({ length: Math.min(windowSize, plan.pageCount - start + 1) }, (_, i) => start + i);
     if (plan.windows.some(w => w.pages[0] === start && !w.error)) {
       if (pages.at(-1) === plan.pageCount) break;
       continue;
     }
-    opts.onStatus?.(`Segmenting window ${Math.floor((start - 1) / (SEGMENT_WINDOW - 1)) + 1}/${Math.max(1, Math.ceil((plan.pageCount - 1) / (SEGMENT_WINDOW - 1)))}`);
+    opts.onStatus?.(`Segmenting window ${Math.floor((start - 1) / (windowSize - 1)) + 1}/${Math.max(1, Math.ceil((plan.pageCount - 1) / (windowSize - 1)))}`);
     const window: SegmentWindow = { pages, decisions: [] };
     const images = [];
     try {

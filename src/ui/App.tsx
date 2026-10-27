@@ -2,7 +2,8 @@ import { loadBatchMode, saveBatchMode } from '../lib/profiles';
 import type { AgentStep, ExtractionProfile } from '../lib/agent/contract';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getBatch, getFile, getWindowedState, listBatches, putBatch, putFile, putWindowedProgress, type WindowedState } from '../lib/db';
-import { runWindowedExtraction, SINGLE_PASS_PAGES } from '../lib/windowed';
+import { runWindowedExtraction } from '../lib/windowed';
+import { imageLimits } from '../lib/providers';
 import { pageManifest } from '../lib/pdf';
 import { loadSettings, type Settings } from '../lib/settings';
 import { sha256 } from '../lib/hash';
@@ -68,7 +69,7 @@ export function App() {
       setNotice('');
       const result = await runWindowedExtraction({ batchId: id, createdAt, file: info, blob: file, profile, manifest, settings, ...state, signal: controller.signal,
         onStep: step => setSteps(previous => [...previous.slice(-19), step]),
-        onStatus: m => { if (manifest.length <= SINGLE_PASS_PAGES) setBusy(`${info.filename}: ${m}`); else if (/^(Segmenting window|Extracting document) /.test(m)) setBusy(m); },
+        onStatus: m => { if (manifest.length <= imageLimits(settings.provider).singlePassPages) setBusy(`${info.filename}: ${m}`); else if (/^(Segmenting window|Extracting document) /.test(m)) setBusy(m); },
         onProgress: progress => {
           latest = progress.batch;
           setBusy(progress.phase === 'segmenting' ? `Segmenting window ${progress.done}/${progress.total}` : `Extracting document ${progress.done}/${progress.total}`);

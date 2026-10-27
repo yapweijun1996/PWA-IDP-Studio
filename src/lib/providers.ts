@@ -22,6 +22,15 @@ export const PROVIDERS: ProviderInfo[] = [
 
 export const providerInfo = (id: ProviderId) => PROVIDERS.find((p) => p.id === id)!;
 
+/** App batching budgets; Infinity means no app-level BYOK request cap. */
+const IMAGE_LIMITS = {
+  demo: { requestImages: 4, window: 4, extractPages: 2, toolImages: 2, singlePassPages: 2 },
+  openai: { requestImages: Infinity, window: 10, extractPages: 10, toolImages: 12, singlePassPages: 10 },
+  openrouter: { requestImages: Infinity, window: 10, extractPages: 10, toolImages: 12, singlePassPages: 10 },
+  gemini: { requestImages: Infinity, window: 10, extractPages: 10, toolImages: 12, singlePassPages: 10 },
+} as const;
+export const imageLimits = (provider: ProviderId) => IMAGE_LIMITS[provider];
+
 const isReasoningItem = (item: unknown) => (item as { type?: string } | null)?.type === 'reasoning';
 
 /** The demo gateway accepts only these Responses controls; BYOK payloads pass through. */

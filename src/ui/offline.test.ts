@@ -7,12 +7,13 @@ import { pageManifest, renderFile } from '../lib/pdf';
 import { runWindowedExtraction } from '../lib/windowed';
 import { buildBatch } from '../contract/build';
 import { invoiceInput } from '../contract/fixtures';
+import { imageLimits } from '../lib/providers';
 
 vi.mock('../lib/db', () => ({ listBatches: vi.fn(async () => []), getBatch: vi.fn(async () => undefined), putBatch: vi.fn(async () => {}), putFile: vi.fn(async () => {}), getWindowedState: vi.fn(async () => undefined), putWindowedProgress: vi.fn(async () => {}) }));
 vi.mock('../lib/migrateStore', () => ({ migrateStore: vi.fn(async () => ({ migrated: 0, skipped: 0 })) }));
 vi.mock('../lib/pdf', () => ({ pageManifest: vi.fn(async () => [{ page_number: 1, width: 100, height: 100 }]), renderFile: vi.fn(async () => []) }));
 vi.mock('../lib/hash', () => ({ sha256: vi.fn(async () => 'a'.repeat(64)) }));
-vi.mock('../lib/windowed', () => ({ runWindowedExtraction: vi.fn(), SINGLE_PASS_PAGES: 10 }));
+vi.mock('../lib/windowed', () => ({ runWindowedExtraction: vi.fn() }));
 vi.mock('./UpdatePrompt', () => ({ UpdatePrompt: () => null }));
 let container: HTMLDivElement;
 let root: Root;
@@ -32,7 +33,7 @@ beforeEach(async () => {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   localStorage.clear();
   window.location.hash = '#/';
-  vi.mocked(runWindowedExtraction).mockResolvedValue({ batch: buildBatch(invoiceInput()), plan: { pageCount: 1, windows: [], segments: [], failed: [], unassigned: [] }, results: [] });
+  vi.mocked(runWindowedExtraction).mockResolvedValue({ batch: buildBatch(invoiceInput()), plan: { pageCount: 1, window: imageLimits('demo').window, windows: [], segments: [], failed: [], unassigned: [] }, results: [] });
   container = document.createElement('div'); document.body.append(container); root = createRoot(container);
   await act(async () => { root.render(createElement(App)); });
 });

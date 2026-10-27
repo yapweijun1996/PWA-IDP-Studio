@@ -12,4 +12,7 @@ describe('friendlyProviderError', () => {
   it('passes provider API errors through untouched', () => {
     expect(friendlyProviderError('429 rate limit', 'openai')).toBe('429 rate limit');
   });
+  it('explains the demo image cap as an app batching bug', () => {
+    expect(friendlyProviderError('400 DEMO_IMAGE_COUNT_EXCEEDED', 'demo')).toBe("The demo service accepts at most 4 page images per request. This is a bug in the app's page batching; please report it.");
+  });
 });

@@ -1,10 +1,14 @@
-import { expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { fakeStream } from './fakeStream';
-import { runWindowedExtraction, MAX_EXTRACT_PAGES, SINGLE_PASS_PAGES, SEGMENT_WINDOW, type WindowedOptions } from './windowed';
+import { runWindowedExtraction, type WindowedOptions } from './windowed';
+import { imageLimits } from './providers';
 import { segmentPages, type SegmentPlan } from './agent/segment';
 import { validateBatch } from '../contract/validate';
 import type { RenderedPage } from './pdf';
 
+const { extractPages: MAX_EXTRACT_PAGES, singlePassPages: SINGLE_PASS_PAGES, window: SEGMENT_WINDOW } = imageLimits('openai');
+beforeEach(() => { vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ token: 'dmo_test', expires_at: '2099-01-01T00:00:00Z' }), { status: 201 })); });
+afterEach(() => { vi.restoreAllMocks(); });
 const range = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
 const decisions = (pages: number[], boundaries = [1]) => JSON.stringify({ pages: pages.map(page => ({ page, document_type: 'unknown', starts_new_document: boundaries.includes(page), confidence: 1 })) });
 const output = (page: number) => JSON.stringify({ document_type: 'unknown', fields: [{ key: 'reference', value: `ref-${page}`, page, bbox: [0, 0, 100, 100], confidence: 1 }], line_items: [] });
@@ -19,7 +23,10 @@ function setup(count: number, replies: string[]) {
     async dispose() { disposed++; },
   };
   const opts: WindowedOptions = { batchId: 'b', createdAt: '2026-10-27T00:00:00Z', file: { file_id: 'f', filename: 'many.pdf', media_type: 'application/pdf', sha256: 'a'.repeat(64), size: 10 }, manifest: range(1, count).map(page_number => ({ page_number, width: 10, height: 10 })), settings: { provider: 'openai', keys: { openai: 'test' }, models: {}, maxPages: 20 }, pageSource: source,
-    streamFn: (...args) => { calls++; return stream(...args); },
+    streamFn: (...args) => {
+      expect((JSON.stringify(args[1]).match(/"type":"image"/g) ?? []).length).toBeLessThanOrEqual(imageLimits(opts.settings.provider).requestImages);
+      calls++; return stream(...args);
+    },
     onProgress: p => { expect(validateBatch(p.batch)).toMatchObject({ ok: true }); },
   };
   return { opts, source, images, stats: () => ({ calls, alive, peak, rendered, released, disposed }) };
@@ -64,12 +71,12 @@ it('resumes only failed windows and failed segments with exact model call counts
 });
 
 it('drops successful results whose page lists change after failed-window resegmentation', async () => {
-  const s = setup(20, [decisions(range(1, 10)), output(1), output(13)]);
-  const plan: SegmentPlan = { pageCount: 20, windows: [{ pages: range(1, 10), decisions: [], error: 'failed' }, { pages: range(10, 19), decisions: range(10, 19).map(page => ({ page, document_type: 'unknown', starts_new_document: page === 13, confidence: 1 })) }, { pages: [19, 20], decisions: [19, 20].map(page => ({ page, document_type: 'unknown', starts_new_document: false, confidence: 1 })) }], segments: [{ pages: [11, 12], document_type: 'unknown', boundary_status: 'confirmed', confidence: 1 }, { pages: range(13, 20), document_type: 'unknown', boundary_status: 'confirmed', confidence: 1 }], failed: range(1, 10), unassigned: [] };
+  const s = setup(20, [decisions(range(1, 10)), output(1), output(11), output(13)]);
+  const plan: SegmentPlan = { pageCount: 20, window: imageLimits('openai').window, windows: [{ pages: range(1, 10), decisions: [], error: 'failed' }, { pages: range(10, 19), decisions: range(10, 19).map(page => ({ page, document_type: 'unknown', starts_new_document: page === 13, confidence: 1 })) }, { pages: [19, 20], decisions: [19, 20].map(page => ({ page, document_type: 'unknown', starts_new_document: false, confidence: 1 })) }], segments: [{ pages: [11, 12], document_type: 'unknown', boundary_status: 'confirmed', confidence: 1 }, { pages: range(13, 20), document_type: 'unknown', boundary_status: 'confirmed', confidence: 1 }], failed: range(1, 10), unassigned: [] };
   const result = await runWindowedExtraction({ ...s.opts, plan, results: [{ pages: [11, 12], output: { document_type: 'unknown', fields: [], line_items: [] } }, { pages: range(13, 20), output: { document_type: 'unknown', fields: [], line_items: [] } }] });
   expect(result.results.map(r => r.pages)).toEqual([range(13, 20), range(1, 12)]);
   expect(result.batch.documents.map(d => d.page_refs.map(p => p.page_number)).flat().sort((a, b) => a - b)).toEqual(range(1, 20));
-  expect(s.stats().calls).toBe(2);
+  expect(s.stats().calls).toBe(3);
 });
 
 it('aborts between windows without further model calls and releases images', async () => {
@@ -205,4 +212,51 @@ it('does not re-segment the final overlap page when a cached full window ends at
   expect(retry.stats().calls).toBe(0);
   expect(restored.batch.documents.map(d => d.page_refs)).toEqual(complete.batch.documents.map(d => d.page_refs));
   expect(restored.batch.pages.every(p => p.status === 'classified')).toBe(true);
+});
+
+it.each([false, true])('merges three demo chunks with merged required-header checks (missing=%s)', async missing => {
+  const replies = [1, 3, 5].map(page => JSON.stringify({ document_type: 'unknown', fields: page === 1 && !missing ? [{ key: 'reference', value: 'HEADER', page, bbox: [0, 0, 100, 100], confidence: 1 }] : [], line_items: [{ sku: { value: `sku-${page}`, page, bbox: [0, 0, 100, 100], confidence: 1 } }] }));
+  const s = setup(5, [decisions([1, 2, 3, 4]), decisions([4, 5]), ...replies]);
+  s.opts.settings.provider = 'demo';
+  const prompts: string[] = [];
+  const stream = s.opts.streamFn!;
+  s.opts.streamFn = (model, context, options) => { prompts.push(JSON.stringify(context)); return stream(model, context, options); };
+  const result = await runWindowedExtraction({ ...s.opts, profile: { id: 'p', name: 'Rows', fields: [{ key: 'reference', label: 'Reference', type: 'code', required: true }], rowFields: [{ key: 'sku', label: 'SKU', type: 'code', required: true }] } });
+  expect(result.plan.window).toBe(4);
+  expect(result.plan.windows.map(w => w.pages)).toEqual([[1, 2, 3, 4], [4, 5]]);
+  expect(result.batch.documents).toHaveLength(1);
+  expect(result.batch.transactions[0].data).toEqual({ reference: missing ? null : 'HEADER', line_items: [{ sku: 'sku-1' }, { sku: 'sku-3' }, { sku: 'sku-5' }] });
+  expect(result.batch.issues.filter(i => i.rule_code === 'MISSING_REQUIRED').map(i => i.message)).toEqual(missing ? ['/reference: required field is missing.'] : []);
+  expect(result.batch.transactions[0].required_fields).toEqual(['/reference', '/line_items/0/sku', '/line_items/1/sku', '/line_items/2/sku']);
+  expect(prompts[3]).toContain('Earlier pages of this same document');
+  expect(s.stats().calls).toBe(5);
+});
+
+it('re-segments when the stored window differs', async () => {
+  const first = setup(5, [output(1)]);
+  const stored = await runWindowedExtraction(first.opts);
+  const retry = setup(5, [decisions([1, 2, 3, 4]), decisions([4, 5]), output(1), output(3), output(5)]);
+  retry.opts.settings.provider = 'demo';
+  const result = await runWindowedExtraction({ ...retry.opts, plan: stored.plan, results: stored.results });
+  expect(result.plan.window).toBe(4);
+  expect(result.plan.windows.map(w => w.pages)).toEqual([[1, 2, 3, 4], [4, 5]]);
+  expect(retry.stats().calls).toBe(5);
+});
+
+it.each(['openai', 'openrouter', 'gemini'] as const)('segments %s with ten-page windows', async provider => {
+  const s = setup(11, [decisions(range(1, 10)), decisions([10, 11])]);
+  s.opts.settings.provider = provider;
+  s.opts.settings.keys = { [provider]: 'test' };
+  const plan = await segmentPages({ ...s.opts, source: s.source });
+  expect(plan.window).toBe(imageLimits(provider).window);
+  expect(plan.windows.map(w => w.pages)).toEqual([range(1, 10), [10, 11]]);
+});
+
+it('does not add header-only data from later demo chunks', async () => {
+  const s = setup(5, [decisions([1, 2, 3, 4]), decisions([4, 5]), output(1), output(3), output(5)]);
+  s.opts.settings.provider = 'demo';
+  const result = await runWindowedExtraction({ ...s.opts, profile: { id: 'p', name: 'Header', fields: [{ key: 'reference', label: 'Reference', type: 'code', required: true }], rowFields: [] } });
+  expect(result.batch.transactions[0].data).toEqual({ reference: 'ref-1' });
+  expect(result.batch.evidence.map(e => e.sources[0].page_number)).toEqual([1]);
+  expect(result.batch.issues.filter(i => i.rule_code === 'MISSING_REQUIRED')).toEqual([]);
 });
