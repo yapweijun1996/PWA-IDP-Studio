@@ -69,11 +69,13 @@ export function buildModel(s: Settings): Model<string> {
   }
 }
 
-let demoToken: { value: string; expiresAt: number } | null = null;
+let demoToken: { value: string; expiresAt: number; uses: number } | null = null;
+/** The gateway answers 429 "demo session request limit reached" after 20 requests per token (measured live); renew before that. */
+export const DEMO_TOKEN_MAX_USES = 18;
 
 /** Short-lived demo token; only works from an origin registered on the gateway. */
 export async function demoApiKey(): Promise<string> {
-  if (demoToken && demoToken.expiresAt - Date.now() > 30_000) return demoToken.value;
+  if (demoToken && demoToken.expiresAt - Date.now() > 30_000 && demoToken.uses < DEMO_TOKEN_MAX_USES) { demoToken.uses++; return demoToken.value; }
   const res = await fetch(`${DEMO_BASE}/demo/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -81,7 +83,7 @@ export async function demoApiKey(): Promise<string> {
   });
   if (!res.ok) throw new Error(`Demo endpoint refused the session (HTTP ${res.status}). It only serves the published site.`);
   const j = (await res.json()) as { token: string; expires_at: string };
-  demoToken = { value: j.token, expiresAt: Date.parse(j.expires_at) };
+  demoToken = { value: j.token, expiresAt: Date.parse(j.expires_at), uses: 1 };
   return j.token;
 }
 

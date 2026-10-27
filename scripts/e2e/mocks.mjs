@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+let sessionSeq = 0; const tokenUses = new Map();
 export const TEST_KEY = 'sk-e2e-not-a-real-key';
 export function invoice(bad = false) {
   return { document_type: 'purchase_invoice', fields: Object.entries({ supplier_name: 'E2E Supplier', invoice_no: 'INV-E2E-001', invoice_date: bad ? '26/10/2026' : '2026-10-26', currency: 'SGD', total_amount: bad ? '12.00' : '10.00' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [{ description: 'E2E service', quantity: '1', unit_price: '10.00', amount: '10.00' }] };
@@ -61,7 +62,7 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
     const fulfill = (status, body, type = 'application/json') => b.send('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: status, responseHeaders: [...cors, { name: 'Content-Type', value: type }], body: Buffer.from(body).toString('base64') });
     if (r.method === 'OPTIONS') { await fulfill(204, ''); return; }
     if (r.method === 'POST' && u.hostname === 'gpt.yapweijun1996.com' && u.pathname === '/demo/session') {
-      await fulfill(201, JSON.stringify({ token: 'dmo_e2e_fake', token_type: 'Bearer', expires_in: 900, expires_at: new Date(Date.now() + 900000).toISOString(), model: 'demo-auto' })); return;
+      await fulfill(201, JSON.stringify({ token: `dmo_e2e_${++sessionSeq}`, token_type: 'Bearer', expires_in: 900, expires_at: new Date(Date.now() + 900000).toISOString(), model: 'demo-auto' })); return;
     }
     if (variant === 'network-error' && r.method === 'POST' && u.pathname.endsWith('/responses')) { await b.send('Fetch.failRequest', { requestId: e.requestId, errorReason: 'ConnectionReset' }); return; }
     if (variant === 'rate-limit') { await fulfill(429, JSON.stringify({ error: { message: 'E2E rate limit', type: 'rate_limit_error' } })); return; }
@@ -71,6 +72,11 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
       }
       if (u.hostname === 'gpt.yapweijun1996.com' && (JSON.parse(r.postData || '{}').input || []).some?.(item => item?.type === 'reasoning')) {
         await fulfill(400, JSON.stringify({ error: { message: 'content is not allowed in reasoning items', code: 'DEMO_FIELD_DISABLED', type: 'invalid_request_error' } })); return;
+      }
+      if (u.hostname === 'gpt.yapweijun1996.com') {
+        const token = String(r.headers.Authorization || r.headers.authorization || '');
+        const uses = (tokenUses.get(token) ?? 0) + 1; tokenUses.set(token, uses);
+        if (uses > 20) { await fulfill(429, JSON.stringify({ error: { message: 'demo session request limit reached', code: 'DEMO_SESSION_REQUEST_LIMIT', type: 'rate_limit_error' } })); return; }
       }
       const payload = JSON.parse(r.postData || '{}');
       const prompt = JSON.stringify(payload.input ?? []);

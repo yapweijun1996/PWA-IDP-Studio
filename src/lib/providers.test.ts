@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { imageLimits, sanitizePayload } from './providers';
 
 const forbidden = ['max_output_tokens', 'max_tokens', 'previous_response_id', 'temperature', 'top_p', 'prompt_cache_key', 'include', 'reasoning', 'service_tier', 'metadata'];
@@ -50,4 +50,17 @@ it.each(['demo', 'openai', 'openrouter', 'gemini'] as const)('defines image batc
     ? { requestImages: 4, window: 4, extractPages: 2, toolImages: 2, singlePassPages: 2 }
     : { requestImages: Infinity, window: 10, extractPages: 10, toolImages: 12, singlePassPages: 10 });
   expect(limits.extractPages + limits.toolImages).toBeLessThanOrEqual(limits.requestImages);
+});
+
+describe('demo token renewal', () => {
+  it('mints a new session before the gateway per-token request limit', async () => {
+    const { demoApiKey, DEMO_TOKEN_MAX_USES } = await import('./providers');
+    let sessions = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ token: `t${++sessions}`, expires_at: new Date(Date.now() + 900_000).toISOString() }), { status: 201 })));
+    const seen = new Set<string>();
+    for (let i = 0; i < DEMO_TOKEN_MAX_USES * 2 + 1; i++) seen.add(await demoApiKey());
+    expect(sessions).toBeGreaterThanOrEqual(2);
+    expect(seen.size).toBe(sessions);
+    vi.unstubAllGlobals();
+  });
 });

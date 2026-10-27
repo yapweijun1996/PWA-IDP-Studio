@@ -80,7 +80,7 @@ export const scenarios = [
   { name: 'upload-demo', async run({b,mocks}) {
     await drop(b); await text(b, 'INV-E2E-001');
     const requests = posts(mocks); assert.equal(requests.length, 1);
-    const r = requests[0]; assert.ok(r.body.includes('input_image')); assert.ok(Object.entries(r.headers).some(([k,v])=>k.toLowerCase()==='authorization' && v==='Bearer dmo_e2e_fake'));
+    const r = requests[0]; assert.ok(r.body.includes('input_image')); assert.ok(Object.entries(r.headers).some(([k,v])=>k.toLowerCase()==='authorization' && String(v).startsWith('Bearer dmo_e2e_')));
     assert.equal(new URL(r.url).pathname, '/demo/v1/responses');
     const payload = JSON.parse(r.body);
     assert.equal(Object.hasOwn(payload, 'max_output_tokens'), false);
