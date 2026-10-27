@@ -8,9 +8,9 @@ import { friendlyProviderError } from './errors';
 import { checkModelOutput, checkProfileOutput, parseModelJson, type ModelOutput } from './validate';
 import { DOCUMENT_TYPES } from './types';
 import type { AgentStep, ExtractionProfile } from './agent/contract';
-import { buildBatch, type BuildInput } from '../contract/build';
+import { buildBatch, buildBatchFromSegments, type BuildInput } from '../contract/build';
 import type { Batch } from '../contract/types';
-import { createPageSource, type PageSource } from './agent/pageSource';
+import { createPageSource, restrictPageSource, type PageSource } from './agent/pageSource';
 import { createExtractionTools, type CodeDecoder } from './agent/tools';
 import { getFileByFileId } from './db';
 
@@ -50,6 +50,8 @@ export interface ExtractOptions {
   /** Inject original-page rendering/decoding in browser-free tests. */
   pageSource?: PageSource;
   decoder?: CodeDecoder;
+  absolutePages?: number[];
+  onOutput?: (output: ModelOutput) => void;
 }
 
 const lastText = (messages: unknown[]): string => {
@@ -84,18 +86,22 @@ export async function runExtraction(opts: ExtractOptions): Promise<Batch> {
   let ownedSource: PageSource | undefined;
   // Existing upload/retry callers already persist the immutable original by file_id.
   const blob = opts.blob ?? (!opts.pageSource && typeof indexedDB !== 'undefined' ? await getFileByFileId(opts.file.file_id) : undefined);
-  const source = opts.pageSource ?? (blob ? (ownedSource = await createPageSource(blob, { maxPages: pages.length })) : {
+  const baseSource = opts.pageSource ?? (blob ? (ownedSource = await createPageSource(blob, { maxPages: opts.absolutePages ? opts.manifest.length : pages.length })) : {
     pageCount: pages.length,
     async render() { throw new Error('Original file unavailable; cannot re-render. Use the attached page images.'); },
     async textItems() { throw new Error('Original file unavailable; cannot inspect its text layer.'); },
     async dispose() {},
   });
+  const source = opts.absolutePages ? restrictPageSource(baseSource, opts.absolutePages) : baseSource;
   const validate = (value: unknown) => opts.profile ? checkProfileOutput(value, opts.profile) : checkModelOutput(value);
   const submit = (value: unknown) => {
     // Validate the entire envelope before accepting a terminal submission.
-    output = makeBatch(validate(value));
+    const out = validate(value);
+    if (opts.absolutePages && [...out.fields.filter(f => f.bbox != null || f.value != null), ...(out.rowEvidence ?? [])].some(f => !opts.absolutePages!.includes(f.page))) throw new Error('Evidence page outside document');
+    output = makeBatch(out);
+    opts.onOutput?.(out);
   };
-  const makeBatch = (out: ModelOutput) => buildBatch({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, renderedPageCount: pages.length, output: out, model: { provider: settings.provider, model: modelFor(settings, settings.provider) } });
+  const makeBatch = (out: ModelOutput) => opts.absolutePages ? buildBatchFromSegments({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, segments: [{ pages: opts.absolutePages, output: out, boundary_status: 'confirmed' }], model: { provider: settings.provider, model: modelFor(settings, settings.provider) } }) : buildBatch({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, renderedPageCount: pages.length, output: out, model: { provider: settings.provider, model: modelFor(settings, settings.provider) } });
   const targeted = opts.profile ? `
 TARGETED MODE. Extract ONLY these header fields: ${JSON.stringify(opts.profile.fields)}.
 Use the fields array from the JSON contract; include every selected key, null if absent.
@@ -154,7 +160,7 @@ Do not add unselected keys. document_type is still required and may be unknown.`
   try {
     let plainRepairs = 0;
     opts.signal?.throwIfAborted();
-    await Promise.race([agent.prompt(`Extract this document (${pages.length} page${pages.length > 1 ? 's' : ''}).`, pages.map(p => ({ type: 'image' as const, data: p.data, mimeType: p.mimeType }))), guard]);
+    await Promise.race([agent.prompt(`Extract this document (${pages.length} pages). Images in order: ${pages.map(p => `Page ${p.page}`).join(', ')}. Use absolute page numbers.`, pages.map(p => ({ type: 'image' as const, data: p.data, mimeType: p.mimeType }))), guard]);
     // Plain JSON is retained for providers that do not implement tool calls.
     // Its validation feedback participates in the same overall turn budget.
     while (!output) {
@@ -170,6 +176,8 @@ Do not add unselected keys. document_type is still required and may be unknown.`
     onStatus?.('Validating…');
     return output!;
   } catch (error) {
+    opts.signal?.throwIfAborted();
+    if (error instanceof Error && error.name === 'AbortError') throw error;
     throw new Error(stopped ?? friendlyProviderError(String((error as Error)?.message ?? error), settings.provider));
   } finally {
     clearTimeout(timer);

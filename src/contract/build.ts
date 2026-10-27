@@ -27,6 +27,11 @@ export function canonicalValue(key: string, value: unknown): Value {
 }
 
 export function buildBatch(input: BuildInput): Batch {
+  if (!input.pages.length || !Number.isInteger(input.renderedPageCount) || input.renderedPageCount < 1 || input.renderedPageCount > input.pages.length) throw new Error('Expected a complete page manifest and at least one rendered page');
+  return buildBatchFromSegments({ ...input, segments: [{ pages: input.pages.filter(p => p.page_number <= input.renderedPageCount).map(p => p.page_number), output: input.output, boundary_status: 'confirmed' }] });
+}
+
+function buildDocumentBatch(input: BuildInput): Batch {
   const { output, file } = input;
   const documentId = 'd_1';
   const transactionId = 't_1';
@@ -74,4 +79,56 @@ export function buildBatch(input: BuildInput): Batch {
   const validation = validateBatch(batch);
   if (!validation.ok) throw new Error(validation.errors.map(e => `${e.code}: ${e.message}`).join('; '));
   return batch;
+}
+
+export interface SegmentBuildInput extends Omit<BuildInput, 'output' | 'renderedPageCount'> {
+  segments: { pages: number[]; output: ModelOutput; boundary_status: 'confirmed' | 'needs_review' }[];
+  failedPages?: number[];
+  unknownPages?: number[];
+}
+
+/** Build isolated documents, remapping local page coordinates back to the manifest. */
+export function buildBatchFromSegments(input: SegmentBuildInput): Batch {
+  const template = buildDocumentBatch({ ...input, output: { document_type: 'unknown', fields: [], line_items: [] }, renderedPageCount: 1 });
+  template.documents = [];
+  template.transactions = [];
+  template.evidence = [];
+  template.issues = [];
+  template.pages = input.pages.map(p => ({ ...p, file_id: input.file.file_id, rotation: 0, status: input.failedPages?.includes(p.page_number) ? 'error' : 'pending', regions: [], unassigned_reason: input.unknownPages?.includes(p.page_number) ? 'unknown' : 'review_pending' }));
+  const used = new Set<number>();
+  for (const [index, segment] of input.segments.entries()) {
+    if (!segment.pages.length || segment.pages.some(p => used.has(p) || !input.pages.some(m => m.page_number === p))) throw new Error('Invalid segment page ownership');
+    segment.pages.forEach(p => used.add(p));
+    const output = { ...segment.output, fields: segment.output.fields.map(f => ({ ...f, page: segment.pages.indexOf(f.page) + 1 })), rowEvidence: segment.output.rowEvidence?.map(f => ({ ...f, page: segment.pages.indexOf(f.page) + 1 })) };
+    const part = buildDocumentBatch({ ...input, pages: segment.pages.map((page, i) => ({ ...input.pages.find(p => p.page_number === page)!, page_number: i + 1 })), renderedPageCount: segment.pages.length, output });
+    const documentId = `d_${index + 1}`, transactionId = `t_${index + 1}`;
+    const doc = part.documents[0], tx = part.transactions[0];
+    doc.document_id = documentId;
+    doc.transaction_ids = [transactionId];
+    doc.boundary_status = segment.boundary_status;
+    doc.page_refs = segment.pages.map(page => ({ file_id: input.file.file_id, page_number: page, region_id: `r_${documentId}_${page}` }));
+    tx.transaction_id = transactionId;
+    tx.document_id = documentId;
+    tx.field_evidence = {};
+    for (const ev of part.evidence) {
+      ev.evidence_id = `e_${template.evidence.length + 1}`;
+      ev.document_id = documentId;
+      ev.transaction_id = transactionId;
+      ev.sources.forEach(s => { s.page_number = segment.pages[s.page_number - 1]; });
+      tx.field_evidence[ev.field_pointer] = [ev.evidence_id];
+      template.evidence.push(ev);
+    }
+    for (const page of segment.pages) {
+      const target = template.pages.find(p => p.page_number === page)!;
+      target.status = 'classified';
+      target.unassigned_reason = null;
+      target.regions = [{ region_id: `r_${documentId}_${page}`, document_id: documentId, role: 'full_page', bbox: { x: 0, y: 0, width: 1, height: 1 } }];
+    }
+    template.documents.push(doc);
+    template.transactions.push(tx);
+  }
+  refreshIssues(template);
+  const result = validateBatch(template);
+  if (!result.ok) throw new Error(result.errors.map(e => `${e.code}: ${e.message}`).join('; '));
+  return template;
 }

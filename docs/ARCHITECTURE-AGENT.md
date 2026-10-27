@@ -33,3 +33,14 @@ The installed pi-ai provider converters already forward tool-result images for e
 All configured models advertise image input. No additional engine-level image fallback is necessary: the completions and older-Gemini fallback is already implemented by pi-ai. This is based on the installed converters, not a claim of live provider verification.
 
 Demo payloads allow only `model`, `input`, `stream`, `instructions`, `tools`, `tool_choice`, and `parallel_tool_calls`, with `store:false` forced. Token-limit controls, especially `max_output_tokens`, are dropped. BYOK payloads remain unchanged.
+
+## Windowed library API
+
+`runWindowedExtraction` performs segmentation, sequential document extraction and multi-document building. The UI is not wired to this API. Files of at most `SINGLE_PASS_PAGES = 10` use the existing extraction loop without a segmentation call. Constants live in `lib/agent/segment.ts`: `SEGMENT_WINDOW = 10`, one-page overlap, `MAX_EXTRACT_PAGES = 12`, and `BOUNDARY_MIN_CONFIDENCE = 0.7`.
+
+Segmentation renders low-resolution images (640 pixels maximum side), supplies absolute page labels and up to 300 characters of native text per page, and allows one repair. Stitching uses the non-first-window decision for overlap pages. Missing decisions remain unassigned, and failed windows do not stop later windows. Each extracted document uses absolute evidence and a restricted PageSource. Every window/chunk releases images in a finally block, including partial renders and the single-pass branch: optional `PageSource.release(pages)` releases injected rendering resources, then base64 data and array references are cleared. The original source is disposed at completion only when owned by the orchestrator; injected sources remain caller-owned.
+
+`SegmentPlan` contains `pageCount`, `windows` (page lists, decisions, optional error), `segments`, `unassigned` and `failed`. `SegmentResult` contains `pages`, `output` or null, and optional `error`. Both are JSON sidecars, not v2 envelope extensions. Supply both to resume: successful windows are reused, failed windows are re-segmented, and only failed or newly changed document segments are extracted. Results are matched by the complete ordered page list; results with no matching segment after re-stitching are discarded. Documents are built in plan order even when earlier failures complete on retry. Progress callbacks contain valid partial batches after each processed window/document, including windows with no extracted segments. Cancellation propagates instead of becoming a recorded failure.
+
+Documents longer than twelve pages are extracted sequentially in twelve-page chunks: headers come from the first chunk, rows concatenate in page order with absolute evidence and adjusted row pointers. Known limitation: each segment produces one transaction, including statements with several entries; intra-document transaction splitting is not implemented.
+

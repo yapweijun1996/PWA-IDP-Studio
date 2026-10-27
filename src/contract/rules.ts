@@ -12,6 +12,9 @@ export function businessIssues(batch: Batch): Issue[] {
   };
   const pending = batch.pages.filter(p => p.status === 'pending');
   if (pending.length) add('batch', batch.batch.batch_id, 'PAGE_LIMIT_EXCEEDED', 'blocking', `${batch.pages.length - pending.length} of ${batch.pages.length} pages processed; unprocessed pages: ${pending.map(p => p.page_number).join(', ')}.`);
+  const failed = batch.pages.filter(p => p.status === 'error');
+  if (failed.length) add('batch', batch.batch.batch_id, 'PAGES_FAILED', 'blocking', `Pages failed: ${failed.map(p => p.page_number).join(', ')}.`);
+  for (const doc of batch.documents) if (doc.boundary_status === 'needs_review') add('document', doc.document_id, 'BOUNDARY_UNCERTAIN', 'blocking', 'Document boundary needs review.');
   for (const tx of batch.transactions) {
     const doc = batch.documents.find(d => d.document_id === tx.document_id)!;
     const required = tx.required_fields ?? REQUIRED_FIELDS[doc.document_type].map(pointerFor);
@@ -86,7 +89,7 @@ export function rollup(batch: Batch): Batch {
 }
 
 const sameIssue = (a: Issue, b: Issue) => a.scope === b.scope && a.target_id === b.target_id && a.rule_code === b.rule_code && a.message === b.message;
-const MANAGED: Record<string, true> = { PAGE_LIMIT_EXCEEDED: true, MISSING_REQUIRED: true, INVALID_DECIMAL: true, INVALID_INTEGER: true, STANDARDS_ISO8601: true, STANDARDS_ISO4217: true, TOTALS_MISMATCH: true, FIELD_WITHOUT_EVIDENCE: true, LOW_CONFIDENCE: true };
+const MANAGED: Record<string, true> = { BOUNDARY_UNCERTAIN: true, PAGES_FAILED: true, PAGE_LIMIT_EXCEEDED: true, MISSING_REQUIRED: true, INVALID_DECIMAL: true, INVALID_INTEGER: true, STANDARDS_ISO8601: true, STANDARDS_ISO4217: true, TOTALS_MISMATCH: true, FIELD_WITHOUT_EVIDENCE: true, LOW_CONFIDENCE: true };
 export function refreshIssues(batch: Batch): Batch {
   const current = businessIssues(batch);
   for (const old of batch.issues) if (old.status === 'open' && Object.hasOwn(MANAGED, old.rule_code) && !current.some(i => sameIssue(i, old))) old.status = 'resolved';

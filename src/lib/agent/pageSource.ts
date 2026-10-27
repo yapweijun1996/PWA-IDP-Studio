@@ -14,7 +14,14 @@ export interface PageSource {
   pageCount: number;
   render(page: number, options?: { scale?: number; crop?: Crop; maxSide?: number }): Promise<RenderedPage>;
   textItems(page: number): Promise<TextItem[]>;
+  /** Release a window's rendered images; the source itself remains usable. */
+  release?(pages: RenderedPage[]): Promise<void>;
   dispose(): Promise<void>;
+}
+
+export async function releasePageImages(source: PageSource, pages: RenderedPage[]) {
+  try { await source.release?.(pages); }
+  finally { for (const page of pages) page.data = ''; pages.length = 0; }
 }
 export async function createPageSource(blob: Blob, { maxPages }: { maxPages: number }): Promise<PageSource> {
   if (!Number.isInteger(maxPages) || maxPages < 1) throw new Error('maxPages must be a positive integer');
@@ -59,5 +66,16 @@ export async function createPageSource(blob: Blob, { maxPages }: { maxPages: num
       });
     },
     async dispose() { image?.close(); await doc?.destroy(); },
+  };
+}
+
+export function restrictPageSource(source: PageSource, pages: number[]): PageSource {
+  const allowed = new Set(pages);
+  const check = (page: number) => { if (!allowed.has(page)) throw new Error('Page outside document'); };
+  return {
+    pageCount: source.pageCount,
+    async render(page, options) { check(page); return source.render(page, options); },
+    async textItems(page) { check(page); return source.textItems(page); },
+    async dispose() {},
   };
 }
