@@ -13,6 +13,7 @@ import type { Batch } from '../contract/types';
 import { createPageSource, restrictPageSource, type PageSource } from './agent/pageSource';
 import { createExtractionTools, type CodeDecoder } from './agent/tools';
 import { getFileByFileId } from './db';
+import { AUTO_HEADER_KEYS } from './standards';
 
 export const SYSTEM_PROMPT = `You are a document-processing agent for ERP data entry.
 Read the attached page images. Detect the document type, extract header fields and line items.
@@ -24,8 +25,8 @@ Use the following JSON shape for submit_result (plain JSON text only if tools ar
               "confidence": 0..1}],
   "line_items": [{"description": string, "quantity": decimal_string, "unit_price": decimal_string, "amount": decimal_string}]
 }
-Use these keys when present: supplier_name, customer_name, payer_name, invoice_no, order_no, po_no, do_no, receipt_no, credit_note_no, payment_no,
-invoice_date/order_date/po_date/delivery_date/receipt_date/credit_note_date/payment_date (YYYY-MM-DD), currency (ISO code), total_amount, amount.
+Use these keys when present: ${AUTO_HEADER_KEYS.join(', ')}.
+Dates use YYYY-MM-DD; currency uses an ISO code.
 Never guess: use null with low confidence when a value is not readable. Amounts and quantities are decimal strings with no thousands separators. Never set approval or claim page coverage.`;
 
 export interface ExtractOptions {

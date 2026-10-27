@@ -128,6 +128,66 @@ export const scenarios = [
     assert.equal(batch.validation.coverage_valid,true);
     assert.ok(batch.validation.export_eligible_transaction_ids.includes(empty.transaction_id));
   } },
+  { name: 'templates', async run({b,mocks}) {
+    await route(b, '#/templates', 'Templates');
+    await text(b, 'Extraction profiles'); await text(b, 'Built-in · locked');
+    await text(b, 'Standard fields by document type'); await overflow(b);
+    await setProfile(b, 'phone'); await settled(b); await overflow(b);
+    const headers = [{ key: 'document_no', label: 'Document number', type: 'text' }, { key: 'transaction_date', label: 'Transaction date', type: 'text' }, { key: 'remarks', label: 'Remarks', type: 'text' }];
+    const columns = [{ key: 'row_no', label: 'Row number', type: 'text' }, { key: 'stock_code', label: 'Stock code', type: 'text' }, { key: 'stock_description', label: 'Stock description', type: 'text' }, { key: 'quantity', label: 'Quantity', type: 'text' }, { key: 'uom', label: 'UOM', type: 'text' }, { key: 'unit_price', label: 'Unit price', type: 'text' }, { key: 'line_subtotal', label: 'Line subtotal', type: 'text' }];
+    await click(b, 'Create profile'); await field(b, 'Profile name', 'Shipping');
+    for (const [i, item] of headers.entries()) {
+      await click(b, 'Add header field'); await field(b, `Header fields ${i + 1} key`, item.key); await field(b, `Header fields ${i + 1} label`, item.label);
+    }
+    for (const [i, item] of columns.entries()) {
+      await click(b, 'Add row column'); await field(b, `Row columns ${i + 1} key`, item.key); await field(b, `Row columns ${i + 1} label`, item.label);
+    }
+    await overflow(b); await click(b, 'Save profile');
+    await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile saved');
+    await click(b, 'Edit Shipping'); await field(b, 'Header fields 1 label', 'Shipping number'); await click(b, 'Save profile');
+    await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile edited');
+    await click(b, 'Duplicate Document info'); await click(b, 'Save profile'); await text(b, 'Document info copy');
+    const originalCreateObjectURL = 'window.__templatesCreateObjectURL';
+    await b.eval(`${originalCreateObjectURL} = URL.createObjectURL; window.__profileBlob = null; URL.createObjectURL = blob => { window.__profileBlob = blob; return ${originalCreateObjectURL}.call(URL, blob); };`);
+    let exported;
+    try {
+      await click(b, 'Export Shipping');
+      exported = await b.eval('window.__profileBlob.text().then(JSON.parse)');
+      assert.deepEqual(Object.keys(exported).sort(), ['idp_studio_profiles', 'profiles']);
+      assert.equal(exported.idp_studio_profiles, 1);
+      assert.deepEqual(exported.profiles.map(p => p.name), ['Shipping']);
+      assert.deepEqual(exported.profiles[0].fields, [{ ...headers[0], label: 'Shipping number' }, ...headers.slice(1)]);
+      assert.deepEqual(exported.profiles[0].rowFields, columns);
+      await click(b, 'Export all custom profiles');
+      const all = await b.eval('window.__profileBlob.text().then(JSON.parse)');
+      assert.deepEqual(all.profiles.map(p => p.name).sort(), ['Document info copy', 'Shipping']);
+      assert.ok(all.profiles.every(p => !Object.hasOwn(p, 'builtin')));
+    } finally {
+      await b.eval(`URL.createObjectURL = ${originalCreateObjectURL}; delete ${originalCreateObjectURL}; delete window.__profileBlob;`);
+    }
+    const importExport = () => b.eval(`(() => { const input = document.querySelector('input[type=file]'); const transfer = new DataTransfer(); transfer.items.add(new File([${js(JSON.stringify(exported))}], 'profiles.json', {type:'application/json'})); input.files = transfer.files; input.dispatchEvent(new Event('change', {bubbles:true})); })()`);
+    await importExport(); await text(b, 'Import profile conflicts'); await click(b, 'Cancel');
+    assert.equal(await b.eval(`[...document.querySelectorAll('h3')].some(e=>e.textContent==='Shipping copy')`), false);
+    await importExport(); await text(b, 'Import profile conflicts'); await click(b, 'Import as copies'); await text(b, 'Shipping copy');
+    await overflow(b); await setProfile(b, 'desktop'); await settled(b); await overflow(b);
+    await click(b, 'Use Shipping copy for next upload'); await home(b);
+    assert.equal(await b.eval(`document.querySelector('input[value="targeted"]')?.checked`), true);
+    mocks.setVariant('targeted'); await drop(b, 'templates.png'); await text(b, 'DOC-TARGET-001'); await text(b, 'SKU-1'); await text(b, 'Shipping number');
+    assert.ok(posts(mocks).some(r => r.body.includes('stock_code')));
+    const batch = (await batches(b)).find(v => v.source_files[0].filename === 'templates.png');
+    assert.deepEqual(batch.transactions[0].data, {
+      document_no: 'DOC-TARGET-001', transaction_date: '2026-10-26', remarks: 'Targeted delivery',
+      line_items: [1, 2].map(n => ({ row_no: String(n), stock_code: `SKU-${n}`, stock_description: `Stock ${n}`, quantity: '2', uom: 'PCS', unit_price: '5.00', line_subtotal: '10.00' })),
+    });
+    await route(b, '#/templates', 'Templates'); await text(b, 'Used by Targeted mode for the next upload');
+    await click(b, 'Delete Shipping'); await click(b, 'Cancel'); await text(b, 'Shipping');
+    await click(b, 'Delete Shipping'); await click(b, 'Delete profile');
+    await b.wait(`![...document.querySelectorAll('h3')].some(e=>e.textContent==='Shipping')`, 'profile deleted');
+    await text(b, 'Shipping copy');
+    await settings(b); await text(b, 'Manage templates');
+    assert.equal(await b.eval(`document.querySelector('main a[href="#/templates"]')?.textContent`), 'Manage templates');
+    assert.equal(await b.eval(`[...document.querySelectorAll('main button')].some(e=>e.textContent==='Create profile')`), false);
+  } },
   { name: 'targeted-mode', async run({b,mocks}) {
     mocks.setVariant('targeted');
     await radio(b, 'Extraction mode', 'targeted');

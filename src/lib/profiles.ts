@@ -37,3 +37,31 @@ export interface BatchMode { mode: ExtractionMode; profile?: ExtractionProfile }
 export function saveBatchMode(id: string, mode: ExtractionMode, profile?: ExtractionProfile): void { save(PROFILE_KEYS[2], { ...load<Record<string, BatchMode>>(PROFILE_KEYS[2], {}), [id]: structuredClone({ mode, profile }) }); }
 export function loadBatchMode(id: string): BatchMode | undefined { return load<Record<string, BatchMode>>(PROFILE_KEYS[2], {})[id]; }
 export function clearProfiles(): void { for (const key of PROFILE_KEYS) { session.delete(key); try { localStorage.removeItem(key); } catch { /* Storage blocked. */ } } }
+
+/** Portable profile file; built-in exports become editable on import. */
+export function exportProfiles(profiles: ExtractionProfile[]): string {
+  return JSON.stringify({ idp_studio_profiles: 1, profiles: profiles.map(({ id, name, fields, rowFields }) => ({ id, name, fields, rowFields })) }, null, 2);
+}
+export function parseProfileImport(text: string): { profiles: ExtractionProfile[]; errors: string[] } {
+  const errors: string[] = [];
+  let value: unknown;
+  try { value = JSON.parse(text); } catch { return { profiles: [], errors: ['Invalid JSON file.'] }; }
+  const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+  if (!object(value) || value.idp_studio_profiles !== 1 || !Array.isArray(value.profiles) || Object.keys(value).some(k => !['idp_studio_profiles', 'profiles'].includes(k))) {
+    return { profiles: [], errors: ['Expected { "idp_studio_profiles": 1, "profiles": [...] }.'] };
+  }
+  const profiles: ExtractionProfile[] = [];
+  value.profiles.forEach((p: unknown, index: number) => {
+    const prefix = `Profile ${index + 1}: `;
+    if (!object(p) || Object.keys(p).some(k => !['id', 'name', 'fields', 'rowFields', 'builtin'].includes(k)) || typeof p.id !== 'string' || !p.id.trim() || typeof p.name !== 'string' || !Array.isArray(p.fields) || !Array.isArray(p.rowFields) || (p.builtin !== undefined && typeof p.builtin !== 'boolean')) {
+      errors.push(`${prefix}Expected id, name, header fields and row columns.`); return;
+    }
+    if ([...p.fields, ...p.rowFields].some(f => !object(f) || Object.keys(f).some(k => !['key', 'label', 'type', 'required'].includes(k)) || (f.required !== undefined && typeof f.required !== 'boolean'))) {
+      errors.push(`${prefix}Unknown field shape or invalid required mark.`); return;
+    }
+    const profile = p as unknown as ExtractionProfile;
+    errors.push(...validateProfile(profile).map(error => prefix + error));
+    profiles.push({ ...profile, builtin: false });
+  });
+  return { profiles: errors.length ? [] : profiles, errors };
+}
