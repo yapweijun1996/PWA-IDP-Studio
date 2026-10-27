@@ -13,12 +13,15 @@ export function transactionView(batch: Batch, transactionId: string) {
   if (!tx) throw new Error('Unknown transaction');
   const doc = batch.documents.find(d => d.document_id === tx.document_id)!;
   const issues = batch.issues.filter(i => i.scope === 'batch' || i.target_id === transactionId || i.target_id === doc.document_id || batch.evidence.some(e => e.evidence_id === i.target_id && e.transaction_id === transactionId));
-  const keys = [...new Set([...Object.keys(tx.data).filter(k => k !== 'line_items'), ...REQUIRED_FIELDS[doc.document_type]])];
+  const required = tx.required_fields
+    ? tx.required_fields.filter(p => /^\/[^/]+$/.test(p)).map(p => p.slice(1).replace(/~1/g, '/').replace(/~0/g, '~'))
+    : REQUIRED_FIELDS[doc.document_type];
+  const keys = [...new Set([...Object.keys(tx.data).filter(k => k !== 'line_items'), ...required])];
   const fields: FieldView[] = keys.map(key => {
     const pointer = pointerFor(key);
     const ev = batch.evidence.find(e => tx.field_evidence[pointer]?.includes(e.evidence_id));
     const source = ev?.sources[0];
-    const missing = REQUIRED_FIELDS[doc.document_type].includes(key) && (tx.data[key] === undefined || tx.data[key] === null || tx.data[key] === '');
+    const missing = required.includes(key) && (tx.data[key] === undefined || tx.data[key] === null || tx.data[key] === '');
     const invalid = issues.some(i => i.status === 'open' && ['INVALID_DECIMAL', 'STANDARDS_ISO8601', 'STANDARDS_ISO4217', 'TOTALS_MISMATCH'].includes(i.rule_code) && i.message.startsWith(`${pointer}:`));
     return { pointer, key, value: tx.data[key] ?? null, confidence: ev?.confidence ?? null, evidence: source ? { page: source.page_number, bbox: source.bbox } : null, exception: missing ? 'missing' : invalid ? 'invalid' : ev && ev.confidence < 0.85 && ev.review_status === 'unreviewed' ? 'low_confidence' : null };
   });

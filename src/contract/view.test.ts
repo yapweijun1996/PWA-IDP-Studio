@@ -27,3 +27,13 @@ it('sums actual batch entities and review-required transactions', () => {
   expect(batchSummary([good, pending])).toEqual({ pages: 3, documents: 2, transactions: 2, reviewQueue: 1 });
   expect(batchSummary([])).toEqual({ pages: 0, documents: 0, transactions: 0, reviewQueue: 0 });
 });
+it('exposes an empty split transaction required identity for correction', () => {
+  const batch = buildBatch(invoiceInput());
+  batch.documents[0].document_type = 'statement';
+  batch.transactions[0].data = {};
+  batch.transactions[0].required_fields = ['/document_no'];
+  batch.transactions[0].field_evidence = {};
+  batch.evidence = [];
+  const fields = transactionView(batch, batch.transactions[0].transaction_id).fields;
+  expect(fields).toEqual([{ pointer: '/document_no', key: 'document_no', value: null, confidence: null, evidence: null, exception: 'missing' }]);
+});

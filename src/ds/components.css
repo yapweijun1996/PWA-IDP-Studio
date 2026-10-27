@@ -120,3 +120,12 @@ a { color: var(--primary); }
   .ds-input { font-size: var(--font-body); }
   .ds-toast { left: var(--space-4); }
 }
+
+.label-studio { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.label-studio > *, .label-layout > * { min-width: 0; max-width: 100%; }
+.label-studio .ds-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.label-layout { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-4); margin-block: var(--space-4); }
+.label-documents { flex: 1 1 var(--sidebar-expanded); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); min-width: 0; }
+.label-pages { flex: 3 1 var(--dialog-width); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sidebar-expanded)), 1fr)); gap: var(--space-3); min-width: 0; }
+.label-thumbnail { display: grid; place-items: center; aspect-ratio: 1; background: var(--surface-alt); margin-block: var(--space-3); overflow: hidden; }
+.label-thumbnail img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }

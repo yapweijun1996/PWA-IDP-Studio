@@ -47,6 +47,87 @@ async function pwa(b) {
   await b.eval(`Promise.race([navigator.serviceWorker.ready.then(()=>true),new Promise((_,reject)=>setTimeout(()=>reject(new Error('SW ready timeout')),30000))])`);
 }
 export const scenarios = [
+  { name: 'label-studio', async run({b,mocks}) {
+    mocks.setVariant('windowed');
+    await drop(b,'labels.pdf',makePDF(30).toString('base64'));
+    let batch=(await batches(b)).find(v=>v.source_files[0].filename==='labels.pdf');
+    checkEnvelope(batch);
+    const batchId=batch.batch.batch_id;
+    const readBatch=async()=> (await batches(b)).find(v=>v.batch.batch_id===batchId);
+    const selectDocument=async id=>{
+      await b.eval(`(() => { const card=[...document.querySelectorAll('main [aria-label="Documents"] .ds-card')].find(e=>[...e.querySelectorAll('p')].some(p=>p.textContent===${js(id)})); if(!card)throw new Error('Document card missing'); card.querySelector('input').click(); })()`);
+    };
+    const selectPage=async number=>{
+      await b.eval(`(() => { const input=[...document.querySelectorAll('main [aria-label="Pages"] input')].find(e=>e.parentElement.textContent.startsWith(${js('Select page '+number+' (')})); if(!input)throw new Error('Page card missing'); input.click(); })()`);
+    };
+    const review=async(action,reason)=>{
+      const prior=(await readBatch()).reviews.length;
+      await click(b,action); await checkLayoutWidths();
+      await field(b,'Reason',reason); await click(b,'Apply review');
+      await b.wait('!document.querySelector(\'[role="dialog"]\')','review dialog closes');
+      batch=await until(async()=>{const v=await readBatch();return v.reviews.length>prior&&v;},'layout review persisted');
+      checkEnvelope(batch);
+      assert.equal(batch.validation.coverage_valid,true);
+      assert.ok(batch.reviews.slice(prior).every(r=>r.actor_id==='local-user'&&r.reason===reason&&r.new_revision===r.prior_revision+1));
+    };
+    await route(b,'#/label-studio','Label Studio');
+    const checkLayoutWidths = async () => {
+      for (const profile of ['desktop', 'phone']) {
+        await setProfile(b, profile); await settled(b);
+        await overflow(b);
+      }
+      await setProfile(b, 'desktop'); await settled(b);
+    };
+    await checkLayoutWidths();
+    const uncertain=batch.documents.find(d=>d.boundary_status==='needs_review');
+    await selectDocument(uncertain.document_id); await review('Confirm boundary','Confirmed page grouping');
+    assert.equal(batch.issues.some(i=>i.rule_code==='BOUNDARY_UNCERTAIN'&&i.status==='open'),false);
+    const first=batch.documents[0];
+    await selectDocument(first.document_id); await selectPage(first.page_refs[1].page_number);
+    const count=batch.documents.length;
+    await review('Split here','Separate later pages');
+    assert.equal(batch.documents.length,count+1);
+    const split=batch.documents.find(d=>d.document_id!==first.document_id&&d.transaction_ids.some(id=>batch.transactions.some(t=>t.transaction_id===id&&Object.keys(t.data).length===0)));
+    assert.ok(split);
+    const empty=batch.transactions.find(t=>t.document_id===split.document_id&&Object.keys(t.data).length===0);
+    assert.ok(batch.issues.some(i=>i.target_id===empty.transaction_id&&i.rule_code==='MISSING_REQUIRED'&&i.status==='open'));
+    const mergeIds=batch.documents.filter(d=>d.document_id!==split.document_id&&d.document_id!==first.document_id).slice(0,2).map(d=>d.document_id);
+    const transactionIds=batch.transactions.map(t=>t.transaction_id);
+    for(const id of mergeIds)await selectDocument(id);
+    await review('Merge selected','Join related documents');
+    assert.deepEqual(batch.transactions.map(t=>t.transaction_id),transactionIds);
+    const failed=batch.pages.filter(p=>p.status==='error'||p.status==='pending');
+    assert.ok(failed.length);
+    const assignmentRevision = batch.batch.revision, assignmentReviews = batch.reviews.length;
+    for(const page of failed)await selectPage(page.page_number);
+    await click(b,'Assign pages to…');
+    await checkLayoutWidths();
+    await b.eval(`(() => { const select=document.querySelector('[role="dialog"] select');select.value=${js(first.document_id)};select.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await field(b,'Reason','Assign failed pages after visual review'); await click(b,'Apply review');
+    await b.wait('!document.querySelector(\'[role="dialog"]\')','assignment persisted');
+    batch=await readBatch(); checkEnvelope(batch);
+    assert.equal(batch.validation.coverage_valid,true);
+    assert.equal(batch.batch.revision,assignmentRevision+failed.length);
+    assert.equal(batch.reviews.length,assignmentReviews+failed.length);
+    assert.ok(batch.reviews.slice(assignmentReviews).every((r,index)=>r.action==='assign'&&r.actor_id==='local-user'&&r.reason==='Assign failed pages after visual review'&&r.prior_revision===assignmentRevision+index&&r.new_revision===assignmentRevision+index+1));
+    assert.ok(batch.pages.every(p=>p.status==='classified'));
+    assert.ok(failed.every(p=>batch.pages.find(q=>q.page_number===p.page_number).regions.some(r=>r.document_id===first.document_id)));
+    for(const d of batch.documents.filter(d=>d.boundary_status==='needs_review'))await selectDocument(d.document_id);
+    await review('Confirm boundary','Confirmed revised boundaries');
+    assert.ok(batch.reviews.some(r=>r.action==='assign'));
+    assert.ok(batch.reviews.some(r=>r.action==='split'));
+    assert.ok(batch.reviews.some(r=>r.action==='merge'));
+    await checkLayoutWidths();
+    await route(b,`#/doc/${batchId}/${empty.transaction_id}`,'labels.pdf');
+    await click(b,'JSON'); assert.equal(await buttonDisabled(b,'Download JSON'),true,'Empty split transaction blocks export after boundary confirmation');
+    await click(b,'Fields');
+    for(const [name,value] of Object.entries({supplier_name:'Reviewed vendor',invoice_no:'LABEL-SPLIT-001',invoice_date:'2026-10-27',currency:'SGD',total_amount:'50.00'}))await correct(b,name,value);
+    await click(b,'JSON');
+    assert.equal(await buttonDisabled(b,'Download JSON'),false,'Filling split transaction required data unblocks export');
+    batch=await readBatch(); checkEnvelope(batch);
+    assert.equal(batch.validation.coverage_valid,true);
+    assert.ok(batch.validation.export_eligible_transaction_ids.includes(empty.transaction_id));
+  } },
   { name: 'targeted-mode', async run({b,mocks}) {
     mocks.setVariant('targeted');
     await radio(b, 'Extraction mode', 'targeted');
