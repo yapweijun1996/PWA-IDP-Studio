@@ -75,7 +75,10 @@ it('drops successful results whose page lists change after failed-window resegme
 it('aborts between windows without further model calls and releases images', async () => {
   const controller = new AbortController();
   const s = setup(20, [decisions(range(1, 10))]);
-  await expect(runWindowedExtraction({ ...s.opts, signal: controller.signal, onProgress: p => { expect(validateBatch(p.batch).ok).toBe(true); controller.abort(); } })).rejects.toThrow();
+  const partial = await runWindowedExtraction({ ...s.opts, signal: controller.signal, onProgress: p => { expect(validateBatch(p.batch).ok).toBe(true); controller.abort(); } });
+  expect(partial.batch.batch.status).toBe('review_required');
+  expect(partial.batch.pages.every(p => p.status === 'pending')).toBe(true);
+  expect(partial.plan.windows).toHaveLength(1);
   expect(s.stats().calls).toBe(1);
   expect(s.stats().alive).toBe(0);
   expect(s.stats().released).toBe(s.stats().rendered);
@@ -151,11 +154,55 @@ it('aborts inside a model call without repair or subsequent windows', async () =
   const controller = new AbortController();
   const s = setup(11, ['bad']);
   const stream = s.opts.streamFn!;
-  await expect(runWindowedExtraction({ ...s.opts, signal: controller.signal, streamFn: (...args) => {
+  const partial = await runWindowedExtraction({ ...s.opts, signal: controller.signal, streamFn: (...args) => {
     controller.abort();
     return stream(...args);
-  } })).rejects.toThrow();
+  } });
+  expect(partial.batch.batch.status).toBe('review_required');
+  expect(partial.results).toEqual([]);
   expect(s.stats().calls).toBe(1);
   expect(s.stats().released).toBe(s.stats().rendered);
   expect(s.stats().alive).toBe(0);
+});
+
+it('limits segmentation to the prefix and processes additional pages when the limit is raised', async () => {
+  const first = setup(25, [decisions(range(1, 10), [1, 6]), decisions(range(10, 12), [11]), output(1), output(6), output(11)]);
+  first.opts.settings.maxPages = 12;
+  const limited = await runWindowedExtraction(first.opts);
+  expect(limited.plan.pageCount).toBe(12);
+  expect(limited.batch.pages.filter(p => p.status === 'classified').map(p => p.page_number)).toEqual(range(1, 12));
+  expect(limited.batch.pages.filter(p => p.status === 'pending').map(p => p.page_number)).toEqual(range(13, 25));
+  expect(limited.batch.issues.some(i => i.rule_code === 'PAGE_LIMIT_EXCEEDED' && i.status === 'open')).toBe(true);
+  const retry = setup(25, [decisions(range(10, 19), [11, 16]), decisions(range(19, 25), [21]), output(11), output(16), output(21)]);
+  retry.opts.settings.maxPages = 25;
+  const complete = await runWindowedExtraction({ ...retry.opts, plan: limited.plan, results: limited.results });
+  expect(complete.batch.pages.every(p => p.status === 'classified')).toBe(true);
+  expect(complete.batch.documents.map(d => d.page_refs.map(p => p.page_number))).toEqual([range(1, 5), range(6, 10), range(11, 15), range(16, 20), range(21, 25)]);
+  expect(retry.stats().calls).toBe(5);
+});
+
+it('keeps completed documents on cancellation and resumes only the remaining document', async () => {
+  const controller = new AbortController();
+  const first = setup(11, [decisions(range(1, 10), [1, 6]), decisions([10, 11]), output(1)]);
+  const partial = await runWindowedExtraction({ ...first.opts, signal: controller.signal, onProgress: p => {
+    if (p.phase === 'extracting' && p.done === 1) controller.abort();
+  } });
+  expect(partial.batch.batch.status).toBe('review_required');
+  expect(partial.batch.documents.map(d => d.page_refs.map(p => p.page_number))).toEqual([range(1, 5)]);
+  expect(partial.batch.pages.filter(p => p.status === 'pending').map(p => p.page_number)).toEqual(range(6, 11));
+  const retry = setup(11, [output(6)]);
+  const complete = await runWindowedExtraction({ ...retry.opts, plan: partial.plan, results: partial.results });
+  expect(retry.stats().calls).toBe(1);
+  expect(complete.batch.documents.map(d => d.page_refs.map(p => p.page_number))).toEqual([range(1, 5), range(6, 11)]);
+  expect(complete.batch.pages.every(p => p.status === 'classified')).toBe(true);
+});
+
+it('does not re-segment the final overlap page when a cached full window ends at the limit', async () => {
+  const first = setup(19, [decisions(range(1, 10), [1, 6]), decisions(range(10, 19), [11, 16]), output(1), output(6), output(11), output(16)]);
+  const complete = await runWindowedExtraction(first.opts);
+  const retry = setup(19, []);
+  const restored = await runWindowedExtraction({ ...retry.opts, plan: complete.plan, results: complete.results });
+  expect(retry.stats().calls).toBe(0);
+  expect(restored.batch.documents.map(d => d.page_refs)).toEqual(complete.batch.documents.map(d => d.page_refs));
+  expect(restored.batch.pages.every(p => p.status === 'classified')).toBe(true);
 });

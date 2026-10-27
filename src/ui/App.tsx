@@ -1,9 +1,9 @@
 import { loadBatchMode, saveBatchMode } from '../lib/profiles';
 import type { AgentStep, ExtractionProfile } from '../lib/agent/contract';
-import { useCallback, useEffect, useState } from 'react';
-import { getBatch, getFile, listBatches, putBatch, putFile } from '../lib/db';
-import { runExtraction } from '../lib/extract';
-import { pageManifest, renderFile } from '../lib/pdf';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getBatch, getFile, getWindowedState, listBatches, putBatch, putFile, putWindowedProgress, type WindowedState } from '../lib/db';
+import { runWindowedExtraction, SINGLE_PASS_PAGES } from '../lib/windowed';
+import { pageManifest } from '../lib/pdf';
 import { loadSettings, type Settings } from '../lib/settings';
 import { sha256 } from '../lib/hash';
 import { migrateStore } from '../lib/migrateStore';
@@ -16,7 +16,7 @@ import { Documents } from './pages/Documents';
 import { ReviewQueue } from './pages/ReviewQueue';
 import { navItems, reviewRows } from './nav';
 import { APP_VERSION, BUILD_ID } from './version';
-import { AppShell, Notice, OnlineStatus, SearchInput, Spinner, useOnlineStatus } from '../ds';
+import { AppShell, Button, Notice, OnlineStatus, SearchInput, Spinner, useOnlineStatus } from '../ds';
 import { ComponentSheet } from '../ds/ComponentSheet';
 import { UpdatePrompt } from './UpdatePrompt';
 import { go, useRoute } from './useHash';
@@ -29,6 +29,8 @@ export function App() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [steps, setSteps] = useState<AgentStep[]>([]);
+  const extraction = useRef<AbortController | null>(null);
+  const [notice, setNotice] = useState('');
   const online = useOnlineStatus();
   const [offlineUpload, setOfflineUpload] = useState(false);
   useEffect(() => { if (online) setOfflineUpload(false); }, [online]);
@@ -54,22 +56,48 @@ export function App() {
     return () => { live = false; };
   }, [route]);
 
-  /** Renders pages and runs extraction for an already stored original; a failure keeps the batch as `failed` so it can be retried. */
-  const extractInto = async ({ file, info, manifest, id, createdAt, pending, profile }: { file: File | Blob; info: Parameters<typeof buildBatch>[0]['file']; manifest: Parameters<typeof buildBatch>[0]['pages']; id: string; createdAt: string; pending: Batch; profile?: ExtractionProfile }) => {
-    const name = info.filename;
+  /** Persist each completed window before allowing the next one to replace its snapshot. */
+  const extractInto = async ({ file, info, manifest, id, createdAt, pending, profile, state }: { file: File | Blob; info: Parameters<typeof buildBatch>[0]['file']; manifest: Parameters<typeof buildBatch>[0]['pages']; id: string; createdAt: string; pending: Batch; profile?: ExtractionProfile; state?: WindowedState }) => {
+    const controller = new AbortController();
+    extraction.current = controller;
+    let writes = Promise.resolve();
+    let latest = pending;
     try {
-      setBusy(`${name}: rendering pages…`);
+      setBusy(`${info.filename}: starting extraction…`);
       setSteps([]);
-      const pages = await renderFile(file, { maxPages: settings.maxPages });
-      const batch = await runExtraction({ batchId: id, createdAt, file: info, blob: file, profile, manifest, pages, settings, onStep: step => setSteps(previous => [...previous.slice(-19), step]), onStatus: m => setBusy(`${name}: ${m}`) });
-      await putBatch(batch);
+      setNotice('');
+      const result = await runWindowedExtraction({ batchId: id, createdAt, file: info, blob: file, profile, manifest, settings, ...state, signal: controller.signal,
+        onStep: step => setSteps(previous => [...previous.slice(-19), step]),
+        onStatus: m => { if (manifest.length <= SINGLE_PASS_PAGES) setBusy(`${info.filename}: ${m}`); else if (/^(Segmenting window|Extracting document) /.test(m)) setBusy(m); },
+        onProgress: progress => {
+          latest = progress.batch;
+          setBusy(progress.phase === 'segmenting' ? `Segmenting window ${progress.done}/${progress.total}` : `Extracting document ${progress.done}/${progress.total}`);
+          writes = writes.then(async () => {
+            await putWindowedProgress(progress.batch, { plan: progress.plan, results: progress.results });
+            await refresh();
+          });
+        },
+      });
+      await writes;
+      await putWindowedProgress(result.batch, { plan: result.plan, results: result.results });
+      if (controller.signal.aborted) setNotice('Extraction cancelled. Finished documents are saved; remaining pages are pending. Retry extraction to continue.');
     } catch (e) {
-      const failed = recomputeIssues({ ...pending, pages: pending.pages.map(p => ({ ...p, status: 'error' as const, unassigned_reason: 'review_pending' as const })) });
-      failed.batch.status = 'failed';
-      failed.issues = failed.issues.filter(i => i.rule_code !== 'EXTRACTION_FAILED' && i.rule_code !== 'PAGE_LIMIT_EXCEEDED');
-      failed.issues.push({ issue_id: 'extraction_failed', scope: 'batch', target_id: id, rule_code: 'EXTRACTION_FAILED', severity: 'blocking', message: String((e as Error).message), status: 'open', waiver_review_id: null });
-      await putBatch(failed);
-    }
+      await writes;
+      if (controller.signal.aborted) {
+        latest.batch.status = 'review_required';
+        await putBatch(latest);
+        setNotice('Extraction cancelled. Finished documents are saved. Retry extraction to continue.');
+      } else if (latest !== pending) {
+        setError(String((e as Error).message));
+      } else {
+        const failed = recomputeIssues({ ...pending, pages: pending.pages.map(p => ({ ...p, status: 'error' as const, unassigned_reason: 'review_pending' as const })) });
+        failed.batch.status = 'failed';
+        failed.issues = failed.issues.filter(i => i.rule_code !== 'EXTRACTION_FAILED' && i.rule_code !== 'PAGE_LIMIT_EXCEEDED');
+        failed.issues.push({ issue_id: 'extraction_failed', scope: 'batch', target_id: id, rule_code: 'EXTRACTION_FAILED', severity: 'blocking', message: String((e as Error).message), status: 'open', waiver_review_id: null });
+        await putBatch(failed);
+      }
+    } finally { extraction.current = null; }
+    return controller.signal.aborted;
   };
 
   const retry = async (batchId: string) => {
@@ -78,6 +106,7 @@ export function App() {
     setError('');
     try {
       const existing = await getBatch(batchId);
+      const state = await getWindowedState(batchId);
       const source = existing?.source_files[0];
       const blob = source ? await getFile(source.file_id) : undefined;
       if (!existing || !source || !blob) throw new Error('The original file is missing from this browser. Upload it again.');
@@ -88,9 +117,9 @@ export function App() {
       placeholder.documents = []; placeholder.transactions = [];
       const pending = recomputeIssues(placeholder);
       pending.batch.status = 'processing';
-      await putBatch(pending);
+      if (!state) await putBatch(pending);
       await refresh();
-      await extractInto({ file: blob, info, manifest, id: batchId, createdAt: existing.batch.created_at, pending, profile: loadBatchMode(batchId)?.profile });
+      await extractInto({ file: blob, info, manifest, id: batchId, createdAt: existing.batch.created_at, pending: state ? existing : pending, profile: loadBatchMode(batchId)?.profile, state });
       await refresh();
     } catch (e) { setError(String((e as Error).message)); }
     setBusy(null);
@@ -126,8 +155,9 @@ export function App() {
         setOfflineUpload(false);
         first ??= id;
         await refresh();
-        await extractInto({ file, info, manifest, id, createdAt, pending, profile });
+        const cancelled = await extractInto({ file, info, manifest, id, createdAt, pending, profile });
         await refresh();
+        if (cancelled) break;
       } catch (e) { setError(`${file.name}: ${String((e as Error).message)}`); }
     }
     setBusy(null);
@@ -147,6 +177,8 @@ export function App() {
   return (
     <AppShell brand="IDP Studio" items={navItems(route.name, reviewRows(docs).length)} search={route.name === 'home' || route.name === 'documents' ? <SearchInput placeholder="Search documents…" value={search} onChange={setSearch} /> : undefined} right={<OnlineStatus />} footer={<>Version {APP_VERSION} · Build {BUILD_ID}</>}>
       {error && <Notice tone="error">{error}</Notice>}
+      {notice && <Notice>{notice}</Notice>}
+      {busy && <Button disabled={!extraction.current || extraction.current.signal.aborted} onClick={() => extraction.current?.abort()}>Cancel extraction</Button>}
       {body}
       <UpdatePrompt />
     </AppShell>

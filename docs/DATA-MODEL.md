@@ -1,10 +1,10 @@
 # Local data model
 
-The application stores the **2.0.0 Batch contract**. Existing upload callers produce one logical document and transaction; the windowed library API produces one document and transaction per extracted segment. The original file is immutable, SHA-256 hashed, and stored under `file_id` in IndexedDB.
+The application stores the **2.0.0 Batch contract**. Uploads use windowed extraction: small files retain one logical document/transaction; larger files produce one document and transaction per extracted segment. The original file is immutable, SHA-256 hashed, and stored under `file_id` in IndexedDB.
 
 ## Coverage and extraction
 
-The renderer reads the complete physical page manifest before calling the provider. `maxPages` defaults to 20 and is clamped to 1–500. Only that prefix is sent. Remaining pages retain `pending` status and `review_pending` attribution, with one batch-level blocking `PAGE_LIMIT_EXCEEDED` issue. Model claims of complete processing or approval are ignored. PDF views and evidence use unrotated top-left coordinates.
+The complete physical page manifest is read before extraction. `maxPages` defaults to 100, clamps to 1–500 and respects stored values. Only that prefix is rendered/segmented. Remaining pages retain `pending` status and `review_pending` attribution, with a batch-level blocking `PAGE_LIMIT_EXCEEDED` issue. Raising the limit and retrying expands the stored plan. Model claims of complete processing or approval are ignored. Evidence uses unrotated top-left coordinates.
 
 Demo requests allow only `model`, `input`, `stream`, `store`, `instructions`, `tools`, `tool_choice`, and `parallel_tool_calls`, forcing `store:false` on every agent turn. Token limits and other unlisted controls are dropped; BYOK payloads are unchanged. See [agent architecture](ARCHITECTURE-AGENT.md) for tool budgets and image forwarding.
 
@@ -29,7 +29,7 @@ Before extraction, `idp-studio.batch-modes.v1` records the used mode and a deep-
 
 ## Storage and legacy data
 
-IndexedDB version 2 adds `batches`, keyed by the nested `batch_id`, with values `{ batch, createdAt }`. Existing `documents` and `files` stores are retained. Legacy document rows are read-only; deleting a batch does not delete original files or legacy rows.
+IndexedDB version 3 retains `documents`, `files` and `batches` (`{ batch, createdAt }`, keyed by nested batch id), adding `windowed`, keyed by batch id with `{ plan: SegmentPlan, results: SegmentResult[] }`. Progress atomically commits both batch and sidecar for crash/refresh recovery. Outputs never enter localStorage. Cancel stores a `review_required` partial batch; Retry reuses successful segments. Both batch deletion paths and storage clearing remove sidecars. UI deletion also removes unshared originals and matching legacy migration sources; low-level `deleteBatch` retains originals.
 
 Startup migration is idempotent by `legacy_<id>`. It hashes original bytes, reads PDF/image dimensions and writes a new batch and file-id-keyed blob. Missing originals are skipped. If dimensions cannot be read, 595×842 fallback dimensions are disclosed in an info issue; page count uses PDF metadata when available, otherwise the saved count. Pages beyond the saved rendered-page count remain pending. Legacy `receipt`/`other` become `unknown` with `LEGACY_TYPE_UNMAPPED` warnings. Field-edit audit entries become reviews. Explicit legacy human approval is retained with a `legacy_user` approval review, but current blockers still prevent export.
 

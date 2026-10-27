@@ -43,6 +43,8 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
   const providers = new Set(['api.openai.com', 'openrouter.ai', 'generativelanguage.googleapis.com', 'gpt.yapweijun1996.com']);
   let variant = 'valid'; let replies = 0;
   const requests = []; const violations = []; const pending = new Set();
+  const extractionPages = [];
+  const attempts = new Map();
   const handle = async e => {
     const r = e.request; const u = new URL(r.url);
     if (!['http:', 'https:'].includes(u.protocol)) { await b.send('Fetch.continueRequest', { requestId: e.requestId }); return; }
@@ -70,6 +72,23 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
       if (u.hostname === 'gpt.yapweijun1996.com' && (JSON.parse(r.postData || '{}').input || []).some?.(item => item?.type === 'reasoning')) {
         await fulfill(400, JSON.stringify({ error: { message: 'content is not allowed in reasoning items', code: 'DEMO_FIELD_DISABLED', type: 'invalid_request_error' } })); return;
       }
+      const payload = JSON.parse(r.postData || '{}');
+      const prompt = JSON.stringify(payload.input ?? []);
+      if (JSON.stringify(payload).includes('Segment documents.')) {
+        const pages = [...new Set([...prompt.matchAll(/Page (\d+):/g)].map(m => Number(m[1])))];
+        await fulfill(200, responseStream(JSON.stringify({ pages: pages.map(page => ({
+          page, document_type: 'purchase_invoice', starts_new_document: (page - 1) % 5 === 0,
+          confidence: variant === 'windowed' && page === 11 ? 0.5 : 1,
+        })) })), 'text/event-stream');
+        return;
+      }
+      const start = Number(prompt.match(/Images in order: Page (\d+)/)?.[1] ?? 1);
+      extractionPages.push(start);
+      attempts.set(start, (attempts.get(start) ?? 0) + 1);
+      if (variant === 'windowed' && start === 16 && attempts.get(start) <= 2) {
+        await fulfill(200, responseStream('not JSON: forced segment failure'), 'text/event-stream');
+        return;
+      }
       replies++;
       if (variant === 'agent-tools') {
         const payload = JSON.parse(r.postData || '{}');
@@ -79,7 +98,9 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
           : toolResponseStream('crop_zoom', { page: 1, ymin: 100, xmin: 100, ymax: 500, xmax: 900, scale: 6 }, 'crop_e2e'), 'text/event-stream');
         return;
       }
-      const text = variant === 'invalid' || (variant === 'repair' && replies === 1) ? 'not JSON: E2E invalid reply' : JSON.stringify(variant === 'targeted' ? targeted() : invoice(variant === 'bad'));
+      const output = variant === 'targeted' ? targeted() : invoice(variant === 'bad');
+      output.fields.forEach(field => { field.page = start; });
+      const text = variant === 'invalid' || (variant === 'repair' && replies === 1) ? 'not JSON: E2E invalid reply' : JSON.stringify(output);
       await fulfill(200, responseStream(text), 'text/event-stream'); return;
     }
     violations.push(`Unimplemented provider request ${r.method} ${u.origin}${u.pathname}`);
@@ -88,6 +109,6 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
   b.on('Fetch.requestPaused', e => { const p = handle(e); pending.add(p); p.finally(() => pending.delete(p)).catch(() => {}); return p; });
   // Catch all destinations, not only provider patterns: an unexpected host must never receive bytes.
   await b.send('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
-  return { requests, violations, setVariant(value) { variant = value; replies = 0; }, async assertSafe() { await Promise.all([...pending]); assert.deepEqual(violations, [], 'Unexpected network destinations/endpoints'); } };
+  return { requests, violations, extractionPages, setVariant(value) { variant = value; replies = 0; attempts.clear(); }, async assertSafe() { await Promise.all([...pending]); assert.deepEqual(violations, [], 'Unexpected network destinations/endpoints'); } };
 }
 export function redact(value) { return String(value).replaceAll(TEST_KEY, '[REDACTED]').replace(/Bearer\s+[^\s"',}]+/gi, 'Bearer [REDACTED]').replace(/sk-[a-zA-Z0-9_-]+/g, '[REDACTED]'); }

@@ -1,7 +1,7 @@
 import { runExtraction, type ExtractOptions } from './extract';
 import { createPageSource, releasePageImages } from './agent/pageSource';
 import { getFileByFileId } from './db';
-import { segmentPages, SEGMENT_WINDOW, SINGLE_PASS_PAGES, MAX_EXTRACT_PAGES, type SegmentPlan } from './agent/segment';
+import { segmentPages, stitchSegments, SEGMENT_WINDOW, SINGLE_PASS_PAGES, MAX_EXTRACT_PAGES, type SegmentPlan } from './agent/segment';
 import { buildBatchFromSegments } from '../contract/build';
 import { modelFor } from './settings';
 import type { ModelOutput } from './validate';
@@ -16,8 +16,16 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
   opts.signal?.throwIfAborted();
   const blob = opts.blob ?? (!opts.pageSource ? await getFileByFileId(opts.file.file_id) : undefined);
   if (!opts.pageSource && !blob) throw new Error('Original file unavailable');
-  const source = opts.pageSource ?? await createPageSource(blob!, { maxPages: opts.manifest.length });
-  let plan: SegmentPlan = opts.plan ? structuredClone(opts.plan) : { pageCount: opts.manifest.length, windows: [], segments: [], failed: [], unassigned: [] };
+  const pageCount = Math.min(opts.manifest.length, opts.settings.maxPages);
+  const source = opts.pageSource ?? await createPageSource(blob!, { maxPages: pageCount });
+  let plan: SegmentPlan = opts.plan ? structuredClone(opts.plan) : { pageCount, windows: [], segments: [], failed: [], unassigned: [] };
+  if (plan.pageCount !== pageCount) {
+    plan.pageCount = pageCount;
+    plan.windows = plan.windows.filter(w => w.pages.every(p => p <= pageCount) && (w.pages.length === SEGMENT_WINDOW || w.pages.at(-1) === pageCount));
+    plan.segments = stitchSegments(plan.windows, pageCount);
+    plan.failed = plan.failed.filter(p => p <= pageCount);
+    plan.unassigned = plan.unassigned.filter(p => p <= pageCount);
+  }
   const results = structuredClone(opts.results ?? []);
   const pruneResults = () => {
     const keys = new Set(plan.segments.map(s => s.pages.join(',')));
@@ -33,10 +41,10 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
   };
   try {
     if (opts.manifest.length <= SINGLE_PASS_PAGES) {
-      if (results[0]?.output) { progress('extracting', 1, 1); return { batch: build(), plan, results }; }
+      if (results[0]?.output && results[0].pages.length === pageCount) { progress('extracting', 1, 1); return { batch: build(), plan, results }; }
       const pages = [];
       try {
-        for (const page of opts.manifest) { opts.signal?.throwIfAborted(); pages.push(await source.render(page.page_number)); }
+        for (const page of opts.manifest.slice(0, pageCount)) { opts.signal?.throwIfAborted(); pages.push(await source.render(page.page_number)); }
         let output: ModelOutput | null = null;
         const batch = await runExtraction({ ...opts, pages, pageSource: source, onOutput: out => { output = out; opts.onOutput?.(out); } });
         plan.segments = [{ pages: pages.map(p => p.page), document_type: batch.documents[0].document_type, boundary_status: 'confirmed', confidence: 1 }];
@@ -45,12 +53,13 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
         return { batch, plan, results };
       } finally { await releasePageImages(source, pages); }
     }
-    plan = await segmentPages({ ...opts, source, plan, onWindow: current => { plan = current; progress('segmenting', plan.windows.length, Math.ceil((plan.pageCount - 1) / (SEGMENT_WINDOW - 1))); } });
+    plan = await segmentPages({ ...opts, source, plan, onWindow: current => { plan = current; progress('segmenting', plan.windows.length, Math.max(1, Math.ceil((plan.pageCount - 1) / (SEGMENT_WINDOW - 1)))); } });
     pruneResults();
     for (const [index, segment] of plan.segments.entries()) {
       opts.signal?.throwIfAborted();
       const existing = results.find(r => r.pages.join(',') === segment.pages.join(','));
       if (existing?.output) { progress('extracting', index + 1, plan.segments.length); continue; }
+      opts.onStatus?.(`Extracting document ${index + 1}/${plan.segments.length}`);
       const result: SegmentResult = { pages: segment.pages, output: null };
       try {
         let merged: ModelOutput | undefined;
@@ -84,5 +93,11 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
       progress('extracting', index + 1, plan.segments.length);
     }
     return { batch: build(), plan, results };
+  } catch (error) {
+    if (!opts.signal?.aborted) throw error;
+    const batch = build();
+    batch.batch.status = 'review_required';
+    opts.onProgress?.({ phase: 'extracting', done: results.filter(r => r.output).length, total: plan.segments.length, batch, plan: structuredClone(plan), results: structuredClone(results) });
+    return { batch, plan, results };
   } finally { if (!opts.pageSource) await source.dispose(); }
 }

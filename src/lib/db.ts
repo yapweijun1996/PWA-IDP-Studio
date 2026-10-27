@@ -1,5 +1,8 @@
 import type { DocumentRecord } from './types';
 import type { Batch } from '../contract/types';
+import type { SegmentPlan, SegmentResult } from './windowed';
+
+export interface WindowedState { plan: SegmentPlan; results: SegmentResult[] }
 
 export interface BatchRecord { batch: Batch; createdAt: number }
 
@@ -7,14 +10,16 @@ const DB_NAME = 'idp-studio';
 const DOCS = 'documents';
 const FILES = 'files';
 const BATCHES = 'batches';
+const WINDOWED = 'windowed';
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 2);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onupgradeneeded = () => {
       if (!req.result.objectStoreNames.contains(DOCS)) req.result.createObjectStore(DOCS, { keyPath: 'id' });
       if (!req.result.objectStoreNames.contains(FILES)) req.result.createObjectStore(FILES);
       if (!req.result.objectStoreNames.contains(BATCHES)) req.result.createObjectStore(BATCHES, { keyPath: 'batch.batch.batch_id' });
+      if (!req.result.objectStoreNames.contains(WINDOWED)) req.result.createObjectStore(WINDOWED);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -73,7 +78,20 @@ export async function listBatches(): Promise<Batch[]> {
   return rows.sort((a, b) => b.createdAt - a.createdAt).map(row => row.batch);
 }
 
+export const getWindowedState = (id: string) =>
+  tx<WindowedState | undefined>([WINDOWED], 'readonly', t => t.objectStore(WINDOWED).get(id));
+
+/** Commit the recoverable snapshot and its segment outputs atomically. */
+export const putWindowedProgress = (batch: Batch, state: WindowedState) =>
+  tx([BATCHES, WINDOWED], 'readwrite', t => {
+    t.objectStore(WINDOWED).put(state, batch.batch.batch_id);
+    return t.objectStore(BATCHES).put({ batch, createdAt: Date.parse(batch.batch.created_at) } satisfies BatchRecord);
+  });
+
 /** Deletes only the batch snapshot; immutable originals and legacy rows are retained. */
 export async function deleteBatch(id: string): Promise<void> {
-  await tx([BATCHES], 'readwrite', t => t.objectStore(BATCHES).delete(id));
+  await tx([BATCHES, WINDOWED], 'readwrite', t => {
+    t.objectStore(WINDOWED).delete(id);
+    return t.objectStore(BATCHES).delete(id);
+  });
 }

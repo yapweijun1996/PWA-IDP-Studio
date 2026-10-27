@@ -28,7 +28,7 @@ export async function drop(b, name = 'invoice.png', base64, { expectProcessed = 
   await b.wait(`document.querySelector('main h1')?.textContent === ${js(name)}`, `workspace ${name}`);
 }
 export async function batches(b) {
-  return b.eval(`new Promise((resolve,reject)=>{const r=indexedDB.open('idp-studio',2);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const d=r.result;const t=d.transaction('batches','readonly');const q=t.objectStore('batches').getAll();t.oncomplete=()=>{d.close();resolve(q.result.map(r=>r.batch))};t.onerror=()=>{d.close();reject(t.error)}}})`);
+  return b.eval(`new Promise((resolve,reject)=>{const r=indexedDB.open('idp-studio');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const d=r.result;const t=d.transaction('batches','readonly');const q=t.objectStore('batches').getAll();t.oncomplete=()=>{d.close();resolve(q.result.map(r=>r.batch))};t.onerror=()=>{d.close();reject(t.error)}}})`);
 }
 export async function fullJSON(b) { await click(b, 'JSON'); await radio(b, 'JSON format', 'full'); await b.wait('!!document.querySelector("pre")', 'full JSON'); return b.eval('JSON.parse(document.querySelector("pre").textContent)'); }
 export function checkEnvelope(batch) {

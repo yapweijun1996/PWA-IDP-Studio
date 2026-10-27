@@ -143,16 +143,51 @@ export const scenarios = [
     const ok=(await batches(b)).find(v=>v.source_files[0].filename==='IMG_0454.png'); assert.equal(ok.batch.status==='failed',false); assert.equal(ok.batch.batch_id,failed.batch.batch_id);
     assert.equal((await batches(b)).filter(v=>v.source_files[0].filename==='IMG_0454.png').length,1,'retry reuses the stored original, no duplicate');
   } },
-  { name: 'page-limit', async run({b,mocks}) {
-    const pdf=makePDF(25).toString('base64'); await drop(b,'limited.pdf',pdf);
-    const batch=await fullJSON(b); checkEnvelope(batch); assert.equal(batch.pages.length,25); assert.equal(batch.pages.filter(p=>p.status==='pending').length,5);
+  { name: 'page-limit', async run({b}) {
+    await settings(b); await field(b,'Maximum pages per extraction','12'); await click(b,'Save extraction settings'); await home(b);
+    await drop(b,'limited.pdf',makePDF(25).toString('base64'));
+    const batch=(await batches(b)).find(v=>v.source_files[0].filename==='limited.pdf');
+    checkEnvelope(batch);
+    assert.equal(batch.pages.filter(p=>p.status==='classified').length,12);
+    assert.deepEqual(batch.pages.filter(p=>p.status==='pending').map(p=>p.page_number),Array.from({length:13},(_,i)=>i+13));
     assert.ok(batch.issues.some(i=>i.rule_code==='PAGE_LIMIT_EXCEEDED'&&i.severity==='blocking'&&i.status==='open'));
-    assert.equal(await buttonDisabled(b,'Approve'),true); assert.equal(await buttonDisabled(b,'Download JSON'),true); assert.equal(await buttonDisabled(b,'Copy JSON'),true);
-    await click(b,'Export'); assert.equal(await b.eval(`[...document.querySelectorAll('[role="menuitem"]')].every(e=>e.disabled)`),true); await key(b,'Escape');
-    await settings(b); await field(b,'Maximum pages per extraction','25'); await click(b,'Save extraction settings'); await home(b); await drop(b,'complete.pdf',pdf);
-    const next=(await batches(b)).find(v=>v.source_files[0].filename==='complete.pdf'); assert.equal(next.pages.filter(p=>p.status==='classified').length,25); assert.equal(next.pages.filter(p=>p.status==='pending').length,0);
-    const input=JSON.parse(posts(mocks).at(-1).body); const countImages=v=>!v||typeof v!=='object'?0:(v.type==='input_image'?1:0)+Object.values(v).reduce((n,x)=>n+(Array.isArray(x)?x.reduce((s,y)=>s+countImages(y),0):countImages(x)),0);
-    assert.equal(countImages(input),25,'25 images sent at raised page limit');
+    assert.equal(await buttonDisabled(b,'Approve'),true);
+    await click(b,'JSON'); assert.equal(await buttonDisabled(b,'Download JSON'),true);
+    await settings(b); await field(b,'Maximum pages per extraction','25'); await click(b,'Save extraction settings');
+    await route(b,`#/doc/${batch.batch.batch_id}`,'limited.pdf'); await click(b,'Retry extraction');
+    const next=await until(async()=>{const v=(await batches(b)).find(x=>x.batch.batch_id===batch.batch.batch_id);return v&&v.pages.filter(p=>p.status==='classified').length===25&&v;},'retry completed',120000);
+    assert.equal(next.pages.filter(p=>p.status==='classified').length,25);
+    assert.ok(!next.issues.some(i=>i.rule_code==='PAGE_LIMIT_EXCEEDED'&&i.status==='open'));
+  } },
+  { name: 'windowed-multi-doc', async run({b,mocks}) {
+    mocks.setVariant('windowed');
+    await drop(b,'multi.pdf',makePDF(30).toString('base64'));
+    let batch=(await batches(b)).find(v=>v.source_files[0].filename==='multi.pdf');
+    checkEnvelope(batch);
+    assert.equal(batch.documents.length,5);
+    assert.deepEqual(batch.pages.filter(p=>p.status==='error').map(p=>p.page_number),[16,17,18,19,20]);
+    assert.ok(batch.issues.some(i=>i.rule_code==='BOUNDARY_UNCERTAIN'&&i.status==='open'));
+    const before=posts(mocks).length;
+    const extracted=mocks.extractionPages.length;
+    await reload(b); await text(b,'multi.pdf'); await click(b,'Retry extraction');
+    const id=batch.batch.batch_id;
+    batch=await until(async()=>{const v=(await batches(b)).find(x=>x.batch.batch_id===id);return v&&v.pages.every(p=>p.status==='classified')&&v;},'segment retry completed',120000);
+    checkEnvelope(batch);
+    assert.equal(batch.documents.length,6);
+    assert.deepEqual(batch.documents.flatMap(d=>d.page_refs.map(p=>p.page_number)),Array.from({length:30},(_,i)=>i+1));
+    assert.ok(batch.pages.every(p=>p.status==='classified'));
+    assert.equal(posts(mocks).length-before,1,'No segmentation or completed-segment model calls on retry');
+    assert.deepEqual(mocks.extractionPages.slice(extracted),[16]);
+    assert.deepEqual([...new Set(batch.evidence.flatMap(e=>e.sources.map(s=>s.page_number)))],[1,6,11,16,21,26]);
+    const uncertain=batch.documents.find(d=>d.boundary_status==='needs_review');
+    assert.ok(uncertain);
+    await route(b,`#/doc/${batch.batch.batch_id}/${uncertain.transaction_ids[0]}`,'multi.pdf');
+    assert.equal(await buttonDisabled(b,'Approve'),true);
+    await click(b,'JSON'); assert.equal(await buttonDisabled(b,'Download JSON'),true);
+    await route(b,`#/doc/${batch.batch.batch_id}/${batch.transactions[0].transaction_id}`,'multi.pdf');
+    await b.wait(`[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Approve'&&!e.disabled)`,'unaffected document approval');
+    await click(b,'Approve'); await click(b,'JSON');
+    assert.equal(await buttonDisabled(b,'Download JSON'),false,'Boundary blocker belongs only to the uncertain document');
   } },
   { name: 'migration', beforeLoad: true, async run({b,url}) {
     // A same-origin empty resource allows seeding BEFORE any application JavaScript executes.
@@ -161,7 +196,7 @@ export const scenarios = [
     await b.eval(`(async()=>{const c=document.createElement('canvas');c.width=200;c.height=200;const blob=await new Promise(r=>c.toBlob(r,'image/png'));await new Promise((resolve,reject)=>{const r=indexedDB.open('idp-studio',1);r.onupgradeneeded=()=>{r.result.createObjectStore('documents',{keyPath:'id'});r.result.createObjectStore('files')};r.onerror=()=>reject(r.error);r.onsuccess=()=>{const d=r.result;const t=d.transaction(['documents','files'],'readwrite');t.objectStore('documents').put({id:'old-e2e',name:'legacy.png',mime:'image/png',size:blob.size,createdAt:1792972800000,pageCount:1,envelope:{schema_version:'1.0',document_id:'old-e2e',document_type:'purchase_invoice',status:'ready',extraction:${js(extraction)},evidence:{},validation:{schema_valid:true,totals_match:true,missing_required:[],low_confidence:[],standards_issues:[],needs_review:false},model:null,audit:[]}});t.objectStore('files').put(blob,'old-e2e');t.oncomplete=()=>{d.close();resolve()};t.onerror=()=>reject(t.error)}})})()`);
     await b.navigate(url); await text(b,'legacy.png'); let rows=await batches(b); assert.equal(rows.length,1); assert.equal(rows[0].batch.batch_id,'legacy_old-e2e');
     await reload(b); await text(b,'legacy.png'); rows=await batches(b); assert.equal(rows.length,1);
-    assert.deepEqual(await b.eval(`new Promise((resolve,reject)=>{const r=indexedDB.open('idp-studio',2);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const d=r.result;const t=d.transaction(['documents','files'],'readonly');const a=t.objectStore('documents').get('old-e2e'),f=t.objectStore('files').get('old-e2e');t.oncomplete=()=>{d.close();resolve([!!a.result, f.result instanceof Blob])}}})`),[true,true]);
+    assert.deepEqual(await b.eval(`new Promise((resolve,reject)=>{const r=indexedDB.open('idp-studio');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const d=r.result;const t=d.transaction(['documents','files'],'readonly');const a=t.objectStore('documents').get('old-e2e'),f=t.objectStore('files').get('old-e2e');t.oncomplete=()=>{d.close();resolve([!!a.result, f.result instanceof Blob])}}})`),[true,true]);
   } },
   { name: 'theme-sidebar', async run({b}) {
     assert.equal(await b.eval('document.documentElement.dataset.theme'),'light'); await settings(b); await radio(b,'Theme','dark'); await b.wait('document.documentElement.dataset.theme==="dark"','dark theme'); await reload(b); assert.equal(await b.eval('document.documentElement.dataset.theme'),'dark');

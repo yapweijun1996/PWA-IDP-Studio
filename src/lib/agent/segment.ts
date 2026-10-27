@@ -50,7 +50,11 @@ export async function segmentPages(opts: Omit<ExtractOptions, 'pages'> & { sourc
   for (let start = 1; start <= plan.pageCount; start += SEGMENT_WINDOW - 1) {
     opts.signal?.throwIfAborted();
     const pages = Array.from({ length: Math.min(SEGMENT_WINDOW, plan.pageCount - start + 1) }, (_, i) => start + i);
-    if (plan.windows.some(w => w.pages[0] === start && !w.error)) continue;
+    if (plan.windows.some(w => w.pages[0] === start && !w.error)) {
+      if (pages.at(-1) === plan.pageCount) break;
+      continue;
+    }
+    opts.onStatus?.(`Segmenting window ${Math.floor((start - 1) / (SEGMENT_WINDOW - 1)) + 1}/${Math.max(1, Math.ceil((plan.pageCount - 1) / (SEGMENT_WINDOW - 1)))}`);
     const window: SegmentWindow = { pages, decisions: [] };
     const images = [];
     try {

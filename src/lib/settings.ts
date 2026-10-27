@@ -15,11 +15,11 @@ export const DEFAULT_MODELS: Record<ProviderId, string> = {
 };
 
 const KEY = 'idp-studio.settings.v1';
-const fresh = (): Settings => ({ provider: 'demo', keys: {}, models: {}, maxPages: 20 });
+const fresh = (): Settings => ({ provider: 'demo', keys: {}, models: {}, maxPages: 100 });
 
 export function clampMaxPages(value: unknown): number {
   const n = Number(value);
-  return Number.isFinite(n) ? Math.min(500, Math.max(1, Math.floor(n))) : 20;
+  return Number.isFinite(n) ? Math.min(500, Math.max(1, Math.floor(n))) : 100;
 }
 
 /** BYOK keys stay in this browser's localStorage and are only sent to the chosen provider. */
@@ -28,7 +28,7 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fresh();
     const stored = JSON.parse(raw);
-    return { ...fresh(), ...stored, maxPages: stored.maxPages === undefined ? 20 : clampMaxPages(stored.maxPages) };
+    return { ...fresh(), ...stored, maxPages: stored.maxPages === undefined ? 100 : clampMaxPages(stored.maxPages) };
   } catch {
     return fresh();
   }

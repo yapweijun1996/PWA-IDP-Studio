@@ -5,7 +5,7 @@ import { stitchSegments, type SegmentWindow } from './agent/segment';
 import { validateBatch } from '../contract/validate';
 import type { Settings } from './settings';
 
-const settings: Settings = { provider: 'openai', keys: { openai: 'test' }, models: {}, maxPages: 20 };
+const settings: Settings = { provider: 'openai', keys: { openai: 'test' }, models: {}, maxPages: 100 };
 const decision = (page: number, starts_new_document = false, confidence = 1) => ({ page, starts_new_document, confidence, document_type: 'unknown' as const });
 it('stitches overlap, gaps, uncertain boundaries and maximal segmentation', () => {
   const windows: SegmentWindow[] = [{ pages: [1, 2, 3], decisions: [decision(1), decision(2, true, .5), decision(3)] }, { pages: [3, 4, 5], decisions: [decision(3, true), decision(5)] }];

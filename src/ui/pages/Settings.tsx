@@ -23,7 +23,7 @@ export function SettingsPage({ settings, onChange, migration, batchCount = 0, on
   const set = (patch: Partial<Settings>) => { setS({ ...s, ...patch }); setSaved(false); };
   return <section className="ds-sheet">
     <PageHeader title="Settings" breadcrumb={<><a href="#/">Home</a> / Settings</>} description="Preferences, credentials and uploads stay in this browser." />
-    <Card><h2>General</h2><Field label="Maximum pages per extraction" hint="1–500. Pages beyond this limit are not processed and block export."><Input type="number" min={1} max={500} value={s.maxPages} onChange={e => set({ maxPages: clampMaxPages(e.target.value) })} /></Field>
+    <Card><h2>General</h2><Field label="Maximum pages per extraction" hint="1–500; default 100. Files over 10 pages are split into documents automatically. Pages beyond this limit are not processed and block export."><Input type="number" min={1} max={500} value={s.maxPages} onChange={e => set({ maxPages: clampMaxPages(e.target.value) })} /></Field>
       <Field label="Default page size"><Select value={preferences.pageSize} onChange={e => setPreferences({ ...preferences, pageSize: Number(e.target.value) })}>{[10,25,50].map(n => <option key={n} value={n}>{n}</option>)}</Select></Field>
       <Segmented label="Table density" value={preferences.density} onChange={value => setPreferences({ ...preferences, density: value as 'comfortable' | 'compact' })} options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]} />
     </Card>

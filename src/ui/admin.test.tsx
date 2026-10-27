@@ -162,7 +162,7 @@ it('deleting a migrated upload removes only its migration source so it cannot re
   await putBatch(batch); await putFile('old', new Blob(['legacy'])); await putFile('legacy_file_old', new Blob(['migrated']));
   // IndexedDB exposes event completion, and this repository targets ES2022.
   await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open('idp-studio', 2);
+    const request = indexedDB.open('idp-studio');
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result; const tx = db.transaction('documents', 'readwrite');
