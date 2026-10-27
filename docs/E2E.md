@@ -67,6 +67,7 @@ Offline contract: once cached, the app shell and stored documents remain availab
 | `unknown-route-update` | Unknown route without an update renders Page not found; route-owned update check discovers build B without a test-side update call; shared explicit prompt activates only on Update now and navigates exactly once; Home/Documents recovery. |
 | `install-integrity` | Mixed worker/build-info deployment rejects the candidate, preserves active build A and its caches, and shows no prompt; consistent build B is discovered on retry; precache keys are query-free. |
 | `search-docs` | Two real uploaded batches; filename search and clear on Home/Documents; ascending/descending Documents sort with aria-sort and actual row order; delete dialog preserves data before confirmation and after Cancel; confirm deletes only chosen upload. |
+| `json-explorer` | Default mock upload; tree roles, initially expanded top-level batch/transactions and `/transactions/0/data` expansion; invoice substring search with asserted next/previous wraparound; origin-scoped clipboard permission grant and visible pointer-copy success confirmation (no clipboard read); permission reset; fresh valid state; no overflow for either batch; windowed 30-page batch opens and accepts a scope click within two seconds. |
 
 All local scenarios also reject uncaught page exceptions and `console.error`.
 CDP Log entries, including intentional HTTP 429 resource errors, are retained in
@@ -190,3 +191,9 @@ smooth scroll-to-top. The top safe-area surface uses the theme's opaque
 
 These additions require the wrapper's typecheck, unit, SSOT, icon, build and
 real-Chrome runs. No passing verification result is recorded here.
+
+JSON Explorer clipboard regression: the headless driver focuses the page but does not grant clipboard permissions by default, and helpers invoke controls through DOM clicks. Denied clipboard access prevented the expected success confirmation; an unresolved Clipboard API permission request could also prevent the old fallback from running. The shared copy helper now attempts synchronous legacy copying first, bounds the modern request to one second, and exposes manual-copy text on failure. The scenario grants clipboard permissions only around its copy assertion and checks the visible success confirmation. Unit coverage includes legacy success, modern success, denial, absent API, unanswered permission requests, focus restoration and exact manual-copy contents. Additional coverage exercises export serialization, targeted/Auto transaction shapes, unknown-transaction refusal, scope selection, search cancellation/wraparound and escaped/control-character pointers.
+
+The fix round was reviewed statically only; no commands or checks were executed by the assistant. The wrapper must verify typecheck, unit tests, SSOT, icons, build, desktop/phone rendering and the two-second Chrome responsiveness assertion.
+
+Explorer fix round 2 adds unit regressions for initial top-level expansion with lazy deeper data, batch switching, an empty Transaction scope with no mounted tree and disabled download, and removal of transactions while inspecting a batch. The Chrome scenario now starts with `/transactions` already expanded and explicitly expands only the transaction and its data. Execution remains delegated to the wrapper; no passing result is claimed for these changes.

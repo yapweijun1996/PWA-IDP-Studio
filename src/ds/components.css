@@ -120,3 +120,11 @@ a { color: var(--primary); }
   .ds-input { font-size: var(--font-body); }
   .ds-toast { left: var(--space-4); }
 }
+.ds-json-tree { min-width: 0; }
+.ds-json-node { padding: var(--space-1) var(--space-2); font-family: monospace; overflow-wrap: anywhere; cursor: pointer; border-left: var(--line) solid var(--border); }
+.ds-json-node:focus { background: var(--selected); outline: var(--focus-width) solid var(--focus); outline-offset: calc(-1 * var(--focus-width)); }
+.ds-json-pointer { overflow-wrap: anywhere; min-width: 0; }
+.ds-json-string { color: var(--success); }
+.ds-json-number { color: var(--info); }
+.ds-json-boolean { color: var(--warning); }
+.ds-json-null { color: var(--muted); }

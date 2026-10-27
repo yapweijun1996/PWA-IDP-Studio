@@ -10,10 +10,7 @@ import { exportEligibleTransactions, validateBatch } from '../../contract/valida
 import { Button, Card, DataTable, EvidenceViewer, Field, Input, Menu, Notice, PageHeader, Progress, Segmented, Select, StatusPill, Tabs } from '../../ds';
 import { readable } from '../nav';
 import { issueTitle } from '../issues';
-export function downloadJSON(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
-}
+import { downloadJSON, serializeJSON, transactionJSONValue } from '../../lib/jsonExport';
 export function Workspace({ doc, onSaved, transactionId, busy, onRetry, steps = [] }: { steps?: AgentStep[]; busy?: string | null; onRetry?: () => void; doc: Batch; onSaved: (d: Batch) => void; transactionId?: string }) {
   const profile = loadBatchMode(doc.batch.batch_id)?.profile;
   const label = (key: string) => [...(profile?.fields ?? []), ...(profile?.rowFields ?? [])].find(f => f.key === key)?.label ?? readable(key);
@@ -56,8 +53,8 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, steps = 
   }
   const view = transactionView(doc, tx.transaction_id);
   const eligible = validateBatch(doc).ok && exportEligibleTransactions(doc).includes(tx.transaction_id);
-  const clean = JSON.stringify(profile ? tx.data : { document_type: view.documentType, ...tx.data }, null, 2);
-  const evidence = JSON.stringify(doc, null, 2);
+  const clean = serializeJSON(transactionJSONValue(doc, tx.transaction_id));
+  const evidence = serializeJSON(doc);
   const json = full === 'full' ? evidence : clean;
   const base = file.filename.replace(/\.[^.]+$/, '');
   const save = async (next: Batch) => { setSaving(true); setError(''); try { await putBatch(next); onSaved(next); setEditing(undefined); } catch(e) { setError(String(e)); } finally { setSaving(false); } };
