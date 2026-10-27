@@ -30,6 +30,10 @@ Retry re-segments failed windows and retries failed extraction segments. Success
 
 Home defaults to Auto (AI decides). Targeted sends a selected profile's header fields and repeating row columns. User profiles and the selected mode are stored in `idp-studio.profiles.v1` and `idp-studio.mode.v1` in localStorage. Builtins are read-only; duplication creates an independent user profile.
 
+Templates imports and exports `{ "idp_studio_profiles": 1, "profiles": [...] }`. Parsing rejects unknown properties and invalid profile fields atomically. Import conflicts by ID or exact name require explicit rename-as-copy approval; existing profiles are never overwritten. Built-in exports import as custom profiles. Deleting the selected profile resets next-upload mode to Auto without changing batch snapshots.
+
+The portable profile object contains `id`, `name`, `fields` and `rowFields`; exported files omit the built-in lock flag. Fields contain `key`, `label`, `type` and optional boolean `required`. Parsing checks the versioned envelope, both field arrays, snake_case keys, cross-section key uniqueness, labels, supported types and the combined 1–30 field limit. Errors identify the profile index; any invalid entry rejects the whole file. ID-only and name-only conflicts both require approval, including collisions between entries in the same file. Approved copies receive fresh IDs and available names (`name copy`, `name copy 2`, …); cancellation changes nothing. An empty profile list is valid and imports nothing.
+
 Before extraction, `idp-studio.batch-modes.v1` records the used mode and a deep-copied profile keyed by batch id. Retry reads this snapshot, not the current Home selection or edited/deleted profile. This sidecar leaves the strict v2 envelope and IndexedDB schema unchanged. Workspace labels use the same snapshot; full evidence JSON remains the unmodified envelope. Targeted clean JSON exports transaction data without Auto's extra `document_type` wrapper. Clear all local data removes profiles, mode and snapshots. Blocked storage retains settings and snapshots for this session only.
 
 ## Review and export

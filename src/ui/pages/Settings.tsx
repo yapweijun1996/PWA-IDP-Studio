@@ -1,4 +1,3 @@
-import { ProfileEditor } from '../ProfileEditor';
 import { useState } from 'react';
 import { PROVIDERS, diagnoseConnection, providerInfo, type DiagnosticStep } from '../../lib/providers';
 import { clampMaxPages, DEFAULT_MODELS, loadSettings, saveSettings, type Settings } from '../../lib/settings';
@@ -27,7 +26,7 @@ export function SettingsPage({ settings, onChange, migration, batchCount = 0, on
       <Field label="Default page size"><Select value={preferences.pageSize} onChange={e => setPreferences({ ...preferences, pageSize: Number(e.target.value) })}>{[10,25,50].map(n => <option key={n} value={n}>{n}</option>)}</Select></Field>
       <Segmented label="Table density" value={preferences.density} onChange={value => setPreferences({ ...preferences, density: value as 'comfortable' | 'compact' })} options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]} />
     </Card>
-    <ProfileEditor key={confirm ? 'clearing' : 'profiles'} />
+    <Card><h2>Extraction profiles</h2><p>Create and manage Targeted extraction profiles in Templates.</p><a href="#/templates">Manage templates</a></Card>
     <Card><h2>AI provider</h2><Segmented label="AI provider" value={s.provider} onChange={value => set({ provider: value as ProviderId })} options={PROVIDERS.map(provider => ({ value: provider.id, label: provider.label }))} /><p className="ds-muted">Pages are sent to {info.recipient}.</p>
       {info.needsKey && <Field label={`${info.label} API key`} hint={`Stored in this browser; sent only to ${info.recipient}.`}><Input type="password" autoComplete="off" value={s.keys[s.provider as Exclude<ProviderId, 'demo'>] ?? ''} onChange={e => set({ keys: { ...s.keys, [s.provider]: e.target.value } })} /></Field>}
       <Field label="Model"><Input value={s.models[s.provider] ?? ''} placeholder={DEFAULT_MODELS[s.provider]} onChange={e => set({ models: { ...s.models, [s.provider]: e.target.value } })} /></Field>
