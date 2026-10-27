@@ -75,22 +75,24 @@ it('Review Queue orders by blockers and omits validated and approved transaction
   expect(container.querySelector('tbody td')!.textContent).toBe('bad.pdf');
   expect(reviewRows(docs).map(r => r.batch.batch.batch_id)).toEqual(['bad', 'mild']);
 });
-it('nav disables unavailable features with reasons and hides zero review badge', async () => {
-  await render(<Sidebar items={navItems('home', 0)} />);
-  for (const label of ['Label Studio', 'Templates', 'JSON Explorer', 'AI Agents', 'Validation']) {
+it('nav links every Studio page, hides zero review badge and keeps the disabled-item contract', async () => {
+  const items = [...navItems('home', 0), { href: '#/future', label: 'Future', icon: 'tag' as const, disabled: true, reason: 'Coming soon' }];
+  await render(<Sidebar items={items} />);
+  for (const [label, href] of [['Label Studio', '#/label-studio'], ['Templates', '#/templates'], ['JSON Explorer', '#/json-explorer'], ['AI Agents', '#/ai-agents'], ['Validation', '#/validation']]) {
     const link = Array.from(container.querySelectorAll('a')).find(n => n.querySelector('span')?.textContent === label)!;
-    expect(link.getAttribute('aria-disabled')).toBe('true'); expect(link.hasAttribute('href')).toBe(false); expect(link.querySelector('.ds-badge')?.textContent).toBe('Coming soon');
-    const description = document.getElementById(link.getAttribute('aria-describedby')!)!;
-    expect(description.textContent).toContain('Coming soon');
+    expect(link.getAttribute('href')).toBe(href); expect(link.getAttribute('aria-disabled')).toBeNull();
   }
+  const future = Array.from(container.querySelectorAll('a')).find(n => n.querySelector('span')?.textContent === 'Future')!;
+  expect(future.getAttribute('aria-disabled')).toBe('true'); expect(future.hasAttribute('href')).toBe(false); expect(future.querySelector('.ds-badge')?.textContent).toBe('Coming soon');
+  expect(document.getElementById(future.getAttribute('aria-describedby')!)!.textContent).toContain('Coming soon');
   const review = Array.from(container.querySelectorAll('a')).find(a => a.querySelector('span')?.textContent === 'Review Queue')!;
   expect(review.querySelector('.ds-badge')).toBeNull();
   await click(container.querySelector('[aria-label="Collapse sidebar"]')!);
-  const disabled = container.querySelector('[aria-label="Label Studio"]')!;
+  const disabled = container.querySelector('[aria-label="Future"]')!;
   expect(disabled.querySelector('.ds-badge')).toBeNull();
   await act(async () => { disabled.dispatchEvent(new FocusEvent('focusin', { bubbles: true })); });
   const tooltip = container.querySelector('[role="tooltip"]')!;
-  expect(tooltip.textContent).toContain('Label Studio: Coming soon');
+  expect(tooltip.textContent).toContain('Future: Coming soon');
   expect(disabled.getAttribute('aria-describedby')?.split(' ')).toContain(tooltip.id);
 });
 it('Workspace selects field evidence on its page, records reason and enables approval after correction', async () => {

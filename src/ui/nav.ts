@@ -11,7 +11,11 @@ export function navItems(active: string, count: number): SidebarItem[] {
     { href: '#/', label: 'Home', icon: 'home', active: active === 'home' },
     { href: '#/documents', label: 'Documents', icon: 'document', active: active === 'documents' },
     { href: '#/review', label: 'Review Queue', icon: 'audit-trail', active: active === 'review', count: count || undefined },
-    ...([{ label: 'Label Studio', icon: 'tag' }, { label: 'Templates', icon: 'database' }, { label: 'JSON Explorer', icon: 'code-file' }, { label: 'AI Agents', icon: 'robot' }, { label: 'Validation', icon: 'approval' }] as const).map(item => ({ ...item, href: `#/${item.label.toLowerCase().replaceAll(' ', '-')}`, disabled: true, reason: 'Coming soon' })),
+    { href: '#/label-studio', label: 'Label Studio', icon: 'tag', active: active === 'labels' },
+    { href: '#/templates', label: 'Templates', icon: 'database', active: active === 'templates' },
+    { href: '#/json-explorer', label: 'JSON Explorer', icon: 'code-file', active: active === 'explorer' },
+    { href: '#/ai-agents', label: 'AI Agents', icon: 'robot', active: active === 'agents' },
+    { href: '#/validation', label: 'Validation', icon: 'approval', active: active === 'validation' },
     { href: '#/settings', label: 'Settings', icon: 'settings', active: active === 'settings' },
   ];
 }

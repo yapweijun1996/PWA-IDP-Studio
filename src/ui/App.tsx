@@ -22,6 +22,11 @@ import { ComponentSheet } from '../ds/ComponentSheet';
 import { UpdatePrompt } from './UpdatePrompt';
 import { go, useRoute } from './useHash';
 import { Workspace } from './pages/Workspace';
+import { LabelStudio } from './pages/LabelStudio';
+import { Templates } from './pages/Templates';
+import { JsonExplorer } from './pages/JsonExplorer';
+import { AiAgents } from './pages/AiAgents';
+import { ValidationPage } from './pages/ValidationPage';
 import { NotFound } from './pages/NotFound';
 
 export function App() {
@@ -170,6 +175,11 @@ export function App() {
   if (route.name === 'settings') body = <SettingsPage settings={settings} onChange={setSettings} migration={migration} batchCount={docs.length} onCleared={async () => { setCurrent(undefined); setMigration({ migrated: 0, skipped: 0 }); await refresh(); }} />;
   else if (route.name === 'design') body = <ComponentSheet />;
   else if (route.name === 'notfound') body = <NotFound />;
+  else if (route.name === 'labels') body = <LabelStudio docs={docs} settings={settings} loading={loading} refresh={refresh} />;
+  else if (route.name === 'templates') body = <Templates docs={docs} settings={settings} loading={loading} refresh={refresh} />;
+  else if (route.name === 'explorer') body = <JsonExplorer docs={docs} settings={settings} loading={loading} refresh={refresh} />;
+  else if (route.name === 'agents') body = <AiAgents docs={docs} settings={settings} loading={loading} refresh={refresh} />;
+  else if (route.name === 'validation') body = <ValidationPage docs={docs} settings={settings} loading={loading} refresh={refresh} />;
   else if (route.name === 'documents') body = <Documents docs={docs} search={search} loading={loading} onDeleted={refresh} />;
   else if (route.name === 'review') body = <ReviewQueue docs={docs} loading={loading} />;
   else if (route.name === 'doc') {

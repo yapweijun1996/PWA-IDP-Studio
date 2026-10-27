@@ -28,7 +28,7 @@ async function shell(b, live = false) {
       badge:badge?.textContent, badgeVisible:!!badge && badge.checkVisibility()};
   })`);
   assert.deepEqual(nav.map(n => n.label), ['Home','Documents','Review Queue','Label Studio','Templates','JSON Explorer','AI Agents','Validation','Settings']);
-  assert.deepEqual(nav.filter(n => n.disabled === 'true').map(n => n.label), ['Label Studio','Templates','JSON Explorer','AI Agents','Validation']);
+  assert.deepEqual(nav.filter(n => n.disabled === 'true').map(n => n.label), []);
   assert.equal(await b.eval('!!document.querySelector("aside:not(.ds-collapsed) button[aria-expanded=true]")'), true, 'Expanded sidebar');
   for (const n of nav.filter(n => n.disabled === 'true')) {
     assert.equal(n.reason, 'Coming soon', `${n.label} accessible description`);
@@ -36,7 +36,7 @@ async function shell(b, live = false) {
     assert.equal(n.badgeVisible, true, `${n.label} badge visible when expanded`);
     assert.equal(n.href, null);
   }
-  assert.deepEqual(nav.filter(n => n.href).map(n => n.href), ['#/','#/documents','#/review','#/settings']);
+  assert.deepEqual(nav.filter(n => n.href).map(n => n.href), ['#/','#/documents','#/review','#/label-studio','#/templates','#/json-explorer','#/ai-agents','#/validation','#/settings']);
   const footer = await b.eval('document.querySelector("aside footer")?.textContent');
   assert.match(footer || '', /Version \S+ · Build \S+/);
   if (!live) assert.ok(footer.endsWith('Build e2e-1'), 'Expected deterministic build ID');
