@@ -131,3 +131,11 @@ a { color: var(--primary); }
 .label-pages { flex: 3 1 var(--dialog-width); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sidebar-expanded)), 1fr)); gap: var(--space-3); min-width: 0; }
 .label-thumbnail { display: grid; place-items: center; aspect-ratio: 1; background: var(--surface-alt); margin-block: var(--space-3); overflow: hidden; }
 .label-thumbnail img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.ds-json-tree { min-width: 0; }
+.ds-json-node { padding: var(--space-1) var(--space-2); font-family: monospace; overflow-wrap: anywhere; cursor: pointer; border-left: var(--line) solid var(--border); }
+.ds-json-node:focus { background: var(--selected); outline: var(--focus-width) solid var(--focus); outline-offset: calc(-1 * var(--focus-width)); }
+.ds-json-pointer { overflow-wrap: anywhere; min-width: 0; }
+.ds-json-string { color: var(--success); }
+.ds-json-number { color: var(--info); }
+.ds-json-boolean { color: var(--warning); }
+.ds-json-null { color: var(--muted); }

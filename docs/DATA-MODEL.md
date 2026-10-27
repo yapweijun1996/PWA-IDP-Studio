@@ -62,3 +62,14 @@ IndexedDB version 3 retains `documents`, `files` and `batches` (`{ batch, create
 Startup migration is idempotent by `legacy_<id>`. It hashes original bytes, reads PDF/image dimensions and writes a new batch and file-id-keyed blob. Missing originals are skipped. If dimensions cannot be read, 595×842 fallback dimensions are disclosed in an info issue; page count uses PDF metadata when available, otherwise the saved count. Pages beyond the saved rendered-page count remain pending. Legacy `receipt`/`other` become `unknown` with `LEGACY_TYPE_UNMAPPED` warnings. Field-edit audit entries become reviews. Explicit legacy human approval is retained with a `legacy_user` approval review, but current blockers still prevent export.
 
 The v2 media enum does not include WebP: new uploads accept PDF/PNG/JPEG only. Unsupported legacy media are preserved and counted as skipped, never relabeled as another format. TIFF upload remains out of scope. Settings > Data displays migration counts for the current startup.
+
+## JSON Explorer
+
+Explorer selects from all loaded stored batches without filtering by approval. It is an inspection surface, not an approval operation: full JSON download/copy deliberately includes unapproved data, while the panel separately reports recomputed export-eligible transaction ids (none when structural/reference validation fails). Workspace retains its existing eligibility gates.
+
+`src/lib/jsonExport.ts` owns serialization and the transaction export shape shared with Workspace: native stable insertion order with two-space indentation; Auto includes `document_type`, targeted profiles export only transaction data using the saved batch-mode snapshot. Full JSON preserves the complete v2.0.0 envelope and advisory `validation` object unchanged. The validation panel uses fresh validator codes/messages, not those advisory flags. Byte size is UTF-8 serialized full JSON; node count includes root, containers and scalar values. Transaction field pointers backed by evidence link to `workspaceHref` for that transaction; geometry remains read-only.
+
+Clipboard refusal does not change the selected export or stored batch: Explorer exposes the same serialized text for manual copying and reports failure rather than claiming a successful copy. Clipboard permission waits are bounded; downloads remain independent of clipboard availability.
+
+Explorer mounts only the active scope and initially opens its top-level containers, leaving deeper data lazy and collections capped at 100 visible children until expanded further. If a batch has no transactions, Transaction shows “No transactions”, mounts no tree and disables Download full JSON; Full batch still exposes the complete envelope for inspection and download. Transaction selection resolves against the current batch so removal of the selected transaction cannot attempt an unknown export.
+

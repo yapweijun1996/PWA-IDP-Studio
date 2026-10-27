@@ -2,3 +2,4 @@
 import './admin.test';
 import './profiles.test';
 import './labelStudio.test';
+import './pages/JsonExplorer.test';

@@ -251,6 +251,43 @@ export const scenarios = [
     await overflow(b);
     await setProfile(b, 'desktop'); await settled(b); await overflow(b);
   } },
+  { name: 'json-explorer', async run({b,mocks}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    await route(b, '#/json-explorer', 'JSON Explorer');
+    await b.wait('!!document.querySelector(\'[role="tree"] [role="treeitem"]\')', 'JSON tree rendered');
+    assert.equal(await b.eval(`document.querySelector('[data-pointer="/batch"]').getAttribute('aria-expanded')`), 'true', 'Top-level batch metadata starts expanded');
+    assert.equal(await b.eval(`document.querySelector('[data-pointer="/transactions"]').getAttribute('aria-expanded')`), 'true', 'Top-level transactions start expanded');
+    for (const pointer of ['/transactions/0','/transactions/0/data']) {
+      await b.eval(`document.querySelector('[data-pointer="${pointer}"]').click()`);
+    }
+    assert.equal(await b.eval(`document.querySelector('[data-pointer="/transactions/0/data"]').getAttribute('aria-expanded')`), 'true');
+    await field(b, 'Search JSON', 'INV-E2E-001');
+    await b.wait(`!![...document.querySelectorAll('[role="status"]')].find(e=>/\\d+ matches/.test(e.textContent)&&!e.textContent.startsWith('0 '))`, 'invoice search completed');
+    await click(b, 'Next match');
+    assert.match(await b.eval(`document.querySelector('.ds-json-pointer').textContent`), /invoice_no|value/);
+    const firstMatch = await b.eval(`document.querySelector('.ds-json-pointer').textContent`);
+    await click(b, 'Previous match');
+    assert.notEqual(await b.eval(`document.querySelector('.ds-json-pointer').textContent`), firstMatch, 'Previous wraps to another invoice match');
+    await click(b, 'Next match');
+    assert.equal(await b.eval(`document.querySelector('.ds-json-pointer').textContent`), firstMatch, 'Next returns to the first match');
+    await b.send('Browser.grantPermissions', { origin: await b.eval('location.origin'), permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'] });
+    await click(b, 'Copy pointer');
+    await text(b, 'Pointer copied.');
+    await b.send('Browser.resetPermissions');
+    assert.ok(await b.eval(`[...document.querySelectorAll('.ds-badge')].some(e=>e.textContent==='Valid')`), 'Batch validator reports valid');
+    await overflow(b);
+    await home(b); mocks.setVariant('windowed');
+    await drop(b, 'explorer-30.pdf', makePDF(30).toString('base64'));
+    const batch = (await batches(b)).find(v => v.source_files[0].filename === 'explorer-30.pdf');
+    assert.equal(batch.pages.length, 30);
+    const started = Date.now();
+    await route(b, '#/json-explorer', 'JSON Explorer');
+    await b.eval(`(() => {const e=[...document.querySelectorAll('main select')].find(e=>[...e.options].some(o=>o.value===${js(batch.batch.batch_id)}));e.value=${js(batch.batch.batch_id)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    await click(b, 'Evidence');
+    await b.wait(`!!document.querySelector('[role="tab"][aria-selected="true"]')&&[...document.querySelectorAll('[role="tab"]')].some(e=>e.textContent==='Evidence'&&e.getAttribute('aria-selected')==='true')`, 'large batch click responsive', 2000);
+    assert.ok(Date.now() - started < 2000, '30-page Explorer opens and handles a click within 2 seconds');
+    await overflow(b);
+  } },
   { name: 'targeted-mode', async run({b,mocks}) {
     mocks.setVariant('targeted');
     await radio(b, 'Extraction mode', 'targeted');
