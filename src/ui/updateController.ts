@@ -20,6 +20,8 @@ export function createUpdateController(register: RegisterFn, now: () => number =
   let registration: ServiceWorkerRegistration | undefined;
   let activate: ((reload?: boolean) => Promise<void>) | undefined;
   let started = false;
+  let pendingCheck = false;
+  let checking = false;
   const listeners = new Set<() => void>();
   const set = (patch: Partial<UpdateState>) => { state = { ...state, ...patch }; listeners.forEach(l => l()); };
   const waiting = () => state.phase === 'available' || state.phase === 'updating';
@@ -37,6 +39,8 @@ export function createUpdateController(register: RegisterFn, now: () => number =
         registration = reg;
         if (!waiting()) set({ phase: 'ready', message: 'You are on the latest known version.' });
         if (reg?.waiting) markAvailable();
+        if (pendingCheck) { pendingCheck = false; void check({ silent: true }); }
+        else queueMicrotask(() => { if (state.phase === 'ready' && !checking && (state.lastChecked === null || now() - state.lastChecked >= AUTO_CHECK_INTERVAL_MS)) void check({ silent: true }); });
       },
       onRegisterError: e => set({ phase: 'failed', message: `Service worker registration failed: ${String((e as Error)?.message ?? e)}` }),
     });
@@ -46,18 +50,23 @@ export function createUpdateController(register: RegisterFn, now: () => number =
   }
 
   async function check({ silent = false }: { silent?: boolean } = {}) {
-    if (state.phase === 'checking' || state.phase === 'updating') return;
+    if (checking || state.phase === 'checking' || state.phase === 'updating') return;
     if (state.phase === 'unsupported') return;
-    if (!registration) { if (!silent) set({ phase: 'failed', message: 'The service worker is not registered yet. Reload the page and try again.' }); return; }
+    if (!registration) { if (silent) pendingCheck = true; else set({ phase: 'failed', message: 'The service worker is not registered yet. Reload the page and try again.' }); return; }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) { if (!silent) set({ phase: 'failed', message: 'You are offline. Connect to the internet to check for updates.' }); return; }
     const previous = state;
+    checking = true;
     if (!silent) set({ phase: 'checking', message: 'Checking for updates…' });
     try {
       await registration.update();
       const installing = registration.installing;
       if (installing) {
         set({ phase: 'checking', message: 'Downloading the update…' });
-        await new Promise<void>(resolve => installing.addEventListener('statechange', () => { if (installing.state === 'installed' || installing.state === 'redundant' || installing.state === 'activated') resolve(); }));
+        // Keep the ES2022 runtime baseline (Promise.withResolvers requires newer browsers).
+        await new Promise<void>(resolve => {
+          const settled = () => { if (installing.state === 'installed' || installing.state === 'redundant' || installing.state === 'activated') { installing.removeEventListener('statechange', settled); resolve(); } };
+          installing.addEventListener('statechange', settled); settled();
+        });
       }
       if (registration.waiting || state.phase === 'available') markAvailable();
       else set({ phase: 'ready', lastChecked: now(), message: 'You are on the latest version.' });
@@ -65,7 +74,7 @@ export function createUpdateController(register: RegisterFn, now: () => number =
     } catch (e) {
       if (silent) set({ phase: previous.phase === 'checking' ? 'ready' : previous.phase, message: previous.message });
       else set({ phase: 'failed', message: `Could not check for updates: ${String((e as Error)?.message ?? e)}` });
-    }
+    } finally { checking = false; }
   }
 
   async function apply() {

@@ -22,6 +22,7 @@ import { ComponentSheet } from '../ds/ComponentSheet';
 import { UpdatePrompt } from './UpdatePrompt';
 import { go, useRoute } from './useHash';
 import { Workspace } from './pages/Workspace';
+import { NotFound } from './pages/NotFound';
 
 export function App() {
   const route = useRoute();
@@ -168,6 +169,7 @@ export function App() {
   let body;
   if (route.name === 'settings') body = <SettingsPage settings={settings} onChange={setSettings} migration={migration} batchCount={docs.length} onCleared={async () => { setCurrent(undefined); setMigration({ migrated: 0, skipped: 0 }); await refresh(); }} />;
   else if (route.name === 'design') body = <ComponentSheet />;
+  else if (route.name === 'notfound') body = <NotFound />;
   else if (route.name === 'documents') body = <Documents docs={docs} search={search} loading={loading} onDeleted={refresh} />;
   else if (route.name === 'review') body = <ReviewQueue docs={docs} loading={loading} />;
   else if (route.name === 'doc') {

@@ -95,4 +95,23 @@ describe('update controller', () => {
     await new Promise(r => setTimeout(r, 0));
     expect(s.registration.update).toHaveBeenCalledTimes(2);
   });
+  it('queues an unknown-route check until registration, without activating', async () => {
+    const s = setup({ waiting: true });
+    await s.controller.check({ silent: true });
+    expect(s.registration.update).not.toHaveBeenCalled();
+    s.options().onRegisteredSW?.('sw.js', s.registration);
+    await Promise.resolve(); await Promise.resolve();
+    expect(s.registration.update).toHaveBeenCalledTimes(1);
+    expect(s.controller.getState().phase).toBe('available');
+    expect(s.activate).not.toHaveBeenCalled();
+  });
+  it('performs the startup check and allows a route check inside the visibility throttle', async () => {
+    const s = setup();
+    s.options().onRegisteredSW?.('sw.js', s.registration);
+    await Promise.resolve(); await Promise.resolve();
+    expect(s.registration.update).toHaveBeenCalledTimes(1);
+    await s.controller.check({ silent: true });
+    expect(s.registration.update).toHaveBeenCalledTimes(2);
+    expect(s.activate).not.toHaveBeenCalled();
+  });
 });

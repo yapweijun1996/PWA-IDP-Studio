@@ -20,15 +20,20 @@ function buildId() {
 }
 
 const base = '/PWA-IDP-Studio/';
+const BUILD = process.env.IDP_BUILD_ID || buildId();
 
 export default defineConfig({
   base,
-  define: { __APP_VERSION__: JSON.stringify(version), __BUILD_ID__: JSON.stringify(process.env.IDP_BUILD_ID || buildId()) },
+  define: { __APP_VERSION__: JSON.stringify(version), __BUILD_ID__: JSON.stringify(BUILD), __PRECACHE_ID__: JSON.stringify(`${BUILD}-${Date.now()}`) },
   plugins: [
     react(),
+    { name: 'build-identity', generateBundle() { this.emitFile({ type: 'asset', fileName: 'build-info.json', source: JSON.stringify({ build: BUILD }) }); } },
     VitePWA({
       // User-controlled update: the new worker waits until the user clicks Update.
       registerType: 'prompt',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         name: 'IDP Studio',
         short_name: 'IDP Studio',
@@ -44,14 +49,12 @@ export default defineConfig({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         // App shell only. Documents and AI responses are never cached by the worker.
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,mjs}'],
-        navigateFallback: `${base}index.html`,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // Provider SDK chunks that are lazy-loaded and unused by the supported providers.
         globIgnores: ['**/mistral-*', '**/anthropic-*', '**/google-vertex-*', '**/azure-openai-*', '**/openai-codex-*', '**/bedrock-*'],
-        cleanupOutdatedCaches: true,
       },
     }),
   ],

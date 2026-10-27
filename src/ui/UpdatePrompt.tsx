@@ -11,7 +11,7 @@ export function UpdatePrompt() {
   return (
     <Toast>
       {updating && <Spinner label="Updating IDP Studio…" />}
-      <span>{failed ? 'Update failed. Try again.' : 'New version available.'}</span>
+      <span>{failed ? 'Update failed. Try again.' : 'A newer version is available'}</span>
       <Button variant="primary" loading={updating} onClick={() => void updates.apply()}>{failed ? 'Retry' : 'Update now'}</Button>
     </Toast>
   );

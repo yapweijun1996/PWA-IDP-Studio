@@ -62,6 +62,10 @@ Offline contract: once cached, the app shell and stored documents remain availab
 | `mobile` | Phone touch/UA, 390×844; Home, Documents, Review Queue, real workspace, Settings and Design system have no horizontal overflow; drawer opens; Tab/Shift-Tab wrap; Escape closes and restores trigger focus. |
 | `offline` | Active/controlling SW; stored upload; CDP offline reload renders shell and Offline pill; stored transaction opens; dispatch-only offline drop shows an explanation, sends no provider request and leaves IndexedDB batch count unchanged; CDP online recovery shows Online pill, processes a new upload and clears the offline Notice on Home. |
 | `sw-update` | Active build A; switch server to build B; update prompt without automatic navigation; Update now produces updating-loader text before unload; exactly one navigation and build B footer; worker settles without another pending update. |
+| `settings-updates` | Current version check, waiting update discovered from Settings, no automatic activation, explicit update produces exactly one navigation. |
+| `top-bar-scroll` / `top-bar-scroll-mobile` | Desktop and phone Design system scrolling hides/reveals the sticky top bar by transform; near-top visibility; scroll-to-top appears after one viewport, clears the toast, is absent at the top, and returns to the top when clicked. Reduced motion removes the header transition and makes scroll-to-top immediate. |
+| `unknown-route-update` | Unknown route without an update renders Page not found; route-owned update check discovers build B without a test-side update call; shared explicit prompt activates only on Update now and navigates exactly once; Home/Documents recovery. |
+| `install-integrity` | Mixed worker/build-info deployment rejects the candidate, preserves active build A and its caches, and shows no prompt; consistent build B is discovered on retry; precache keys are query-free. |
 | `search-docs` | Two real uploaded batches; filename search and clear on Home/Documents; ascending/descending Documents sort with aria-sort and actual row order; delete dialog preserves data before confirmation and after Cancel; confirm deletes only chosen upload. |
 
 All local scenarios also reject uncaught page exceptions and `console.error`.
@@ -152,3 +156,37 @@ the runtime denied the loopback server's `listen` with `EPERM`. No new browser
 passes are claimed.
 
 The demo gateway mock counts every `input_image` in the complete request input, including `function_call_output` parts, rejects more than four with HTTP 400 `DEMO_IMAGE_COUNT_EXCEEDED`, and asserts that no app request exceeded four images. Demo uses four-page segmentation windows with one-page overlap and two-page extraction chunks.
+
+## Install integrity and CDN propagation
+
+The worker is built with `injectManifest`. `build-info.json` contains the same
+build ID as the footer and is excluded from the precache. Install first fetches
+this identity with `?v=<BUILD>` and `cache: 'reload'`. Network/HTTP failures,
+invalid JSON, missing identity and mismatched build IDs reject installation.
+Only the candidate cache is deleted; the active worker and its cache keep
+serving. A later update check retries the rejected worker.
+
+Workbox's normal revision URLs are not the deployment identity check. This
+worker uses null revisions for canonical query-free cache keys, a build-scoped
+cache with a per-build-invocation suffix, and a fetch plugin that adds
+`?v=<BUILD>` and forces reload for every precache request. Cache lookups ignore
+query parameters. The identity request always uses the network, never the
+worker's precache. Candidate caches are isolated even when rebuilding the same
+git SHA. Obsolete shell caches are removed only after successful activation.
+
+GitHub Pages can expose mixed deployment files during its approximately
+10-minute CDN propagation window. A rejected update is intentional: keep using
+the active version and check again after propagation. Startup and visible-tab
+checks use the existing approximately 10-minute throttle; Settings and unknown
+routes request a check without that automatic-check throttle. No check activates
+a waiting worker. Update now retains the loader and single-reload lifecycle.
+
+AppShell scrolls with the document, not an overflow workspace. Its top bar
+uses cumulative 8px direction changes, remains visible within 48px of the top,
+and stays visible for focused top-bar controls, the mobile drawer and DS
+dialogs/menus/popovers. Reduced motion disables the transform transition and
+smooth scroll-to-top. The top safe-area surface uses the theme's opaque
+`--topbar` color. Scroll-to-top clears the measured toast/update prompt bounds.
+
+These additions require the wrapper's typecheck, unit, SSOT, icon, build and
+real-Chrome runs. No passing verification result is recorded here.

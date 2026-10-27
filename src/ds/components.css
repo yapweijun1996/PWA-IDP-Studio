@@ -68,7 +68,11 @@ a { color: var(--primary); }
 .ds-dialog header { justify-content: space-between; }
 .ds-dialog h2 { margin: 0; font-size: var(--font-lg); }
 .ds-shell { min-height: 100dvh; }
-.ds-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--space-4); min-height: calc(var(--topbar-height) + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(var(--space-4), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left)); background: var(--topbar); border-bottom: var(--line) solid var(--border); }
+.ds-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--space-4); min-height: calc(var(--topbar-height) + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(var(--space-4), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left)); background: var(--topbar); border-bottom: var(--line) solid var(--border); transition: transform 160ms ease; }
+.ds-topbar-hidden .ds-topbar { transform: translateY(-100%); }
+.ds-safe-top { position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top); background: var(--topbar); z-index: var(--z-modal); pointer-events: none; }
+.ds-scroll-top { position: fixed; z-index: var(--z-toast); right: max(var(--space-4), env(safe-area-inset-right)); bottom: max(var(--space-4), env(safe-area-inset-bottom)); width: 44px; height: 44px; padding: 0; box-shadow: var(--shadow-sm); }
+@media (prefers-reduced-motion: reduce) { .ds-topbar { transition: none; } }
 .ds-topbar-search { flex: 1; min-width: 0; }
 .ds-shell-body { display: flex; align-items: flex-start; }
 .ds-sidebar { flex-shrink: 0; display: flex; flex-direction: column; width: var(--sidebar-expanded); position: sticky; top: calc(var(--topbar-height) + env(safe-area-inset-top)); height: calc(100dvh - var(--topbar-height) - env(safe-area-inset-top)); padding: var(--space-2); padding-bottom: max(var(--space-2), env(safe-area-inset-bottom)); background: var(--sidebar); border-right: var(--line) solid var(--border); }

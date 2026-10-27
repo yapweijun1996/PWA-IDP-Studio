@@ -3,6 +3,8 @@ import { text, click, radio, field, fill, route, reload, drop, batches, fullJSON
 import { setProfile, until } from '../cdp.mjs';
 import { TEST_KEY, invoice } from '../mocks.mjs';
 import { makePDF } from '../pdf.mjs';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 const posts = mocks => mocks.requests.filter(r => r.method === 'POST' && r.url.endsWith('/responses'));
 const buttonDisabled = (b, label) => b.eval(`[...document.querySelectorAll('button')].find(e=>e.textContent.trim()===${js(label)})?.disabled`);
@@ -250,7 +252,7 @@ export const scenarios = [
   { name: 'sw-update', async run({b,server,buildApp,buildB}) {
     await pwa(b); await reload(b); await b.wait('!!navigator.serviceWorker.controller','controlled build A'); await text(b,'Build e2e-1');
     await buildApp('e2e-2',buildB); server.setRoot(buildB); const initial=b.navigations;
-    await b.eval('navigator.serviceWorker.getRegistration().then(r=>r.update()).then(()=>true)'); await text(b,'New version available.'); assert.equal(b.navigations,initial,'No automatic update reload'); await text(b,'Build e2e-1');
+    await b.eval('navigator.serviceWorker.getRegistration().then(r=>r.update()).then(()=>true)'); await text(b,'A newer version is available'); assert.equal(b.navigations,initial,'No automatic update reload'); await text(b,'Build e2e-1');
     const promptQuietUntil=Date.now()+3000;
     await until(()=>{assert.equal(b.navigations,initial,'No automatic update reload while prompt waits');return Date.now()>=promptQuietUntil},'update prompt navigation stability',6000);
     await b.send('Page.addScriptToEvaluateOnNewDocument',{source:`sessionStorage.setItem('e2eReloads',String(Number(sessionStorage.getItem('e2eReloads')||0)+1))`});
@@ -259,7 +261,7 @@ export const scenarios = [
     await b.wait('navigator.serviceWorker.getRegistration().then(r=>!!r?.active&&!r.waiting&&!r.installing)','updated worker settled'); await settled(b);
     const quietUntil=Date.now()+2000;
     await until(()=>{assert.equal(b.navigations-initial,1,'No update reload loop');return Date.now()>=quietUntil},'post-update navigation stability',5000);
-    assert.equal(b.navigations-initial,1,'Exactly one navigation'); assert.equal(await b.eval('sessionStorage.getItem("e2eReloads")'),'1'); assert.equal(await b.eval('document.body.innerText.includes("New version available.")'),false);
+    assert.equal(b.navigations-initial,1,'Exactly one navigation'); assert.equal(await b.eval('sessionStorage.getItem("e2eReloads")'),'1'); assert.equal(await b.eval('document.body.innerText.includes("A newer version is available")'),false);
   } },
   { name: 'settings-updates', async run({b,server,buildApp,buildB}) {
     await pwa(b); await reload(b); await b.wait('!!navigator.serviceWorker.controller','controlled build A'); await settings(b);
@@ -273,6 +275,70 @@ export const scenarios = [
     await b.eval(`[...document.querySelectorAll('main button')].find(e=>e.textContent.trim()==='Update now').click()`);
     await text(b,'Build e2e-2'); await b.wait('navigator.serviceWorker.getRegistration().then(r=>!!r?.active&&!r.waiting&&!r.installing)','updated worker settled');
     assert.equal(b.navigations-initial,1,'Exactly one navigation');
+  } },
+  ...['desktop', 'phone'].map(profile => ({ name: profile === 'desktop' ? 'top-bar-scroll' : 'top-bar-scroll-mobile', profile, async run({b}) {
+    await route(b, '#/design', 'Design system');
+    await b.eval('document.activeElement?.blur();window.scrollTo(0,0)');
+    await b.wait('window.scrollY===0', 'page starts at top');
+    assert.equal(await b.eval('!!document.querySelector(\'[aria-label="Scroll to top"]\')'), false);
+    const hidden = `getComputedStyle(document.querySelector('.ds-topbar')).transform!=='none'&&document.querySelector('.ds-topbar').getBoundingClientRect().bottom<=1`;
+    await b.eval('window.scrollTo(0,window.innerHeight+300)');
+    await b.wait(`window.scrollY>window.innerHeight&&${hidden}`, 'topbar hides after downward scrolling');
+    await b.wait('!!document.querySelector(\'[aria-label="Scroll to top"]\')', 'scroll-to-top is available');
+    await b.eval(`[...document.querySelectorAll('button')].find(e=>e.textContent==='Show toast').click()`);
+    await b.wait(`document.querySelector('.ds-scroll-top').getBoundingClientRect().bottom<document.querySelector('.ds-toast').getBoundingClientRect().top`, 'scroll-to-top clears the toast');
+    await b.eval(`document.querySelector('[aria-label="Dismiss notification"]').click()`);
+    await b.eval('window.scrollBy(0,-80)');
+    await b.wait(`getComputedStyle(document.querySelector('.ds-topbar')).transform==='none'`, 'topbar reveals after upward scrolling');
+    await b.eval('window.scrollTo(0,32)');
+    await b.wait(`getComputedStyle(document.querySelector('.ds-topbar')).transform==='none'`, 'near-top header remains visible');
+    await b.eval('window.scrollTo(0,window.innerHeight+300)');
+    await b.wait('!!document.querySelector(\'[aria-label="Scroll to top"]\')', 'scroll-to-top returns');
+    await b.eval('document.querySelector(\'[aria-label="Scroll to top"]\').click()');
+    await b.wait('window.scrollY===0&&!document.querySelector(\'[aria-label="Scroll to top"]\')', 'scroll-to-top returns to top');
+    await b.wait(`getComputedStyle(document.querySelector('.ds-topbar')).transform==='none'`, 'header visible at top');
+    await b.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    await b.wait(`getComputedStyle(document.querySelector('.ds-topbar')).transitionDuration==='0s'`, 'reduced motion disables header transition');
+    await b.eval('window.scrollTo(0,window.innerHeight+300)');
+    await b.wait(hidden, 'reduced-motion scroll still hides header');
+    await b.eval('document.querySelector(\'[aria-label="Scroll to top"]\').click()');
+    assert.equal(await b.eval('window.scrollY'), 0, 'Reduced-motion scroll-to-top is immediate');
+  } })),
+  { name: 'unknown-route-update', async run({b,server,buildApp,buildB}) {
+    await pwa(b); await reload(b); await b.wait('!!navigator.serviceWorker.controller', 'controlled build A');
+    await route(b, '#/missing', 'Page not found');
+    await b.wait('navigator.serviceWorker.getRegistration().then(r=>!r.waiting&&!r.installing)', 'no update for current build');
+    assert.equal(await b.eval('!![...document.querySelectorAll("button")].find(e=>e.textContent==="Update now")'), false);
+    await click(b, 'Go to Home'); await text(b, 'Upload Documents');
+    await buildApp('e2e-2', buildB); server.setRoot(buildB);
+    const initial = b.navigations;
+    await route(b, '#/missing-again', 'Page not found');
+    await text(b, 'A newer version is available');
+    assert.equal(b.navigations, initial, 'Unknown route does not activate the waiting worker');
+    await click(b, 'Update now'); await text(b, 'Build e2e-2');
+    await b.wait('navigator.serviceWorker.getRegistration().then(r=>!r.waiting&&!r.installing)', 'new worker settled');
+    assert.equal(b.navigations - initial, 1, 'Exactly one update navigation');
+    await text(b, 'Page not found'); await click(b, 'Documents');
+    await b.wait('location.hash==="#/documents"&&document.querySelector("main h1")?.textContent==="Documents"', 'Documents recovery route');
+  } },
+  { name: 'install-integrity', async run({b,server,buildApp,buildB}) {
+    await pwa(b); await reload(b); await b.wait('!!navigator.serviceWorker.controller', 'controlled build A');
+    const originalCaches = await b.eval('caches.keys()');
+    await buildApp('e2e-2', buildB);
+    await writeFile(join(buildB, 'build-info.json'), JSON.stringify({ build: 'wrong-build' }));
+    server.setRoot(buildB);
+    await b.eval(`navigator.serviceWorker.getRegistration().then(async r=>{await r.update();window.integrityCandidate=r.installing;return true}).catch(()=>true)`);
+    await b.wait('!window.integrityCandidate||window.integrityCandidate.state==="redundant"', 'mixed build rejected');
+    assert.equal(await b.eval('navigator.serviceWorker.getRegistration().then(r=>!!r.waiting)'), false);
+    assert.deepEqual(await b.eval('caches.keys()'), originalCaches, 'Only the failed candidate cache is removed');
+    await reload(b); await text(b, 'Build e2e-1');
+    assert.equal(await b.eval('document.body.innerText.includes("A newer version is available")'), false);
+    await writeFile(join(buildB, 'build-info.json'), JSON.stringify({ build: 'e2e-2' }));
+    await b.eval('navigator.serviceWorker.getRegistration().then(r=>r.update()).then(()=>true)');
+    await text(b, 'A newer version is available');
+    await text(b, 'Build e2e-1');
+    const keys = await b.eval('caches.keys().then(names=>Promise.all(names.map(name=>caches.open(name).then(c=>c.keys().then(keys=>keys.map(k=>k.url))))))');
+    assert.ok(keys.flat().every(url => !new URL(url).search), 'Canonical precache keys have no query');
   } },
   { name: 'search-docs', async run({b}) {
     await drop(b,'alpha.png'); await home(b); await drop(b,'zulu.png'); await home(b);
