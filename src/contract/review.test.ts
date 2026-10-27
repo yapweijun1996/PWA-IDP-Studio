@@ -1,9 +1,99 @@
 import { describe, expect, it } from 'vitest';
 import { invoiceInput } from './fixtures';
 import { buildBatch } from './build';
-import { approveTransaction, correctField, recomputeIssues } from './review';
+import { approveTransaction, correctField, recomputeIssues, waiveIssue, reopenIssue } from './review';
 import { validateBatch } from './validate';
 
+describe('audited issue waivers', () => {
+  it('preserves a waiver through recomputation and audits reopening', () => {
+    const original = buildBatch(invoiceInput());
+    const issue = original.issues.find(i => i.rule_code === 'LOW_CONFIDENCE')!;
+    const waived = waiveIssue(original, issue.issue_id, 'Verified against original source');
+    expect(original.issues.find(i => i.issue_id === issue.issue_id)?.status).toBe('open');
+    const next = recomputeIssues(waived);
+    expect(next.issues.filter(i => i.issue_id === issue.issue_id)).toEqual([expect.objectContaining({ status: 'waived', waiver_review_id: next.reviews.at(-1)!.review_id })]);
+    expect(next.reviews.at(-1)).toMatchObject({ action: 'waive', target_type: 'issue', target_id: issue.issue_id });
+    const reopened = reopenIssue(next, issue.issue_id, 'New evidence requires another review');
+    expect(reopened.issues.find(i => i.issue_id === issue.issue_id)).toMatchObject({ status: 'open', waiver_review_id: null });
+    expect(reopened.reviews.at(-1)).toMatchObject({ action: 'reject', target_id: issue.issue_id });
+  });
+  it('requires a meaningful reason and refuses mandatory rules', () => {
+    const input = invoiceInput();
+    input.output.fields = input.output.fields.filter(f => f.key !== 'supplier_name');
+    const batch = buildBatch(input);
+    const missing = batch.issues.find(i => i.rule_code === 'MISSING_REQUIRED')!;
+    const low = batch.issues.find(i => i.rule_code === 'LOW_CONFIDENCE')!;
+    expect(() => waiveIssue(batch, missing.issue_id, 'Reviewed original source')).toThrow(/cannot be waived/);
+    expect(() => waiveIssue(batch, low.issue_id, ' short ')).toThrow(/10 characters/);
+  });
+  it('removes a waived reconciliation blocker from export eligibility', () => {
+    const input = invoiceInput();
+    input.output.fields.find(f => f.key === 'total_amount')!.value = '50';
+    const batch = buildBatch(input);
+    const issue = batch.issues.find(i => i.rule_code === 'TOTALS_MISMATCH')!;
+    expect(batch.validation.export_eligible_transaction_ids).toEqual([]);
+    const next = waiveIssue(batch, issue.issue_id, 'Authorized reconciliation exception');
+    expect(next.validation.export_eligible_transaction_ids).toContain('t_1');
+    expect(reopenIssue(next, issue.issue_id, 'Reconciliation exception withdrawn').validation.export_eligible_transaction_ids).toEqual([]);
+  });
+  it.each([waiveIssue, reopenIssue])('rejects unknown issues, unknown rules and short reasons without mutating input', operation => {
+    const batch = buildBatch(invoiceInput());
+    const snapshot = structuredClone(batch);
+    expect(() => operation(batch, 'missing', 'Reviewed original source')).toThrow('Unknown issue');
+    const low = batch.issues.find(i => i.rule_code === 'LOW_CONFIDENCE')!;
+    expect(() => operation(batch, low.issue_id, '          ')).toThrow(/10 characters/);
+    low.rule_code = 'UNKNOWN_RULE';
+    expect(() => operation(batch, low.issue_id, 'Reviewed original source')).toThrow(/cannot be waived/);
+    low.rule_code = 'LOW_CONFIDENCE';
+    expect(batch).toEqual(snapshot);
+  });
+  it('rejects repeat waivers, reopening open issues and decisions on resolved issues', () => {
+    const batch = buildBatch(invoiceInput());
+    const low = batch.issues.find(i => i.rule_code === 'LOW_CONFIDENCE')!;
+    expect(() => reopenIssue(batch, low.issue_id, 'Reviewed original source')).toThrow('Issue is not waived');
+    const waived = waiveIssue(batch, low.issue_id, 'Reviewed original source');
+    const snapshot = structuredClone(waived);
+    expect(() => waiveIssue(waived, low.issue_id, 'Reviewed original source')).toThrow('Issue is not open');
+    expect(waived).toEqual(snapshot);
+    low.status = 'resolved';
+    expect(() => waiveIssue(batch, low.issue_id, 'Reviewed original source')).toThrow('Issue is not open');
+    expect(() => reopenIssue(batch, low.issue_id, 'Reviewed original source')).toThrow('Issue is not waived');
+  });
+  it.each(['SCHEMA', 'ORPHAN_TRANSACTION', 'PAGE_MANIFEST_COVERAGE', 'MISSING_REQUIRED', 'BOUNDARY_UNCERTAIN', 'PAGES_FAILED', 'EXTRACTION_FAILED'])('never waives or reopens mandatory rule %s', code => {
+    const batch = buildBatch(invoiceInput());
+    const issue = batch.issues[0];
+    issue.rule_code = code;
+    expect(() => waiveIssue(batch, issue.issue_id, 'Reviewed original source')).toThrow(/cannot be waived/);
+    issue.status = 'waived';
+    expect(() => reopenIssue(batch, issue.issue_id, 'Reviewed original source')).toThrow(/cannot be waived/);
+  });
+  it('audits the exact reason, actor and revision transition and preserves earlier decisions', () => {
+    const batch = buildBatch(invoiceInput());
+    const evidence = batch.issues.find(i => i.rule_code === 'FIELD_WITHOUT_EVIDENCE')!;
+    const waived = waiveIssue(batch, evidence.issue_id, '  Checked source manually  ');
+    expect(waived.batch.revision).toBe(batch.batch.revision + 1);
+    expect(waived.reviews.at(-1)).toMatchObject({
+      action: 'waive', actor_id: 'local_user', reason: 'Checked source manually',
+      prior_revision: batch.batch.revision, new_revision: waived.batch.revision,
+      target_type: 'issue', target_id: evidence.issue_id,
+    });
+    expect(Number.isNaN(Date.parse(waived.reviews.at(-1)!.at))).toBe(false);
+    const reopened = reopenIssue(waived, evidence.issue_id, 'Source needs another inspection');
+    expect(reopened.reviews.slice(0, -1)).toEqual(waived.reviews);
+    expect(reopened.batch.revision).toBe(waived.batch.revision + 1);
+    expect(validateBatch(reopened).ok).toBe(true);
+  });
+  it('refuses decisions on structurally invalid batches without changing them', () => {
+    const batch = buildBatch(invoiceInput());
+    batch.source_files[0].page_count = 2;
+    const low = batch.issues.find(i => i.rule_code === 'LOW_CONFIDENCE')!;
+    const snapshot = structuredClone(batch);
+    expect(() => waiveIssue(batch, low.issue_id, 'Reviewed original source')).toThrow('PAGE_MANIFEST_COVERAGE');
+    expect(batch).toEqual(snapshot);
+    low.status = 'waived';
+    expect(() => reopenIssue(batch, low.issue_id, 'Reviewed original source')).toThrow('PAGE_MANIFEST_COVERAGE');
+  });
+});
 describe('immutable batch reviews', () => {
   it('corrects, resolves, approves and invalidates approval on the next edit', () => {
     const input = invoiceInput();

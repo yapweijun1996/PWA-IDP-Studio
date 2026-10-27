@@ -47,6 +47,69 @@ async function pwa(b) {
   await b.eval(`Promise.race([navigator.serviceWorker.ready.then(()=>true),new Promise((_,reject)=>setTimeout(()=>reject(new Error('SW ready timeout')),30000))])`);
 }
 export const scenarios = [
+  { name: 'validation', async run({b,mocks}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    const defaultWorkspace = await fullJSON(b);
+    await home(b); mocks.setVariant('validation-targeted');
+    await radio(b, 'Extraction mode', 'targeted');
+    await b.eval(`(() => {const e=document.querySelector('main select');e.value='doc-info-rows';e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    await drop(b, 'validation-targeted.png'); await text(b, 'Targeted delivery');
+    const targetedWorkspace = await fullJSON(b);
+    const initial = await batches(b);
+    assert.equal(initial.length, 2);
+    const targetedBatch = initial.find(v => v.source_files[0].filename === 'validation-targeted.png');
+    const low = targetedBatch.issues.find(i => i.rule_code === 'LOW_CONFIDENCE');
+    assert.ok(low); assert.ok(targetedBatch.issues.some(i => i.rule_code === 'MISSING_REQUIRED'));
+    assert.deepEqual(defaultWorkspace.issues, initial.find(v => v.batch.batch_id === defaultWorkspace.batch.batch_id).issues);
+    assert.deepEqual(targetedWorkspace.issues, targetedBatch.issues);
+    await route(b, '#/validation', 'Validation');
+    await text(b, 'Export eligibility');
+    const selectFilter = async (label, value) => b.eval(`(() => {const label=[...document.querySelectorAll('label')].find(e=>e.textContent===${js(label)});const e=document.getElementById(label.htmlFor);e.value=${js(value)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    for (const severity of ['blocking','error','warning','info']) {
+      const count = initial.flatMap(v => v.issues).filter(i => i.status === 'open' && i.severity === severity).length;
+      await text(b, `Open ${severity}: ${count}`);
+    }
+    await text(b, '1 eligible · 1 blocked transactions');
+    await selectFilter('Batch', targetedBatch.batch.batch_id);
+    await selectFilter('Rule', 'LOW_CONFIDENCE');
+    assert.equal(await b.eval(`document.querySelectorAll('[aria-label="Validation issues"] tbody tr').length`), 1);
+    const issueLink = await b.eval(`document.querySelector('[aria-label="Validation issues"] tbody a')?.getAttribute('href')`);
+    assert.ok(issueLink.includes(encodeURIComponent(targetedBatch.batch.batch_id)));
+    await click(b, 'Waive');
+    await field(b, 'Waiver reason', 'short');
+    assert.equal(await buttonDisabled(b, 'Save waiver'), true);
+    await field(b, 'Waiver reason', 'Verified original source in validation E2E'); await click(b, 'Save waiver');
+    await b.wait(`!document.querySelector('[role=dialog]')`, 'waiver persisted');
+    let saved = (await batches(b)).find(v => v.batch.batch_id === targetedBatch.batch.batch_id);
+    const waived = saved.issues.find(i => i.issue_id === low.issue_id);
+    assert.equal(waived.status, 'waived');
+    assert.ok(saved.reviews.some(r => r.review_id === waived.waiver_review_id && r.action === 'waive'));
+    assert.equal(saved.reviews.at(-1).reason, 'Verified original source in validation E2E');
+    await click(b, 'Revalidate all'); await text(b, 'integrity errors');
+    await b.wait(`![...document.querySelectorAll('button')].find(e=>e.textContent==='Revalidate all')?.disabled`, 'all batches revalidated');
+    saved = (await batches(b)).find(v => v.batch.batch_id === targetedBatch.batch.batch_id);
+    assert.equal(saved.issues.find(i => i.issue_id === low.issue_id).status, 'waived');
+    await selectFilter('Status', 'waived'); await click(b, 'Reopen');
+    await field(b, 'Waiver reason', 'Reopen after additional source inspection'); await click(b, 'Save reopen');
+    await b.wait(`!document.querySelector('[role=dialog]')`, 'reopen persisted');
+    await selectFilter('Status', 'open'); await selectFilter('Rule', 'MISSING_REQUIRED');
+    await text(b, 'Cannot waive mandatory integrity or extraction rules');
+    assert.equal(await b.eval(`[...document.querySelectorAll('[aria-label=\"Validation issues\"] button')].some(e=>e.textContent==='Waive')`), false);
+    await click(b, 'Revalidate all'); await text(b, 'integrity errors');
+    await b.wait(`![...document.querySelectorAll('button')].find(e=>e.textContent==='Revalidate all')?.disabled`, 'reopened batch revalidated');
+    saved = (await batches(b)).find(v => v.batch.batch_id === targetedBatch.batch.batch_id);
+    assert.equal(saved.issues.find(i => i.issue_id === low.issue_id).status, 'open');
+    assert.equal(saved.reviews.at(-1).action, 'reject');
+    assert.equal(saved.issues.find(i => i.issue_id === low.issue_id).waiver_review_id, null);
+    await field(b, 'Search rules', 'TOTALS_MISMATCH');
+    await click(b, 'TOTALS_MISMATCH');
+    await text(b, 'authorized reconciliation exception');
+    await overflow(b);
+    await setProfile(b, 'phone'); await settled(b); await overflow(b);
+    await b.eval(`document.documentElement.dataset.theme='dark'`);
+    await overflow(b);
+    await setProfile(b, 'desktop'); await settled(b); await overflow(b);
+  } },
   { name: 'targeted-mode', async run({b,mocks}) {
     mocks.setVariant('targeted');
     await radio(b, 'Extraction mode', 'targeted');

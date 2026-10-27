@@ -3,6 +3,7 @@ import { canonicalValue } from './build';
 import { blockingIssues, refreshIssues, rollup } from './rules';
 import { validateBatch } from './validate';
 import { normalizeDecimal } from './decimal';
+import { ruleCatalogEntry } from './ruleCatalog';
 
 export function recomputeIssues(batch: Batch): Batch {
   return refreshIssues(structuredClone(batch));
@@ -62,3 +63,21 @@ export function approveTransaction(batch: Batch, transactionId: string, reason: 
   tx.status = 'approved';
   return { ok: true, batch: assertValid(rollup(next)) };
 }
+
+function reviewIssue(batch: Batch, issueId: string, reason: string, reopen: boolean): Batch {
+  const explanation = reason.trim();
+  if (explanation.length < 10) throw new Error('Enter a reason of at least 10 characters');
+  const next = structuredClone(batch);
+  const issue = next.issues.find(i => i.issue_id === issueId);
+  if (!issue) throw new Error('Unknown issue');
+  if (!ruleCatalogEntry(issue.rule_code)?.waivable) throw new Error('Mandatory integrity rules cannot be waived');
+  if (issue.status !== (reopen ? 'waived' : 'open')) throw new Error(reopen ? 'Issue is not waived' : 'Issue is not open');
+  const prior = next.batch.revision++;
+  const reviewId = `review_${crypto.randomUUID()}`;
+  next.reviews.push({ review_id: reviewId, target_type: 'issue', target_id: issueId, action: reopen ? 'reject' : 'waive', actor_id: 'local_user', at: new Date().toISOString(), reason: explanation, prior_revision: prior, new_revision: next.batch.revision });
+  issue.status = reopen ? 'open' : 'waived';
+  issue.waiver_review_id = reopen ? null : reviewId;
+  return assertValid(refreshIssues(next));
+}
+export const waiveIssue = (batch: Batch, issueId: string, reason: string): Batch => reviewIssue(batch, issueId, reason, false);
+export const reopenIssue = (batch: Batch, issueId: string, reason: string): Batch => reviewIssue(batch, issueId, reason, true);
