@@ -36,7 +36,7 @@ Retry re-segments failed windows and retries failed extraction segments. Success
 
 ### Extraction modes and profile snapshots
 
-Home defaults to Auto (AI decides). Targeted sends a selected profile's header fields and repeating row columns. User profiles and the selected mode are stored in `idp-studio.profiles.v1` and `idp-studio.mode.v1` in localStorage. Builtins are read-only; duplication creates an independent user profile.
+Home defaults to Auto (AI decides). Targeted sends a selected profile's header fields and repeating row columns. User profiles and the selected mode are stored in `idp-studio.profiles.v1` and `idp-studio.mode.v1` in localStorage. Builtins are read-only; duplication creates an independent user profile. A profile's `fields` are the document-level values and its `rowFields` the row columns; there is no separate footer section, so totals such as `total_amount`, `subtotal_amount` and `tax_amount` are ordinary header fields. See [Product design](PRODUCT-DESIGN.md) for how these map to the Document Info / Row Data / Footer model and which parts are still gaps.
 
 Templates imports and exports `{ "idp_studio_profiles": 1, "profiles": [...] }`. Parsing rejects unknown properties and invalid profile fields atomically. Import conflicts by ID or exact name require explicit rename-as-copy approval; existing profiles are never overwritten. Built-in exports import as custom profiles. Deleting the selected profile resets next-upload mode to Auto without changing batch snapshots.
 
