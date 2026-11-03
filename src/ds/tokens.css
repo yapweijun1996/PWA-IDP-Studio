@@ -5,7 +5,7 @@
   --bg: var(--background); --warn: var(--warning); --ok: var(--success); --bbox: #2563eb40;
   --sidebar-expanded: 248px; --sidebar-collapsed: 64px; --topbar-height: 60px; --workspace-padding: 24px;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 40px; --space-8: 48px;
-  --font-sm: 12px; --font-body: 14px; --font-lg: 18px; --font-title: 28px; --font-family: system-ui, sans-serif;
+  --font-sm: 12px; --font-body: 14px; --font-input: 16px; --font-lg: 18px; --font-title: 28px; --font-family: system-ui, sans-serif;
   --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-pill: 999px;
   --shadow-sm: 0 2px 8px #17203320; --shadow-lg: 0 12px 40px #17203340;
   --z-sticky: 20; --z-popover: 40; --z-modal: 60; --z-toast: 80;

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import type { Batch } from '../contract/types';
 import { Badge, Button, Card, Notice, Progress } from '../ds';
+import { go } from './useHash';
+import { workspaceHref } from './nav';
+import { formatPageNumbers } from './pageRanges';
 import { DeleteUploadDialog } from './DeleteUploadDialog';
 
 /** An upload whose pages are not all processed: says what state it is in and offers retry or removal. */
@@ -14,13 +17,14 @@ export function UnprocessedUploadCard({ batch, busy, onRetry, onDeleted }: { bat
   const running = status === 'processing' && !!busy;
   const interrupted = status === 'processing' && !busy;
   const state = status === 'failed' ? 'Failed' : interrupted ? 'Interrupted' : running ? 'Processing' : 'Incomplete';
-  const canRetry = !!onRetry && (status === 'failed' || interrupted);
+  const canRetry = !!onRetry && !running && (status === 'failed' || missing.length > 0);
   return <Card>
     <div className="ds-row ds-card-header"><h2>{batch.source_files[0].filename}</h2><Badge tone={status === 'failed' ? 'danger' : 'warning'}>{state}</Badge></div>
     <Progress label={`Page coverage ${done} of ${batch.pages.length}${running ? ` · ${busy}` : ''}`} value={done} max={batch.pages.length} />
-    {missing.length > 0 && <Notice tone="warning">{missing.length === 1 ? 'Page' : 'Pages'} {missing.join(', ')} {missing.length === 1 ? 'was' : 'were'} not processed, so export is blocked. {batch.issues.find(i => i.rule_code === 'EXTRACTION_FAILED')?.message}</Notice>}
+    {missing.length > 0 && <Notice tone="warning">{missing.length === 1 ? 'Page' : 'Pages'} {formatPageNumbers(missing)} {missing.length === 1 ? 'was' : 'were'} not processed, so export is blocked. {batch.issues.find(i => i.rule_code === 'EXTRACTION_FAILED')?.message}</Notice>}
     <div className="ds-row">
       {canRetry && <Button disabled={!!busy} onClick={() => onRetry(batch.batch.batch_id)}>Retry extraction</Button>}
+      <Button onClick={() => go(workspaceHref(batch))}>Open in Workspace</Button>
       <Button variant="danger" disabled={!!busy} onClick={() => setDeleting(batch)}>Delete upload</Button>
     </div>
     {error && <Notice tone="error">{error}</Notice>}

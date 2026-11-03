@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, useId, type ReactNode } from 'react';
 import { Sidebar, type SidebarItem } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useMobile } from '../useMobile';
@@ -8,9 +8,11 @@ import { ScrollTopButton } from './ScrollTopButton';
 export function AppShell({ children, items, search, right, footer, brand }: { children: ReactNode; items: readonly SidebarItem[]; search?: ReactNode; right?: ReactNode; footer?: ReactNode; brand?: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobile = useMobile();
+  const sidebarId = useId();
+  const mainRef = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('idp-studio.sidebar') === 'collapsed'; } catch { return false; } });
   const close = useCallback(() => setMobileOpen(false), []);
   const toggle = () => { if (mobile) setMobileOpen(!mobileOpen); else setCollapsed(!collapsed); };
   const scroll = useSmartScroll(mobile && mobileOpen);
-  return <div className={`ds-shell${scroll.hidden ? ' ds-topbar-hidden' : ''}`}><div className="ds-safe-top" aria-hidden="true" /><Topbar brand={brand} search={search} right={right} onMenuToggle={toggle} menuExpanded={mobile ? mobileOpen : !collapsed} /><div className="ds-shell-body"><Sidebar items={items} footer={footer} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} mobileOpen={mobileOpen} onMobileClose={close} /><main className="ds-workspace">{children}</main></div><ScrollTopButton visible={scroll.showTop} /></div>;
+  return <div className={`ds-shell${scroll.hidden ? ' ds-topbar-hidden' : ''}`}><a className="ds-skip-link" href="#main-content" onClick={event => { event.preventDefault(); mainRef.current?.focus(); }}>Skip to main content</a><div className="ds-safe-top" aria-hidden="true" /><Topbar brand={brand} search={search} right={right} onMenuToggle={toggle} menuExpanded={mobileOpen} showMenu={mobile} menuControls={sidebarId} /><div className="ds-shell-body"><Sidebar id={sidebarId} items={items} footer={footer} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} mobileOpen={mobileOpen} onMobileClose={close} /><main ref={mainRef} id="main-content" tabIndex={-1} className="ds-workspace">{children}</main></div><ScrollTopButton visible={scroll.showTop} /></div>;
 }

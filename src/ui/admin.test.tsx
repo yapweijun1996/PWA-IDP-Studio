@@ -13,6 +13,7 @@ import { ReviewQueue } from './pages/ReviewQueue';
 import { Workspace } from './pages/Workspace';
 import { SettingsPage } from './pages/Settings';
 import { loadSettings } from '../lib/settings';
+import { providerInfo } from '../lib/providers';
 import { loadPreferences } from './preferences';
 import { navItems, reviewRows } from './nav';
 import { SearchInput, Sidebar, ThemeProvider } from '../ds';
@@ -54,6 +55,25 @@ it('Home stats use batchSummary; document type search and clear restore real upl
   expect(container.querySelector('tbody')?.textContent).not.toContain('alpha.pdf');
   await click(container.querySelector('[aria-label="Clear search"]')!);
   expect(container.querySelector('tbody')?.textContent).toContain('alpha.pdf');
+});
+it('Home describes the selected extraction mode and places provider disclosure before upload', async () => {
+  await render(<Home docs={[]} settings={loadSettings()} busy={null} onFiles={() => {}} />);
+  expect(container.querySelector('nav[aria-label="Breadcrumb"]')).toBeNull();
+  const group = container.querySelector('[role="radiogroup"][aria-label="Extraction mode"]')!;
+  const description = document.getElementById(group.getAttribute('aria-describedby')!)!;
+  expect(description.textContent).toBe('AI chooses the document type and extracts every field it finds.');
+  await click(container.querySelector('input[value="targeted"]')!);
+  expect(description.textContent).toBe('Only the fields of the selected profile are extracted.');
+  const disclosure = Array.from(container.querySelectorAll('p')).find(p => p.textContent?.startsWith('Pages are sent to'))!;
+  expect(disclosure.textContent).toContain(providerInfo(loadSettings().provider).recipient);
+  const dropzone = container.querySelector('.ds-dropzone')!;
+  expect(disclosure.compareDocumentPosition(dropzone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+it('Home exposes only the Agent activity live region while busy', async () => {
+  await render(<Home docs={[]} settings={loadSettings()} busy="Reading page 1" onFiles={() => {}} steps={[{ summary: 'Classifying' } as never]} />);
+  expect(container.querySelectorAll('[role="status"], [role="alert"], [aria-live]')).toHaveLength(1);
+  expect(container.querySelector('[role="status"][aria-label="Agent activity"]')?.textContent).toContain('Classifying');
+  expect(container.querySelector('progress')).not.toBeNull();
 });
 it('Documents sorts the whole result before pagination and filters by status', async () => {
   const docs = Array.from({ length: 12 }, (_, i) => fixture(String(i), `${String(12-i).padStart(2,'0')}.pdf`));
@@ -128,9 +148,12 @@ it('Home accepts WebP by MIME or extension while rejecting TIFF in the same sele
   const inferred = new File(['webp'], 'SCAN.WEBP');
   const tiff = new File(['tiff'], 'scan.tiff', { type: 'image/tiff' });
   const chooser = container.querySelector('input[type="file"]')!;
+  expect(container.textContent).not.toContain('TIFF');
   Object.defineProperty(chooser, 'files', { configurable: true, value: [webp, inferred, tiff] });
   await act(async () => { chooser.dispatchEvent(new Event('change', { bubbles: true })); });
   expect(accepted).toEqual([[webp, inferred]]);
+  expect(container.querySelector('.ds-notice')?.textContent).toContain('TIFF is not supported.');
+  expect(container.querySelector('.ds-notice')?.textContent).not.toContain('pages per file');
 });
 it('Workspace searches hundreds of statement entries grouped under their document', async () => {
   const source = invoiceInput();
@@ -214,11 +237,21 @@ it('Home: an interrupted upload states what happened and offers retry and delete
   await click(button('Delete'));
   expect(await getBatch('stopped')).toBeUndefined(); expect(deleted).toHaveBeenCalledTimes(1);
 });
+it('Home: an incomplete upload can retry or open in Workspace', async () => {
+  const batch = unprocessed('incomplete');
+  batch.batch.status = 'review_required';
+  await render(<Home docs={[batch]} settings={loadSettings()} busy={null} onFiles={() => {}} onRetry={() => {}} />);
+  const card = Array.from(container.querySelectorAll('.ds-card')).find(item => item.querySelector('h2')?.textContent === 'IPJEM23058814.pdf')!;
+  const actions = Array.from(card.querySelectorAll('button')).map(item => item.textContent);
+  expect(actions).toEqual(['Retry extraction', 'Open in Workspace', 'Delete upload']);
+  await click(Array.from(card.querySelectorAll('button')).find(item => item.textContent === 'Open in Workspace')!);
+  expect(location.hash).toBe('#/doc/incomplete');
+});
 it('Home: while extraction runs the card shows Processing and blocks retry and delete; a failed upload shows Failed with retry', async () => {
   const running = unprocessed('running');
   await render(<Home docs={[running]} settings={loadSettings()} busy="Reading page 2" onFiles={() => {}} onRetry={() => {}} onDeleted={() => {}} />);
   expect(container.textContent).toContain('Processing'); expect(container.textContent).toContain('Reading page 2');
-  expect(button('Retry extraction')).toBeUndefined(); expect(button('Delete upload').disabled).toBe(true);
+  expect(button('Retry extraction')).toBeUndefined(); expect(button('Delete upload').disabled).toBe(true); expect(button('Open in Workspace').disabled).toBe(false);
   await render(<Home docs={[unprocessed('broken', 'failed')]} settings={loadSettings()} busy={null} onFiles={() => {}} onRetry={() => {}} onDeleted={() => {}} />);
   expect(container.textContent).toContain('Failed'); expect(button('Retry extraction').disabled).toBe(false);
 });

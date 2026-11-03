@@ -54,6 +54,9 @@ a { color: var(--primary); }
 .ds-dropzone h2, .ds-dropzone p { margin: 0; }
 .ds-over { border-color: var(--primary); background: var(--selected); }
 .ds-visually-hidden { position: absolute; width: var(--line); height: var(--line); overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ds-skip-link { position: fixed; top: max(var(--space-2), env(safe-area-inset-top)); left: max(var(--space-4), env(safe-area-inset-left)); z-index: var(--z-toast); padding: var(--space-3) var(--space-4); border: var(--line) solid var(--control-border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); }
+.ds-skip-link:not(:focus) { width: var(--line); height: var(--line); overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+main[tabindex="-1"]:focus { outline: none; }
 .ds-tooltip-anchor, .ds-menu-anchor { display: inline-flex; position: relative; min-width: 0; }
 .ds-tooltip { position: absolute; inset-inline-start: 100%; top: 0; margin-inline-start: var(--space-2); z-index: var(--z-popover); padding: var(--space-2) var(--space-3); border: var(--line) solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); background: var(--surface); color: var(--text); white-space: nowrap; pointer-events: none; }
 .ds-menu { position: absolute; top: 100%; inset-inline-start: 0; z-index: var(--z-popover); display: grid; gap: var(--space-1); padding: var(--space-2); background: var(--surface); border: var(--line) solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); min-width: max-content; }
@@ -63,7 +66,7 @@ a { color: var(--primary); }
 .ds-table th { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--surface-alt); text-align: left; }
 .ds-table th, .ds-table td { padding-inline: var(--space-3); border-bottom: var(--line) solid var(--border); height: var(--row-normal); white-space: nowrap; }
 .ds-density-compact td, .ds-density-compact th { height: var(--row-compact); }
-.ds-table th .ds-button { min-height: inherit; padding-block: 0; }
+.ds-table th .ds-button { min-height: var(--control-sm); padding-block: 0; }
 .ds-clickable { cursor: pointer; }
 .ds-clickable:hover { background: var(--hover); }
 .ds-table [aria-selected="true"] { background: var(--selected); outline: var(--line) solid var(--primary); outline-offset: calc(-1 * var(--line)); }
@@ -82,6 +85,8 @@ a { color: var(--primary); }
 .ds-shell-body { display: flex; align-items: flex-start; }
 .ds-sidebar { flex-shrink: 0; display: flex; flex-direction: column; width: var(--sidebar-expanded); position: sticky; top: calc(var(--topbar-height) + env(safe-area-inset-top)); height: calc(100dvh - var(--topbar-height) - env(safe-area-inset-top)); padding: var(--space-2); padding-bottom: max(var(--space-2), env(safe-area-inset-bottom)); background: var(--sidebar); border-right: var(--line) solid var(--border); }
 .ds-sidebar.ds-collapsed { width: var(--sidebar-collapsed); }
+.ds-sidebar > .ds-button { align-self: flex-end; width: var(--control-height); min-height: var(--control-height); padding: var(--space-2); }
+.ds-sidebar.ds-collapsed > .ds-button { align-self: center; }
 .ds-sidebar nav { display: grid; gap: var(--space-1); }
 .ds-sidebar nav > .ds-tooltip-anchor { display: flex; }
 .ds-sidebar footer { margin-top: auto; overflow-wrap: anywhere; font-size: var(--font-sm); color: var(--muted); }
@@ -128,7 +133,8 @@ a { color: var(--primary); }
   .ds-topbar { gap: var(--space-2); flex-wrap: wrap; }
   .ds-topbar-search:has(.ds-search) { order: 3; flex-basis: 100%; padding-bottom: var(--space-2); }
   .ds-topbar > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ds-input { font-size: var(--font-body); }
+  .ds-input { font-size: var(--font-input); }
+  .ds-sidebar > .ds-button { width: var(--touch-target); min-width: var(--touch-target); min-height: var(--touch-target); }
   .ds-toast { left: var(--space-4); }
 }
 /* Too short for the sticky rail (its links need about 460px): let it scroll with the page so every link stays reachable. */
