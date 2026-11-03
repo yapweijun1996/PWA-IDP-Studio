@@ -62,6 +62,9 @@ it('Home keeps the Recent uploads caption available while hiding the duplicate h
   expect(caption.classList.contains('ds-visually-hidden')).toBe(true);
   expect(caption.textContent).toBe('Recent uploads');
   expect(container.querySelector('.ds-row-between h2')?.textContent).toBe('Recent uploads');
+  const recentUploadsHeader = container.querySelector('.ds-row-between h2')?.parentElement!;
+  expect(recentUploadsHeader.classList.contains('ds-card-header')).toBe(true);
+  expect(recentUploadsHeader.classList.contains('ds-row-between')).toBe(true);
   expect(container.querySelector('a[href="#/documents"]')?.textContent).toBe('View all');
 });
 it('Home describes the selected extraction mode and places provider disclosure before upload', async () => {
@@ -76,8 +79,8 @@ it('Home describes the selected extraction mode and places provider disclosure b
   expect(disclosure.textContent).toContain(providerInfo(loadSettings().provider).recipient);
   const dropzone = container.querySelector('.ds-dropzone')!;
   expect(disclosure.compareDocumentPosition(dropzone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(container.querySelector('section[aria-label="Upload documents"]')).toBe(dropzone);
-  expect(dropzone.textContent).toContain('Upload documents');
+  expect(container.querySelector('section[aria-label="Add documents"]')).toBe(dropzone);
+  expect(dropzone.textContent).toContain('Add documents');
   expect(dropzone.textContent).not.toContain('Drag and drop documents here');
 });
 it('Home exposes only the Agent activity live region while busy', async () => {
