@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# The icon generator embeds SVG source text verbatim and `npm run check:icons`
+# compares bytes, so these files must be LF on every OS (including Windows
+# checkouts with core.autocrlf=true).
+icons/catalog/*.svg text eol=lf
+src/ui/icons.generated.ts text eol=lf
