@@ -14,3 +14,9 @@ describe('WCAG AA token text pairings', () => {
     for (const [foreground, background] of pairs) it(`${theme}: ${foreground} on ${background}`, () => { const values = [luminance(tokens[foreground]), luminance(tokens[background])].sort((a, b) => b - a); expect((values[0] + 0.05) / (values[1] + 0.05)).toBeGreaterThanOrEqual(4.5); });
   }
 });
+// WCAG 1.4.11: the boundary of an input, button or drop target and the focus ring need 3:1 against the surface behind them.
+describe('WCAG non-text token pairings', () => {
+  for (const [theme, tokens] of Object.entries(themes)) {
+    for (const foreground of ['control-border', 'focus']) for (const background of ['background', 'surface', 'surface-alt']) it(`${theme}: ${foreground} on ${background}`, () => { const values = [luminance(tokens[foreground]), luminance(tokens[background])].sort((a, b) => b - a); expect((values[0] + 0.05) / (values[1] + 0.05)).toBeGreaterThanOrEqual(3); });
+  }
+});

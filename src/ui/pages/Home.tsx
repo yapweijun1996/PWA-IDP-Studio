@@ -6,8 +6,9 @@ import type { Batch } from '../../contract/types';
 import { batchSummary } from '../../contract/view';
 import type { Settings } from '../../lib/settings';
 import { providerInfo } from '../../lib/providers';
-import { Button, Card, Dropzone, Notice, PageHeader, Progress, StatCard } from '../../ds';
+import { Card, Dropzone, Notice, PageHeader, Progress, StatCard } from '../../ds';
 import { BatchTable } from '../BatchTable';
+import { UnprocessedUploadCard } from '../UnprocessedUploadCard';
 export function Home({ docs, settings, busy, onFiles, steps = [], search = '', loading, onDeleted, onRetry, offlineUpload = false }: { steps?: AgentStep[]; onRetry?: (batchId: string) => void; docs: Batch[]; settings: Settings; busy: string | null; onFiles: (files: File[], profile?: ExtractionProfile) => void; search?: string; loading?: boolean; onDeleted?: () => void | Promise<void>; offlineUpload?: boolean }) {
   const [mode, setMode] = useState(loadMode);
   const profiles = loadProfiles();
@@ -22,7 +23,7 @@ export function Home({ docs, settings, busy, onFiles, steps = [], search = '', l
     <p>Pages are sent to <strong>{providerInfo(settings.provider).recipient}</strong>. <a href="#/settings">Change provider</a></p>
     {busy && <Notice><Progress label={busy} /></Notice>}
     {busy && <ul role="status" aria-live="polite" aria-label="Agent activity">{steps.map((step, i) => <li key={i}>{step.summary}</li>)}</ul>}
-    {docs.filter(b => b.pages.some(p => p.status !== 'classified') || b.batch.status === 'failed').map(b => <Card key={b.batch.batch_id}><h2>{b.source_files[0].filename}</h2><Progress label={`Page coverage ${b.pages.filter(p => p.status === 'classified').length}/${b.pages.length} · ${b.batch.status === 'processing' ? busy ?? 'Processing interrupted.' : b.batch.status.replaceAll('_', ' ')}`} value={b.pages.filter(p => p.status === 'classified').length} max={b.pages.length} /><Notice tone="warning">Unprocessed pages: {b.pages.filter(p => p.status !== 'classified').map(p => `${p.page_number} (${p.status === 'error' ? 'failed' : 'not processed'})`).join(', ')}. Unprocessed pages block export. {b.issues.find(i => i.rule_code === 'EXTRACTION_FAILED')?.message}</Notice>{b.batch.status === 'failed' && onRetry && <Button disabled={!!busy} onClick={() => onRetry(b.batch.batch_id)}>Retry extraction</Button>}</Card>)}
+    {docs.filter(b => b.pages.some(p => p.status !== 'classified') || b.batch.status === 'failed').map(b => <UnprocessedUploadCard key={b.batch.batch_id} batch={b} busy={busy} onRetry={onRetry} onDeleted={onDeleted} />)}
     <div className="ds-grid ds-stat-grid"><StatCard icon="document" label="Pages processed" value={summary.pages} caption="Physical pages in uploaded batches" /><StatCard icon="collection" label="Documents detected" value={summary.documents} /><StatCard icon="ledger" label="Transactions extracted" value={summary.transactions} /></div>
     <Card><div className="ds-row"><h2>Recent uploads</h2><a href="#/documents">View all</a></div><BatchTable docs={docs} search={search} recent loading={loading} onDeleted={onDeleted} /></Card>
   </section>;
