@@ -484,6 +484,30 @@ export const scenarios = [
     await route(b, '#/templates', 'Templates');
     await text(b, 'Suggested for documents from E2E Supplier, purchase invoice.');
   } },
+  { name: 'footer-lines', async run({b,mocks}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    const original = (await batches(b)).find(v => v.source_files[0].filename === 'invoice.png');
+    await click(b, 'Customize fields'); await click(b, 'Add field'); await field(b, 'Header fields 6 label', 'Shipping Fee');
+    await click(b, 'Add field'); await field(b, 'Header fields 7 label', 'Discount');
+    await click(b, 'Save and extract again'); await text(b, 'Extract this document again?');
+    mocks.setVariant('footer-lines'); await click(b, 'Extract again');
+    await b.wait(`location.hash.startsWith('#/doc/') && !location.hash.includes(${js(original.batch.batch_id)})`, 'moved to the result read with the template');
+    const footerText = () => b.eval(`document.querySelector('main section[aria-label="Footer"] [role="group"][aria-label="Totals check"]')?.textContent ?? ''`);
+    await b.wait(`(document.querySelector('main section[aria-label="Footer"]')?.textContent || '').includes('shipping fee 15.00')`, 'footer lines listed');
+    let text_ = await footerText();
+    assert.ok(text_.includes('Rows add up to 10.00') && text_.includes('shipping fee 15.00') && text_.includes('discount -5.00') && text_.includes('grand total 20.00') && text_.includes('Matches'), `footer check: ${text_}`);
+    // The total adds up only because the footer lines are counted: no mismatch is raised, and the document can be approved.
+    const batch = (await batches(b)).find(v => v.source_files[0].filename === 'invoice.png');
+    assert.equal(batch.transactions[0].data.shipping_fee, '15.00'); assert.equal(batch.transactions[0].data.discount, '5.00');
+    assert.ok(!batch.issues.some(i => i.rule_code === 'TOTALS_MISMATCH' && i.status === 'open'), 'no totals mismatch');
+    assert.equal(await buttonDisabled(b, 'Approve'), false, 'approval available');
+    // A wrong total is still caught.
+    await correct(b, 'total_amount', '21.00');
+    await b.wait(`(document.querySelector('main section[aria-label="Footer"]')?.textContent || '').includes('Does not match')`, 'mismatch shown');
+    assert.equal(await buttonDisabled(b, 'Approve'), true);
+    await correct(b, 'total_amount', '20.00');
+    await b.wait(`(document.querySelector('main section[aria-label="Footer"]')?.textContent || '').includes('Matches')`, 'match shown again');
+  } },
   { name: 'customize-fields', async run({b,mocks}) {
     await drop(b); await text(b, 'INV-E2E-001');
     const original = (await batches(b)).find(v => v.source_files[0].filename === 'invoice.png');

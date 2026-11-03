@@ -138,13 +138,13 @@ describe('Section in the field form', () => {
     const onExtract = await open();
     await click('Add field'); await fill('Header fields 3 label', 'Shipping Fee');
     expect(control('Header fields 3 section').value).toBe('footer'); // from its name, nothing chosen yet
-    await click('Add field'); await fill('Header fields 4 label', 'Handling');
+    await click('Add field'); await fill('Header fields 4 label', 'Admin fee');
     expect(control('Header fields 4 section').value).toBe('info');
     await choose('Header fields 4 section', 'footer'); // no name says it, so the user says it
     await choose('Header fields 2 section', 'info'); // and the user can move a total up
     await click('Save and extract again'); await click('Extract again');
     const profile = onExtract.mock.calls[0][0] as ExtractionProfile;
-    expect(profile.fields.map(f => [f.key, f.section])).toEqual([['supplier_name', undefined], ['total_amount', 'info'], ['shipping_fee', undefined], ['handling', 'footer']]);
-    expect(loadProfiles().find(p => p.name === 'Mine')?.fields.find(f => f.key === 'handling')?.section).toBe('footer');
+    expect(profile.fields.map(f => [f.key, f.section])).toEqual([['supplier_name', undefined], ['total_amount', 'info'], ['shipping_fee', undefined], ['admin_fee', 'footer']]);
+    expect(loadProfiles().find(p => p.name === 'Mine')?.fields.find(f => f.key === 'admin_fee')?.section).toBe('footer');
   });
 });
