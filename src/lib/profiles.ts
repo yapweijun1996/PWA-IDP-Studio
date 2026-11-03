@@ -1,3 +1,4 @@
+import { DOCUMENT_TYPES } from './types';
 import { BUILTIN_PROFILES, type ExtractionMode, type ExtractionProfile } from './agent/contract';
 export const PROFILE_KEYS = ['idp-studio.profiles.v1', 'idp-studio.mode.v1', 'idp-studio.batch-modes.v1'];
 const session = new Map<string, unknown>();
@@ -23,6 +24,15 @@ export function validateProfile(profile: ExtractionProfile): string[] {
   }
   for (const field of profile.fields ?? []) if (field && field.section !== undefined && field.section !== 'info' && field.section !== 'footer') errors.push(`Unknown section for ${field.key}.`);
   for (const field of profile.rowFields ?? []) if (field && field.section !== undefined) errors.push(`Row column ${field.key} cannot have a section; rows are always Row Data.`);
+  if (profile.match !== undefined) {
+    const match = profile.match as unknown;
+    if (!match || typeof match !== 'object' || Array.isArray(match) || Object.keys(match).some(k => k !== 'party' && k !== 'documentType')) errors.push('Suggestion settings are invalid.');
+    else {
+      const { party, documentType } = match as { party?: unknown; documentType?: unknown };
+      if (party !== undefined && (typeof party !== 'string' || !party.trim() || party.length > 120)) errors.push('Enter a supplier or customer name for the suggestion, or leave it empty.');
+      if (documentType !== undefined && !(DOCUMENT_TYPES as readonly unknown[]).includes(documentType)) errors.push('Unknown document type for the suggestion.');
+    }
+  }
   return errors;
 }
 /**
@@ -69,7 +79,7 @@ export function clearProfiles(): void { for (const key of PROFILE_KEYS) { sessio
 
 /** Portable profile file; built-in exports become editable on import. */
 export function exportProfiles(profiles: ExtractionProfile[]): string {
-  return JSON.stringify({ idp_studio_profiles: 1, profiles: profiles.map(({ id, name, fields, rowFields, rowsAsTransactions }) => ({ id, name, fields, rowFields, ...(rowsAsTransactions !== undefined ? { rowsAsTransactions } : {}) })) }, null, 2);
+  return JSON.stringify({ idp_studio_profiles: 1, profiles: profiles.map(({ id, name, fields, rowFields, rowsAsTransactions, match }) => ({ id, name, fields, rowFields, ...(rowsAsTransactions !== undefined ? { rowsAsTransactions } : {}), ...(match !== undefined ? { match } : {}) })) }, null, 2);
 }
 export function parseProfileImport(text: string): { profiles: ExtractionProfile[]; errors: string[] } {
   const errors: string[] = [];
@@ -82,7 +92,7 @@ export function parseProfileImport(text: string): { profiles: ExtractionProfile[
   const profiles: ExtractionProfile[] = [];
   value.profiles.forEach((p: unknown, index: number) => {
     const prefix = `Profile ${index + 1}: `;
-    if (!object(p) || Object.keys(p).some(k => !['id', 'name', 'fields', 'rowFields', 'rowsAsTransactions', 'builtin'].includes(k)) || typeof p.id !== 'string' || !p.id.trim() || typeof p.name !== 'string' || !Array.isArray(p.fields) || !Array.isArray(p.rowFields) || (p.builtin !== undefined && typeof p.builtin !== 'boolean')) {
+    if (!object(p) || Object.keys(p).some(k => !['id', 'name', 'fields', 'rowFields', 'rowsAsTransactions', 'builtin', 'match'].includes(k)) || typeof p.id !== 'string' || !p.id.trim() || typeof p.name !== 'string' || !Array.isArray(p.fields) || !Array.isArray(p.rowFields) || (p.builtin !== undefined && typeof p.builtin !== 'boolean')) {
       errors.push(`${prefix}Expected id, name, header fields and row columns.`); return;
     }
     if ([...p.fields, ...p.rowFields].some(f => !object(f) || Object.keys(f).some(k => !['key', 'label', 'type', 'required', 'section'].includes(k)) || (f.required !== undefined && typeof f.required !== 'boolean'))) {

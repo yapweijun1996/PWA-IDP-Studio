@@ -8,9 +8,9 @@ export function targeted() {
   return { document_type: 'unknown', fields: Object.entries({ document_no: 'DOC-TARGET-001', transaction_date: '2026-10-26', remarks: 'Targeted delivery' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [1, 2].map(n => Object.fromEntries(Object.entries({ row_no: String(n), stock_code: `SKU-${n}`, stock_description: `Stock ${n}`, quantity: '2', uom: 'PCS', unit_price: '5.00', line_subtotal: '10.00' }).map(([key, value]) => [key, { value, page: 1, bbox: [300 + n * 50, 100, 340 + n * 50, 900], confidence: 0.98 }]))) };
 }
 /** The invoice read again with the template "Customize fields" builds from it plus a Batch No field. */
-export function customized() {
+export function customized(withBatchNo = true) {
   const cell = value => ({ value, page: 1, bbox: [300, 100, 340, 900], confidence: 0.98 });
-  return { document_type: 'purchase_invoice', fields: Object.entries({ supplier_name: 'E2E Supplier', invoice_no: 'INV-E2E-001', invoice_date: '2026-10-26', currency: 'SGD', total_amount: '10.00', batch_no: 'BATCH-77' }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [Object.fromEntries(Object.entries({ description: 'E2E service', quantity: '1', unit_price: '10.00', amount: '10.00' }).map(([key, value]) => [key, cell(value)]))] };
+  return { document_type: 'purchase_invoice', fields: Object.entries({ supplier_name: 'E2E Supplier', invoice_no: 'INV-E2E-001', invoice_date: '2026-10-26', currency: 'SGD', total_amount: '10.00', ...(withBatchNo ? { batch_no: 'BATCH-77' } : {}) }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [Object.fromEntries(Object.entries({ description: 'E2E service', quantity: '1', unit_price: '10.00', amount: '10.00' }).map(([key, value]) => [key, cell(value)]))] };
 }
 export function statement() {
   return {
@@ -119,7 +119,7 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
           : toolResponseStream('crop_zoom', { page: 1, ymin: 100, xmin: 100, ymax: 500, xmax: 900, scale: 6 }, 'crop_e2e'), 'text/event-stream');
         return;
       }
-      const output = variant === 'statement-entries' ? statement() : variant === 'targeted' || variant === 'validation-targeted' ? targeted() : variant === 'customized' ? customized() : invoice(variant === 'bad');
+      const output = variant === 'statement-entries' ? statement() : variant === 'targeted' || variant === 'validation-targeted' ? targeted() : variant === 'customized' ? customized() : variant === 'saved-template' ? customized(false) : invoice(variant === 'bad');
       if (variant === 'validation-targeted') {
         output.fields.find(f => f.key === 'document_no').value = '';
         output.fields.find(f => f.key === 'remarks').confidence = 0.5;

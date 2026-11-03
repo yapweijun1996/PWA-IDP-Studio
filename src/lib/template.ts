@@ -3,6 +3,7 @@ import { decimalKey, pointerFor } from '../contract/rules';
 import { requiredKeys } from '../contract/view';
 import type { ExtractionProfile, FieldType, ProfileField } from './agent/contract';
 import { labelFromKey } from './profiles';
+import { matchFor } from './templateMatch';
 
 /** The field type a key implies, so a template built from an Auto result keeps the checks Auto applied by key name. */
 export function fieldTypeForKey(key: string): FieldType {
@@ -19,7 +20,8 @@ const filled = (value: unknown) => value !== null && value !== undefined && valu
  * The starting point for "Customize fields" in review. A document extracted with a template starts from that template (a
  * copy; the saved one is never touched). A document extracted in Auto mode starts from what it actually contains: the
  * header fields and row columns that have a value, plus the fields its document type requires, typed by key so the
- * validation Auto applied still applies. The user then adds to it.
+ * validation Auto applied still applies, and remembering who the document is from so the template is suggested for the next one
+ * like it (`match`). The user then adds to it.
  */
 export function templateFromTransaction(tx: Transaction, documentType: DocumentType, name: string, base?: ExtractionProfile): ExtractionProfile {
   if (base) return { ...structuredClone(base), id: crypto.randomUUID(), name, builtin: false };
@@ -32,5 +34,6 @@ export function templateFromTransaction(tx: Transaction, documentType: DocumentT
   const headerType = (key: string) => declared?.[pointerFor(key)];
   const rowType = (key: string) => rows.map((_, i) => declared?.[`/line_items/${i}${pointerFor(key)}`]).find(type => type !== undefined);
   const field = (key: string, isRequired: boolean, type: FieldType | undefined): ProfileField => ({ key, label: labelFromKey(key), type: type ?? fieldTypeForKey(key), ...(isRequired ? { required: true } : {}) });
-  return { id: crypto.randomUUID(), name, fields: headerKeys.map(key => field(key, required.includes(key), headerType(key))), rowFields: rowKeys.map(key => field(key, false, rowType(key))) };
+  const match = matchFor(tx.data, documentType);
+  return { id: crypto.randomUUID(), name, fields: headerKeys.map(key => field(key, required.includes(key), headerType(key))), rowFields: rowKeys.map(key => field(key, false, rowType(key))), ...(match ? { match } : {}) };
 }

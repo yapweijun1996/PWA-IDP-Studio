@@ -9,11 +9,11 @@ import { ProfileFieldsForm } from './ProfileFieldsForm';
  * document again with it. Step 1 edits the template; step 2 says exactly what extracting again replaces. The caller keeps the
  * current result until the new extraction has finished, so nothing here can lose data.
  */
-export function CustomizeFields({ start, reviewCount, documentCount, onClose, onExtract }: { start: ExtractionProfile; reviewCount: number; documentCount: number; onClose: () => void; onExtract: (profile: ExtractionProfile) => void }) {
+export function CustomizeFields({ start, reviewCount, documentCount, onClose, onExtract, initialStep = 'edit' }: { start: ExtractionProfile; reviewCount: number; documentCount: number; onClose: () => void; onExtract: (profile: ExtractionProfile) => void; /** `confirm` opens straight at the question, for a saved template that needs no editing (Back still leads to the editor). */ initialStep?: 'edit' | 'confirm' }) {
   const [draft, setDraft] = useState<ExtractionProfile>(() => structuredClone(start));
   const [locked] = useState<ReadonlySet<string>>(() => new Set([...start.fields, ...start.rowFields].map(f => f.key)));
   const [errors, setErrors] = useState<string[]>([]);
-  const [step, setStep] = useState<'edit' | 'confirm'>('edit');
+  const [step, setStep] = useState<'edit' | 'confirm'>(initialStep);
   const [saved, setSaved] = useState(false);
   const valid = () => { const problems = validateProfile(draft); setErrors(problems); return problems.length === 0; };
   const persist = () => saveProfiles([...loadProfiles().filter(p => p.id !== draft.id), draft]);
