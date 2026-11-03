@@ -36,6 +36,19 @@ export function keyFromLabel(label: string, taken: Iterable<string> = []): strin
   while (used.has(key)) key = `${base}_${n++}`;
   return key;
 }
+const ACRONYMS = new Set(['po', 'do', 'uom', 'id', 'gst', 'sku']);
+/** A plain-words label for a technical key: supplier_name -> "Supplier name", po_no -> "PO no", uom -> "UOM". */
+export function labelFromKey(key: string): string {
+  return key.toLowerCase().split('_').map(word => ACRONYMS.has(word) ? word.toUpperCase() : word).join(' ').replace(/^./, c => c.toUpperCase());
+}
+/** `base`, or `base 2`, `base 3`... when a template with that name already exists (case-insensitive). */
+export function uniqueProfileName(base: string, profiles: readonly ExtractionProfile[]): string {
+  const taken = new Set(profiles.map(p => p.name.trim().toLowerCase()));
+  let name = base.trim() || 'My template'; let n = 2;
+  const root = name;
+  while (taken.has(name.toLowerCase())) name = `${root} ${n++}`;
+  return name;
+}
 export function loadProfiles(): ExtractionProfile[] {
   const stored = load<unknown>(PROFILE_KEYS[0], []);
   const users = Array.isArray(stored) ? stored.filter((p): p is ExtractionProfile => !!p && typeof p.id === 'string' && Array.isArray(p.fields) && Array.isArray(p.rowFields) && !BUILTIN_PROFILES.some(b => b.id === p.id) && validateProfile(p).length === 0) : [];

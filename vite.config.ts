@@ -89,5 +89,5 @@ export default defineConfig({
     }),
   ],
   build: { chunkSizeWarningLimit: 1500 },
-  test: { environment: 'jsdom', include: ['src/**/*.test.ts', 'src/ui/validation.test.tsx'], poolOptions: { forks: { execArgv: noNodeWebStorage } } },
+  test: { environment: 'jsdom', include: ['src/**/*.test.ts', 'src/ui/validation.test.tsx', 'src/ui/customize.test.tsx'], poolOptions: { forks: { execArgv: noNodeWebStorage } } },
 });

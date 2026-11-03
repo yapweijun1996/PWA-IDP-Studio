@@ -382,6 +382,32 @@ export const scenarios = [
     assert.equal(output.line_items[0].stock_code, 'SKU-EDIT');
     assert.deepEqual(Object.keys(output.line_items[0]).sort(), ['row_no','stock_code','stock_description','quantity','uom','unit_price','line_subtotal'].sort());
   } },
+  { name: 'customize-fields', async run({b,mocks}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    const original = (await batches(b)).find(v => v.source_files[0].filename === 'invoice.png');
+    await correct(b, 'supplier_name', 'Corrected Supplier'); // a review action that reading the file again would replace
+    const customize = async () => { await click(b, 'Customize fields'); await click(b, 'Add field'); await field(b, 'Header fields 6 label', 'Batch No'); await click(b, 'Save and extract again'); await text(b, 'Extract this document again?'); };
+    // A failed run must cost the user nothing: the earlier result, with its correction, is still there and nothing is left over.
+    await customize(); await text(b, '1 review action');
+    mocks.setVariant('network-error'); await click(b, 'Extract again');
+    await text(b, 'Your earlier result was kept unchanged');
+    let rows = (await batches(b)).filter(v => v.source_files[0].filename === 'invoice.png');
+    assert.equal(rows.length, 1, 'no leftover batch from the failed run');
+    assert.equal(rows[0].batch.batch_id, original.batch.batch_id); assert.equal(rows[0].transactions[0].data.supplier_name, 'Corrected Supplier'); assert.equal(rows[0].reviews.length, 1);
+    assert.ok(await b.eval(`location.hash.includes(${js(original.batch.batch_id)})`), 'still on the earlier result');
+    // A complete run replaces it, carries the new field, and the template stays on the Templates page.
+    mocks.setVariant('customized'); await customize(); await click(b, 'Extract again');
+    await b.wait(`location.hash.startsWith('#/doc/') && !location.hash.includes(${js(original.batch.batch_id)})`, 'moved to the new result');
+    await text(b, 'BATCH-77');
+    rows = (await batches(b)).filter(v => v.source_files[0].filename === 'invoice.png');
+    assert.equal(rows.length, 1, 'the earlier result was replaced, not duplicated'); assert.notEqual(rows[0].batch.batch_id, original.batch.batch_id);
+    assert.equal(rows[0].transactions[0].data.batch_no, 'BATCH-77'); assert.equal(rows[0].transactions[0].data.supplier_name, 'E2E Supplier');
+    assert.equal(rows[0].source_files[0].file_id, original.source_files[0].file_id, 'same stored original, nothing re-uploaded');
+    checkEnvelope(rows[0]); await click(b, 'JSON');
+    const clean = await b.eval('JSON.parse(document.querySelector("pre").textContent)');
+    assert.equal(clean.batch_no, 'BATCH-77'); assert.equal(clean.line_items[0].description, 'E2E service');
+    await route(b, '#/templates', 'Templates'); await text(b, 'My template');
+  } },
   { name: 'shell', async run({b}) { await shell(b); } },
   { name: 'agent-tools', async run({b,mocks}) {
     mocks.setVariant('agent-tools');
