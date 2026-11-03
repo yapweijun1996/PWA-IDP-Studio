@@ -55,7 +55,9 @@ export function businessIssues(batch: Batch): Issue[] {
         if ((tx.field_types ? present && (type === 'amount' || type === 'quantity') : decimalKey(key) && (!entry || present)) && normalizeDecimal(v) === null) add('transaction', tx.transaction_id, 'INVALID_DECIMAL', 'error', `${pointer}: invalid decimal.`);
         if ((tx.field_types ? present && type === 'date' : (key.endsWith('_date') && (!entry || present)) || (entry && key === 'date' && present)) && !isIsoDate(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO8601', 'blocking', `${pointer}: not ISO 8601.`);
         if (present && type === 'integer' && (typeof v !== 'number' || !Number.isSafeInteger(v))) add('transaction', tx.transaction_id, 'INVALID_INTEGER', 'blocking', `${pointer}: not an integer.`);
-        if (!tx.field_types && key === 'currency' && !isIsoCurrency(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO4217', 'blocking', `${pointer}: not ISO 4217.`);
+        // Auto checks every currency. A Targeted result checks one that is present, so an optional currency the document does not print
+        // is not an error (a required one is reported as missing instead).
+        if (key === 'currency' && (!tx.field_types || present) && !isIsoCurrency(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO4217', 'blocking', `${pointer}: not ISO 4217.`);
         if (Array.isArray(v)) v.forEach((row, i) => { if (row && typeof row === 'object' && !Array.isArray(row)) walk(row, `${pointer}/${i}`); });
       }
     };
