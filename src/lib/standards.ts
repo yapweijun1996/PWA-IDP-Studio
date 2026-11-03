@@ -12,7 +12,9 @@ export const REQUIRED_FIELDS: Record<DocumentType, string[]> = {
   statement: [], unknown: [],
 };
 
-export const AUTO_HEADER_KEYS = ['supplier_name', 'customer_name', 'payer_name', 'invoice_no', 'order_no', 'po_no', 'do_no', 'receipt_no', 'credit_note_no', 'payment_no', 'invoice_date', 'order_date', 'po_date', 'delivery_date', 'receipt_date', 'credit_note_date', 'payment_date', 'currency', 'total_amount', 'amount'];
+/** Header amount that explains why a total can exceed the sum of its lines (GST/VAT/sales tax). */
+export const TAX_AMOUNT_KEY = 'tax_amount';
+export const AUTO_HEADER_KEYS = ['supplier_name', 'customer_name', 'payer_name', 'invoice_no', 'order_no', 'po_no', 'do_no', 'receipt_no', 'credit_note_no', 'payment_no', 'invoice_date', 'order_date', 'po_date', 'delivery_date', 'receipt_date', 'credit_note_date', 'payment_date', 'currency', 'total_amount', 'subtotal_amount', TAX_AMOUNT_KEY, 'amount'];
 export const AUTO_ROW_KEYS = ['description', 'quantity', 'unit_price', 'amount'];
 
 // ISO 4217 alphabetic codes, including funds and precious-metal codes.

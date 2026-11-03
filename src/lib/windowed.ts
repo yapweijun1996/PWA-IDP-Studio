@@ -14,6 +14,22 @@ export interface SegmentResult { pages: number[]; output: ModelOutput | null; er
 export interface WindowedProgress { phase: 'segmenting' | 'extracting'; done: number; total: number; batch: Batch; plan: SegmentPlan; results: SegmentResult[] }
 export type WindowedOptions = Omit<ExtractOptions, 'pages'> & { plan?: SegmentPlan; results?: SegmentResult[]; onProgress?: (progress: WindowedProgress) => void };
 
+const isEmpty = (value: unknown) => value === null || value === undefined || value === '';
+
+/**
+ * Headers come from the first chunk, but a value that is empty there (typically a grand total printed on the last
+ * page of a long document) is filled from a later chunk. A value the first chunk already found is never replaced.
+ */
+export function fillMissingHeaders(merged: ModelOutput, chunk: ModelOutput): void {
+  for (const field of chunk.fields) {
+    if (isEmpty(field.value)) continue;
+    let index = -1;
+    merged.fields.forEach((existing, i) => { if (existing.key === field.key) index = i; });
+    if (index < 0) merged.fields.push(field);
+    else if (isEmpty(merged.fields[index].value)) merged.fields[index] = field;
+  }
+}
+
 export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ batch: Batch; plan: SegmentPlan; results: SegmentResult[] }> {
   opts = { ...opts, agentConfig: opts.agentConfig ?? loadAgentConfig(opts.settings.provider) };
   opts.signal?.throwIfAborted();
@@ -78,6 +94,7 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
             if (!chunk) throw new Error('Extraction produced no output');
             if (!merged) merged = chunk;
             else {
+              fillMissingHeaders(merged, chunk);
               const rowOffset = merged.line_items.length;
               merged.line_items.push(...chunk.line_items);
               merged.rowEvidence = [...(merged.rowEvidence ?? []), ...(chunk.rowEvidence ?? []).map(e => ({ ...e, row: e.row + rowOffset }))];

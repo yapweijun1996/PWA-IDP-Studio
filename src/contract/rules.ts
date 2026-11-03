@@ -1,6 +1,6 @@
 import type { Batch, Issue, Transaction, Value } from './types';
 import { normalizeDecimal, sumDecimals, decimalEquals } from './decimal';
-import { REQUIRED_FIELDS, isIsoDate, isIsoCurrency } from '../lib/standards';
+import { REQUIRED_FIELDS, TAX_AMOUNT_KEY, isIsoDate, isIsoCurrency } from '../lib/standards';
 import { validateBatch, exportEligibleTransactions } from './validate';
 import { ruleCatalogEntry } from './ruleCatalog';
 
@@ -46,7 +46,12 @@ export function businessIssues(batch: Batch): Issue[] {
     const total = normalizeDecimal(tx.data.total_amount);
     if (!tx.field_types && total !== null && Array.isArray(rows) && rows.length) {
       const amounts = rows.map(row => row && typeof row === 'object' && !Array.isArray(row) ? normalizeDecimal(row.amount) : null);
-      if (amounts.every((v): v is string => v !== null) && !decimalEquals(sumDecimals(amounts), total)) add('transaction', tx.transaction_id, 'TOTALS_MISMATCH', 'blocking', '/total_amount: line amounts do not match total.');
+      if (amounts.every((v): v is string => v !== null)) {
+        // A total may be the line sum plus a separately printed tax (e.g. 673.50 + 8% GST 53.88 = 727.38).
+        const net = sumDecimals(amounts);
+        const tax = normalizeDecimal(tx.data[TAX_AMOUNT_KEY]);
+        if (!decimalEquals(net, total) && !(tax !== null && decimalEquals(sumDecimals([net, tax]), total))) add('transaction', tx.transaction_id, 'TOTALS_MISMATCH', 'blocking', '/total_amount: line amounts do not match total.');
+      }
     }
     for (const key of Object.keys(tx.data).filter(k => k !== 'line_items')) {
       const pointer = pointerFor(key);

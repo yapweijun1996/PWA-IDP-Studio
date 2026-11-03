@@ -124,6 +124,21 @@ it('chunks long segments in order and offsets row evidence and profile pointers'
   expect(s.images.every(image => image.data === '')).toBe(true);
 });
 
+it('fills a header value that is empty in the first chunk from a later chunk, without replacing values already found', async () => {
+  const chunk = (page: number, fields: { key: string; value: string | null }[]) => JSON.stringify({ document_type: 'unknown', fields: fields.map(f => ({ ...f, page, bbox: [0, 0, 100, 100], confidence: 1 })), line_items: [] });
+  const count = MAX_EXTRACT_PAGES + 1;
+  const s = setup(count, [decisions(range(1, SEGMENT_WINDOW)), decisions(range(SEGMENT_WINDOW, count)),
+    chunk(1, [{ key: 'reference', value: 'ref-first' }, { key: 'total_amount', value: null }]),
+    chunk(count, [{ key: 'reference', value: 'ref-later' }, { key: 'total_amount', value: '7178.43' }])]);
+  const result = await runWindowedExtraction(s.opts);
+  const fields = result.results[0].output!.fields;
+  expect(fields.find(f => f.key === 'reference')).toMatchObject({ value: 'ref-first', page: 1 });
+  expect(fields.find(f => f.key === 'total_amount')).toMatchObject({ value: '7178.43', page: count });
+  expect(result.batch.transactions[0].data).toMatchObject({ reference: 'ref-first', total_amount: '7178.43' });
+  expect(result.batch.evidence.find(e => e.field_pointer === '/total_amount')!.sources[0].page_number).toBe(count);
+  expect(s.stats().calls).toBe(4);
+});
+
 it('expands statement rows after chunk merge and resumes without altering cached outputs', async () => {
   const count = MAX_EXTRACT_PAGES + 1;
   const rowOutput = (page: number) => JSON.stringify({ document_type: 'statement', fields: page === 1 ? [{ key: 'closing_balance', value: '20.00', page, bbox: [0, 0, 100, 100], confidence: 1 }] : [], line_items: [{ description: { value: `Entry page ${page}`, page, bbox: [100, 100, 200, 200], confidence: 1 }, amount: { value: '10.00', page, bbox: [100, 100, 200, 200], confidence: 1 }, balance: { value: page === 1 ? '10.00' : '20.00', page, bbox: [100, 100, 200, 200], confidence: 1 } }] });

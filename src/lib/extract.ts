@@ -28,6 +28,7 @@ Use the following JSON shape for submit_result (plain JSON text only if tools ar
 }
 Use these keys when present: ${AUTO_HEADER_KEYS.join(', ')}.
 Dates use YYYY-MM-DD; currency uses an ISO code.
+total_amount is the final payable total. When the document also prints an amount before tax and a tax amount (GST, VAT, sales tax), put them in subtotal_amount and tax_amount.
 For statements, preserve supplier, statement_date, period, opening_balance, closing_balance, currency and total_amount as header fields. Extract every entry in line_items with date, reference, description, debit, credit, balance and amount when present. Statement row cells use {value,page,bbox,confidence}, with the same evidence coordinates as header fields.
 Never guess: use null with low confidence when a value is not readable. Amounts and quantities are decimal strings with no thousands separators. Never set approval or claim page coverage.`;
 
