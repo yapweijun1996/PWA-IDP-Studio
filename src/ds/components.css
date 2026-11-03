@@ -92,19 +92,24 @@ main[tabindex="-1"]:focus { outline: none; }
 .ds-topbar-search { flex: 1; min-width: 0; }
 .ds-shell-body { display: flex; align-items: flex-start; }
 .ds-sidebar { flex-shrink: 0; display: flex; flex-direction: column; width: var(--sidebar-expanded); position: sticky; top: calc(var(--topbar-height) + env(safe-area-inset-top)); height: calc(100dvh - var(--topbar-height) - env(safe-area-inset-top)); padding: var(--space-2); padding-bottom: max(var(--space-2), env(safe-area-inset-bottom)); background: var(--sidebar); border-right: var(--line) solid var(--border); }
-@media (min-width: 760px) and (min-height: 561px) {
+@media (min-width: 760px) and (min-height: 601px) {
   .ds-topbar-hidden .ds-sidebar { top: env(safe-area-inset-top); height: calc(100dvh - env(safe-area-inset-top)); }
 }
 .ds-sidebar.ds-collapsed { width: var(--sidebar-collapsed); }
-.ds-sidebar > .ds-button { align-self: flex-end; width: var(--control-height); min-height: var(--control-height); padding: var(--space-2); }
-.ds-sidebar.ds-collapsed > .ds-button { align-self: center; }
+.ds-sidebar-header { height: calc(var(--space-8) + var(--space-2)); flex: none; display: flex; align-items: center; justify-content: flex-end; margin-bottom: var(--space-2); }
+.ds-sidebar-header .ds-button { width: var(--control-height); min-height: var(--control-height); padding: var(--space-2); }
+.ds-sidebar.ds-collapsed .ds-sidebar-header { justify-content: center; }
 .ds-sidebar nav { display: grid; gap: var(--space-1); }
 .ds-sidebar nav > .ds-tooltip-anchor { display: flex; }
-.ds-sidebar footer { margin-top: auto; overflow-wrap: anywhere; font-size: var(--font-sm); color: var(--muted); }
+.ds-sidebar footer { margin-top: auto; padding-top: var(--space-3); font-size: var(--font-sm); color: var(--muted); white-space: nowrap; }
+.ds-sidebar.ds-collapsed footer { display: flex; justify-content: center; }
+.ds-sidebar-version { display: inline-flex; align-items: center; justify-content: center; width: var(--control-height); height: var(--control-height); border-radius: var(--radius-md); }
 .ds-nav { display: flex; flex-wrap: nowrap; width: 100%; align-items: center; gap: var(--space-2); min-height: var(--control-height); padding: var(--space-2); border-radius: var(--radius-md); color: var(--text); text-decoration: none; }
 .ds-nav .ds-badge { margin-inline-start: auto; color: var(--muted); padding: 0 var(--space-1); }
+.ds-collapsed .ds-nav { position: relative; justify-content: center; }
+.ds-collapsed .ds-nav .ds-badge { position: absolute; top: 0; right: 0; max-width: var(--control-sm); overflow: hidden; text-overflow: ellipsis; font-size: var(--font-sm); }
 .ds-nav:hover { background: var(--hover); }
-.ds-nav.ds-active { background: var(--selected); outline: var(--line) solid var(--primary); font-weight: bold; }
+.ds-nav.ds-active { background: var(--selected); font-weight: bold; }
 .ds-nav[aria-disabled="true"] { color: var(--disabled); cursor: not-allowed; }
 .ds-workspace { flex: 1; min-width: 0; padding: var(--workspace-padding); padding-bottom: max(var(--workspace-padding), env(safe-area-inset-bottom)); }
 .ds-sheet { display: grid; gap: var(--space-5); }
@@ -162,11 +167,11 @@ main[tabindex="-1"]:focus { outline: none; }
   .ds-topbar-search:has(.ds-search) { order: 3; flex-basis: 100%; padding-bottom: var(--space-2); }
   .ds-topbar > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ds-input { font-size: var(--font-input); }
-  .ds-sidebar > .ds-button { width: var(--touch-target); min-width: var(--touch-target); min-height: var(--touch-target); }
+  .ds-sidebar-header .ds-button { width: var(--touch-target); min-width: var(--touch-target); min-height: var(--touch-target); }
   .ds-toast { left: var(--space-4); }
 }
-/* Too short for the sticky rail (its links need about 460px): let it scroll with the page so every link stays reachable. */
-@media (min-width: 760px) and (max-height: 560px) {
+/* Let the rail scroll with the page when the viewport is too short for its header, links and footer. */
+@media (min-width: 760px) and (max-height: 600px) {
   .ds-sidebar { position: static; height: auto; }
 }
 

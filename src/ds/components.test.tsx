@@ -27,6 +27,19 @@ describe('theme', () => {
   it('defaults to light and persists an explicit choice', () => { render(<ThemeProvider><ThemeControls /></ThemeProvider>); expect(document.documentElement.dataset.theme).toBe('light'); click(container.querySelector('button')!); expect(localStorage.getItem('idp-studio.theme')).toBe('dark'); act(() => { dark = false; mediaListeners.forEach(fn => fn()); }); expect(document.documentElement.dataset.theme).toBe('dark'); });
 });
 it('sidebar toggles aria-expanded and restores persisted rail state', () => { const items = [{ href: '#/', label: 'Home', icon: 'home' as const, active: true }]; render(<Sidebar items={items} />); const toggle = container.querySelector('button')!; expect(toggle.getAttribute('aria-expanded')).toBe('true'); click(toggle); expect(toggle.getAttribute('aria-expanded')).toBe('false'); expect(localStorage.getItem('idp-studio.sidebar')).toBe('collapsed'); render(<div />); render(<Sidebar items={items} />); expect(container.querySelector('button')!.getAttribute('aria-expanded')).toBe('false'); expect(container.querySelector('a')!.getAttribute('aria-current')).toBe('page'); });
+it('retains the review count and exposes version details in the collapsed rail', () => {
+  render(<Sidebar items={[{ href: '#/review', label: 'Review Queue', icon: 'audit-trail', count: 2 }]} footer={<>Version 0.1.0 · Build abc123</>} />);
+  expect(container.querySelector('footer')!.textContent).toContain('Version 0.1.0');
+  click(container.querySelector('[aria-label="Collapse sidebar"]')!);
+  const review = container.querySelector('[aria-label="Review Queue, 2"]')!;
+  expect(review.querySelector('.ds-badge')!.textContent).toBe('2');
+  expect(container.querySelector('footer')!.textContent).not.toContain('Version 0.1.0');
+  const version = container.querySelector<HTMLElement>('[aria-label="Version information"]')!;
+  act(() => version.focus());
+  const tooltip = container.querySelector('[role="tooltip"]')!;
+  expect(tooltip.textContent).toBe('Version 0.1.0 · Build abc123');
+  expect(version.getAttribute('aria-describedby')).toBe(tooltip.id);
+});
 it('AppShell skip link is first tabbable and focuses main without changing hash', () => {
   render(<AppShell items={[{ href: '#/', label: 'Home', icon: 'home' }]}><p>Content</p></AppShell>);
   const skip = container.querySelector<HTMLAnchorElement>('.ds-skip-link')!;

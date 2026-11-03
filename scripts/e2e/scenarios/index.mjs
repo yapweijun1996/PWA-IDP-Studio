@@ -701,6 +701,27 @@ export const scenarios = [
     await b.send('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
     await b.wait(`!![...document.querySelectorAll('[role="tooltip"]')].find(e=>e.textContent==='Home')`,'rail hover tooltip');
   } },
+  { name: 'sidebar-layout', async run({b}) {
+    for (const width of [320, 390, 768, 1024, 1440]) {
+      await b.send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});
+      if (width < 760) {
+        await b.wait(`!!document.querySelector('[aria-label="Toggle navigation"]')`,'mobile menu');
+        await click(b,'Toggle navigation');
+        await b.wait('!!document.querySelector("aside[role=dialog]")','mobile drawer');
+        assert.equal(await b.eval(`(()=>{const s=document.querySelector('aside');return s.getBoundingClientRect().right<=innerWidth && [...s.querySelectorAll('nav a')].every(a=>a.getBoundingClientRect().width>=40)})()`),true,`Drawer at ${width}`);
+        await click(b,'Close navigation');
+      } else {
+        await b.wait(`!!document.querySelector('[aria-label="Collapse sidebar"]')`,'desktop sidebar');
+        const expandedY=await b.eval(`document.querySelector('.ds-sidebar-header button').getBoundingClientRect().y`);
+        await click(b,'Collapse sidebar');
+        assert.equal(await b.eval(`(()=>{const s=document.querySelector('aside'),h=s.querySelector('.ds-sidebar-header'),n=s.querySelector('nav'),a=n.querySelector('a'),r=s.getBoundingClientRect(),i=a.querySelector('svg').getBoundingClientRect();return r.width>=64 && r.width<=72 && n.getBoundingClientRect().top-h.getBoundingClientRect().bottom>=8 && Math.abs((i.left+i.right)/2-(r.left+r.right)/2)<2 && !!s.querySelector('[aria-label="Version information"]') && document.documentElement.scrollWidth<=innerWidth})()`),true,`Collapsed alignment at ${width}`);
+        assert.equal(await b.eval(`document.querySelector('.ds-sidebar-header button').getBoundingClientRect().y`),expandedY,'Toggle position stays stable');
+        await b.eval(`document.querySelector('[aria-label="Version information"]').focus()`);
+        await b.wait(`!!document.querySelector('footer [role="tooltip"]')`,'version focus tooltip');
+        await click(b,'Expand sidebar');
+      }
+    }
+  } },
   { name: 'mobile', profile: 'phone', async run({b}) {
     await drop(b); const hash=await b.eval('location.hash');
     for(const [hashValue,heading] of [['#/','Upload Documents'],['#/documents','Documents'],['#/review','Review Queue'],[hash,'invoice.png'],['#/settings','Settings'],['#/design','Design system']]) { await route(b,hashValue,heading); await settled(b); await overflow(b); }

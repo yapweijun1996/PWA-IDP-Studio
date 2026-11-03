@@ -28,10 +28,10 @@ export function Sidebar({ id, items, footer, mobileOpen = false, onMobileClose, 
         role={mobile && mobileOpen ? 'dialog' : undefined}
         aria-modal={mobile && mobileOpen ? true : undefined}
         aria-label="Main navigation" tabIndex={-1} hidden={mobile && !mobileOpen}>
-        <IconButton icon={rail ? 'chevron-right' : 'chevron-left'}
+        <div className="ds-sidebar-header"><IconButton icon={rail ? 'chevron-right' : 'chevron-left'}
           label={mobile ? 'Close navigation' : rail ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={mobile ? mobileOpen : !collapsed} aria-controls={id}
-          onClick={() => mobile ? close() : toggle()} />
+          onClick={() => mobile ? close() : toggle()} /></div>
         <nav aria-label="Main">{items.map(item => {
           const reason = item.reason ?? 'Coming soon';
           const content = (
@@ -39,7 +39,7 @@ export function Sidebar({ id, items, footer, mobileOpen = false, onMobileClose, 
               href={item.disabled ? undefined : item.href}
               role={item.disabled ? 'link' : undefined}
               tabIndex={item.disabled ? 0 : undefined}
-              aria-label={rail ? item.label : undefined}
+              aria-label={rail ? `${item.label}${item.count !== undefined ? `, ${item.count}` : ''}` : undefined}
               aria-current={item.active ? 'page' : undefined}
               aria-disabled={item.disabled || undefined}
               aria-describedby={item.disabled ? `${reasonId}-${item.href}` : undefined}
@@ -49,14 +49,14 @@ export function Sidebar({ id, items, footer, mobileOpen = false, onMobileClose, 
               }}>
               <Icon name={item.icon} />
               {!rail && <span>{item.label}</span>}
-              {item.count !== undefined && !rail && <Badge>{item.count}</Badge>}
+              {item.count !== undefined && <Badge>{item.count}</Badge>}
               {item.disabled && <><span id={`${reasonId}-${item.href}`} className="ds-visually-hidden">{reason}</span>{!rail && <Badge>Coming soon</Badge>}</>}
             </a>
           );
           return <Tooltip key={item.href}
-            text={item.disabled ? `${item.label}: ${reason}` : item.label}>{content}</Tooltip>;
+            text={item.disabled ? `${item.label}: ${reason}` : `${item.label}${rail && item.count !== undefined ? ` (${item.count})` : ''}`}>{content}</Tooltip>;
         })}</nav>
-        {footer && <footer>{footer}</footer>}
+        {footer && <footer>{rail ? <Tooltip text={footer}><span className="ds-sidebar-version" tabIndex={0} role="img" aria-label="Version information"><Icon name="info" /></span></Tooltip> : footer}</footer>}
       </aside>
     </>
   );
