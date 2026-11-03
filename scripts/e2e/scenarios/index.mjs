@@ -382,6 +382,35 @@ export const scenarios = [
     assert.equal(output.line_items[0].stock_code, 'SKU-EDIT');
     assert.deepEqual(Object.keys(output.line_items[0]).sort(), ['row_no','stock_code','stock_description','quantity','uom','unit_price','line_subtotal'].sort());
   } },
+  { name: 'add-row', async run({b}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    await click(b, 'Add row'); await text(b, 'Add row 2 by hand');
+    await field(b, 'Amount', 'abc'); await click(b, 'Save row'); await text(b, 'Amount: enter a number'); // refused at the door, nothing stored
+    assert.equal((await batches(b)).find(v => v.source_files[0].filename === 'invoice.png').transactions[0].data.line_items.length, 1);
+    for (const [label, value] of [['Description', 'Extra item'], ['Quantity', '1'], ['Unit price', '5.00'], ['Amount', '5.00'], ['Reason for adding this row', 'Missing from the scan']]) await field(b, label, value);
+    await click(b, 'Save row'); await text(b, 'Entered by hand');
+    // The extra 5.00 no longer adds up to the 10.00 total: the checks ran again and approval is blocked until a person resolves it.
+    let batch = (await batches(b)).find(v => v.source_files[0].filename === 'invoice.png');
+    assert.equal(batch.transactions[0].data.line_items.length, 2);
+    assert.ok(batch.issues.some(i => i.rule_code === 'TOTALS_MISMATCH' && i.status === 'open'), 'totals rule ran again');
+    assert.equal(await buttonDisabled(b, 'Approve'), true);
+    assert.equal(batch.reviews.length, 1); assert.match(batch.reviews[0].reason, /^Row added by hand: row 2\. Missing from the scan$/);
+    await correct(b, 'total_amount', '15.00');
+    await b.wait(`[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Approve'&&!e.disabled)`, 'approval enabled once the total matches');
+    await reload(b); await text(b, 'Entered by hand'); // the marker is stored with the batch, not only on screen
+    assert.equal(await b.eval(`document.querySelectorAll('table tbody tr').length`), 2);
+    await click(b, 'Approve'); await text(b, 'Approved'); await click(b, 'JSON');
+    const clean = await b.eval('JSON.parse(document.querySelector("pre").textContent)');
+    assert.equal(clean.line_items.length, 2); assert.equal(clean.line_items[1].description, 'Extra item'); assert.equal(clean.line_items[1].amount, '5.00');
+    batch = await fullJSON(b); checkEnvelope(batch);
+    assert.deepEqual(batch.reviews.map(r => r.action), ['correct', 'correct', 'approve']);
+    assert.ok(batch.evidence.every(e => !e.field_pointer.startsWith('/line_items/1/')), 'a row typed by hand has no page evidence to claim');
+    // Adding a row to an approved document withdraws the approval.
+    await click(b, 'Fields'); await click(b, 'Add row'); await text(b, 'withdraws that approval');
+    await field(b, 'Description', 'Late item'); await field(b, 'Amount', '0'); await click(b, 'Save row');
+    await b.wait(`document.querySelectorAll('table tbody tr').length === 3`, 'third row shown');
+    assert.notEqual((await batches(b)).find(v => v.source_files[0].filename === 'invoice.png').transactions[0].status, 'approved');
+  } },
   { name: 'customize-fields', async run({b,mocks}) {
     await drop(b); await text(b, 'INV-E2E-001');
     const original = (await batches(b)).find(v => v.source_files[0].filename === 'invoice.png');
