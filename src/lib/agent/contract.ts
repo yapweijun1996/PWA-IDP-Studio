@@ -13,6 +13,12 @@ export interface ProfileField {
   label: string;
   type: FieldType;
   required?: boolean;
+  /**
+   * Which block of the document a header field belongs to: the document info at the top or the footer totals at the bottom.
+   * Omitted means the default for its key (`defaultSection`). Display and export only; the AI is not told, and the stored batch
+   * does not change. Row columns are always Row Data and never carry it.
+   */
+  section?: 'info' | 'footer';
 }
 
 /** What a user wants extracted in "Targeted" mode. */

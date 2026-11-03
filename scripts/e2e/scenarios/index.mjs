@@ -382,6 +382,46 @@ export const scenarios = [
     assert.equal(output.line_items[0].stock_code, 'SKU-EDIT');
     assert.deepEqual(Object.keys(output.line_items[0]).sort(), ['row_no','stock_code','stock_description','quantity','uom','unit_price','line_subtotal'].sort());
   } },
+  { name: 'sections', async run({b}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    const sections = () => b.eval(`[...document.querySelectorAll('main section[aria-label]')].filter(s => ['Document info','Row data','Footer'].includes(s.getAttribute('aria-label'))).map(s => ({ name: s.getAttribute('aria-label'), text: s.innerText }))`);
+    let blocks = await sections();
+    assert.deepEqual(blocks.map(s => s.name), ['Document info', 'Row data', 'Footer'], 'document info, then rows, then footer');
+    const [info, rows, footer] = blocks;
+    assert.ok(info.text.includes('Supplier name') && info.text.includes('Invoice no') && !info.text.includes('Total amount'));
+    assert.ok(footer.text.includes('Total amount') && !footer.text.includes('Supplier name'));
+    assert.ok(rows.text.includes('E2E service'));
+    assert.ok(footer.text.includes('Rows add up to 10.00') && footer.text.includes('Matches'), 'the footer checks the rows against the grand total');
+    // A footer line is edited like any field, and the check follows it.
+    await correct(b, 'total_amount', '99.00');
+    await b.wait(`[...document.querySelectorAll('main section[aria-label="Footer"]')].some(s => s.innerText.includes('Does not match'))`, 'mismatch shown in the footer');
+    assert.equal(await buttonDisabled(b, 'Approve'), true);
+    await correct(b, 'total_amount', '10.00');
+    await b.wait(`[...document.querySelectorAll('main section[aria-label="Footer"]')].some(s => s.innerText.includes('Matches'))`, 'match shown again');
+    // The same data grouped, next to the flat JSON.
+    await click(b, 'JSON'); await radio(b, 'JSON format', 'grouped');
+    const grouped = await b.eval('JSON.parse(document.querySelector("pre").textContent)');
+    assert.deepEqual(Object.keys(grouped), ['document_type', 'document', 'rows', 'footer']);
+    assert.equal(grouped.document.supplier_name, 'E2E Supplier'); assert.deepEqual(Object.keys(grouped.footer), ['total_amount']); assert.equal(grouped.footer.total_amount, '10.00');
+    assert.equal(grouped.rows.length, 1); assert.equal(grouped.rows[0].description, 'E2E service');
+    await radio(b, 'JSON format', 'clean');
+    const flat = await b.eval('JSON.parse(document.querySelector("pre").textContent)');
+    assert.deepEqual(flat.line_items, grouped.rows); assert.equal(flat.total_amount, grouped.footer.total_amount); // the flat contract is unchanged
+    // A template can put a field in the footer; the choice is saved and survives a reload.
+    await route(b, '#/templates', 'Templates');
+    await click(b, 'Create profile'); await field(b, 'Profile name', 'Sectioned');
+    await click(b, 'Add field'); await field(b, 'Header fields 1 label', 'Handling charge');
+    await click(b, 'Add field'); await field(b, 'Header fields 2 label', 'Shipping Fee');
+    const sectionValue = label => b.eval(`[...document.querySelectorAll('label')].find(e => e.textContent === ${js(label)}).control.value`);
+    assert.equal(await sectionValue('Header fields 1 section'), 'info', 'no name says footer, so it starts in the info');
+    assert.equal(await sectionValue('Header fields 2 section'), 'footer', 'a charge by name starts in the footer');
+    await b.eval(`(() => { const s = [...document.querySelectorAll('label')].find(e => e.textContent === 'Header fields 1 section').control; Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'footer'); s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await click(b, 'Save profile'); await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile saved');
+    await reload(b); await route(b, '#/templates', 'Templates');
+    const stored = await b.eval(`JSON.parse(localStorage.getItem('idp-studio.profiles.v1')).find(p => p.name === 'Sectioned').fields.map(f => [f.key, f.section ?? null])`);
+    assert.deepEqual(stored, [['handling_charge', 'footer'], ['shipping_fee', null]]);
+    assert.equal(await b.eval(`[...document.querySelectorAll('main li')].filter(li => li.innerText.includes('Footer')).length`) >= 2, true, 'both footer fields are marked in the list');
+  } },
   { name: 'add-row', async run({b}) {
     await drop(b); await text(b, 'INV-E2E-001');
     await click(b, 'Add row'); await text(b, 'Add row 2 by hand');

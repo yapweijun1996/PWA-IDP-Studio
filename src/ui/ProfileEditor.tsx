@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge, Button, Card, Dialog, Field, Input, Notice } from '../ds';
+import { defaultSection } from '../lib/sections';
 import { exportProfiles, loadMode, loadProfiles, parseProfileImport, saveMode, saveProfiles, validateProfile } from '../lib/profiles';
 import type { ExtractionProfile } from '../lib/agent/contract';
 import { ProfileFieldsForm } from './ProfileFieldsForm';
@@ -32,7 +33,7 @@ export function ProfileEditor({ advanced = false }: { advanced?: boolean } = {})
     }
     persist(next); setPending([]); setImported(items.length);
   };
-  const fields = (profile: ExtractionProfile, section: 'fields' | 'rowFields', title: string) => <section aria-label={`${profile.name} ${title}`}><h4>{title}</h4>{profile[section].length ? <ul>{profile[section].map(f => <li key={f.key}>{f.label} {advanced && <>(<code>{f.key}</code>) </>}<Badge>{f.type}</Badge> {f.required && <strong>Required *</strong>}</li>)}</ul> : <p className="ds-muted">None</p>}</section>;
+  const fields = (profile: ExtractionProfile, section: 'fields' | 'rowFields', title: string) => <section aria-label={`${profile.name} ${title}`}><h4>{title}</h4>{profile[section].length ? <ul>{profile[section].map(f => <li key={f.key}>{f.label} {advanced && <>(<code>{f.key}</code>) </>}<Badge>{f.type}</Badge> {section === 'fields' && (f.section ?? defaultSection(f.key, f.type)) === 'footer' && <Badge tone="info">Footer</Badge>} {f.required && <strong>Required *</strong>}</li>)}</ul> : <p className="ds-muted">None</p>}</section>;
   const begin = (profile?: ExtractionProfile) => { setErrors([]); setLocked(new Set(profile ? [...profile.fields, ...profile.rowFields].map(f => f.key) : [])); setDraft(profile ? structuredClone(profile) : { id: crypto.randomUUID(), name: '', fields: [], rowFields: [] }); };
   const persist = (next: ExtractionProfile[]) => { saveProfiles(next); setProfiles(loadProfiles()); };
   return <Card><h2>Extraction profiles</h2><div className="ds-row"><Button onClick={() => begin()}>Create profile</Button><Button disabled={!profiles.some(p => !p.builtin)} onClick={() => download(profiles.filter(p => !p.builtin))}>Export all custom profiles</Button></div>

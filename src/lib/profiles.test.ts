@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { BUILTIN_PROFILES } from './agent/contract';
-import { clearProfiles, keyFromLabel, loadBatchMode, loadMode, loadProfiles, saveBatchMode, saveMode, saveProfiles, validateProfile } from './profiles';
+import { BUILTIN_PROFILES, type ProfileField } from './agent/contract';
+import { clearProfiles, exportProfiles, keyFromLabel, loadBatchMode, loadMode, loadProfiles, parseProfileImport, saveBatchMode, saveMode, saveProfiles, validateProfile } from './profiles';
 beforeEach(() => { clearProfiles(); localStorage.clear(); });
 it.each([['Batch No', 'batch_no'], ['  Unit   Price (SGD) ', 'unit_price_sgd'], ['Qty/UOM', 'qty_uom'], ['Café Ünit', 'cafe_unit'], ['2nd Qty', 'field_2nd_qty'], ['批号', 'field'], ['', 'field'], ['---', 'field']])('derives the key for the label %j as %s', (label, key) => {
   expect(keyFromLabel(label)).toBe(key);
@@ -50,4 +50,22 @@ it('handles malformed and blocked browser storage', () => {
   const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
   saveMode({ kind: 'targeted', profileId: 'doc-info' }); expect(loadMode()).toEqual({ kind: 'targeted', profileId: 'doc-info' });
   spy.mockRestore();
+});
+it('accepts a header field in the info or footer block, rejects anything else, and keeps row columns out of it', () => {
+  const base = { id: 'p', name: 'P', rowFields: [{ key: 'qty', label: 'Qty', type: 'quantity' as const }] };
+  const fields = (section?: 'info' | 'footer'): ProfileField[] => [{ key: 'shipping_fee', label: 'Shipping fee', type: 'amount', ...(section === undefined ? {} : { section }) }];
+  expect(validateProfile({ ...base, fields: fields() })).toEqual([]);
+  expect(validateProfile({ ...base, fields: fields('footer') })).toEqual([]);
+  expect(validateProfile({ ...base, fields: fields('info') })).toEqual([]);
+  expect(validateProfile({ ...base, fields: fields('rows' as 'footer') })).toEqual(['Unknown section for shipping_fee.']);
+  expect(validateProfile({ ...base, fields: fields(), rowFields: [{ key: 'qty', label: 'Qty', type: 'quantity', section: 'footer' }] })).toEqual(['Row column qty cannot have a section; rows are always Row Data.']);
+});
+it('exports and imports a footer choice, and drops nothing else from the field', () => {
+  const profile = { id: 'p', name: 'With footer', rowFields: [], fields: [{ key: 'handling', label: 'Handling', type: 'amount' as const, required: true, section: 'footer' as const }, { key: 'po_no', label: 'PO no', type: 'code' as const }] };
+  const imported = parseProfileImport(exportProfiles([profile]));
+  expect(imported.errors).toEqual([]);
+  expect(imported.profiles[0].fields).toEqual(profile.fields);
+  expect(parseProfileImport(JSON.stringify({ idp_studio_profiles: 1, profiles: [{ ...profile, fields: [{ ...profile.fields[0], section: 'middle' }] }] })).errors).toEqual(['Profile 1: Unknown section for handling.']);
+  saveProfiles([{ ...profile, builtin: false }]);
+  expect(loadProfiles().find(p => p.id === 'p')?.fields[0].section).toBe('footer'); // survives a save and load
 });
