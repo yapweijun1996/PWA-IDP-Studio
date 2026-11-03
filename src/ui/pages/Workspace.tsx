@@ -3,6 +3,7 @@ import { templateFromTransaction } from '../../lib/template';
 import type { AgentStep, ExtractionProfile } from '../../lib/agent/contract';
 import { CustomizeFields } from '../CustomizeFields';
 import { AddRow, rowColumns } from '../AddRow';
+import { TemplateLibraryBar } from '../TemplateLibraryBar';
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { getFileByFileId, putBatch } from '../../lib/db';
 import { renderFile, type RenderedPage } from '../../lib/pdf';
@@ -117,6 +118,7 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextr
     {!busy && onRetry && doc.pages.some(p => p.status !== 'classified') && <Button onClick={onRetry}>Retry extraction</Button>}
     {error && <Notice tone="error">{error}</Notice>}{copied && <Notice>JSON copied.</Notice>}
     {locked && <Notice tone="info">Reading this file again with your new template. This result is locked and stays unchanged until the new one finishes; cancel the extraction to keep working on it.</Notice>}
+    {onReextract && !profile && <TemplateLibraryBar key={tx.transaction_id} tx={tx} documentType={view.documentType} reviewCount={doc.reviews.length} documentCount={doc.documents.length} disabled={saving || locked || !!busy} onExtract={onReextract} />}
     {addingRow && <AddRow columns={rowColumns(tx, profile)} label={label} rowNumber={view.lineItems.length + 1} approved={tx.status === 'approved'} onClose={() => setAddingRow(false)} onAdd={addRowByHand} />}
     {customizing && onReextract && <CustomizeFields start={templateFromTransaction(tx, view.documentType, uniqueProfileName(profile ? `${profile.name} (edited)` : 'My template', loadProfiles()), profile)} reviewCount={doc.reviews.length} documentCount={doc.documents.length} onClose={() => setCustomizing(false)} onExtract={onReextract} />}
     {doc.transactions.length > 1 && <div className="ds-sheet"><Field label="Search transactions"><Input value={transactionSearch} onChange={e => setTransactionSearch(e.target.value)} /></Field><Field label="Transaction"><Select value={tx.transaction_id} onChange={e => { setTxId(e.target.value); setSelected(undefined); setEditing(undefined); setDetails(undefined); setAddingColumn(false); }}>{doc.documents.map(document => <optgroup key={document.document_id} label={`${document.document_id} · ${readable(document.document_type)}`}>{doc.transactions.filter(t => t.document_id === document.document_id && (t.transaction_id === tx.transaction_id || `${t.transaction_id} ${t.transaction_type} ${JSON.stringify(t.data)}`.toLowerCase().includes(transactionSearch.toLowerCase()))).map(t => <option key={t.transaction_id} value={t.transaction_id}>{t.transaction_id} · {readable(t.transaction_type)}</option>)}</optgroup>)}</Select></Field></div>}

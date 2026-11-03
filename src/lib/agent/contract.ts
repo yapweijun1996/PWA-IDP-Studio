@@ -4,6 +4,8 @@
  * both sides compile against it.
  */
 
+import type { DocumentType } from '../types';
+
 export type FieldType = 'text' | 'date' | 'amount' | 'quantity' | 'integer' | 'code';
 
 export interface ProfileField {
@@ -22,6 +24,16 @@ export interface ProfileField {
 }
 
 /** What a user wants extracted in "Targeted" mode. */
+/**
+ * When a saved template fits a document: a supplier or customer name and/or a document type. Used only to suggest the template
+ * after a document has been read; it never selects a template by itself and is not sent to the AI.
+ */
+export interface TemplateMatch {
+  /** supplier or customer name as printed; compared ignoring case, punctuation and company words (Pte Ltd, Sdn Bhd …) */
+  party?: string;
+  documentType?: DocumentType;
+}
+
 export interface ExtractionProfile {
   id: string;
   name: string;
@@ -31,6 +43,8 @@ export interface ExtractionProfile {
   rowFields: ProfileField[];
   /** Build each repeating row as an independently reviewed transaction. */
   rowsAsTransactions?: boolean;
+  /** Optional: which documents this template should be suggested for. */
+  match?: TemplateMatch;
   builtin?: boolean;
 }
 

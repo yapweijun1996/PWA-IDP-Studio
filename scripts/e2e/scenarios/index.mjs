@@ -457,6 +457,33 @@ export const scenarios = [
     await b.wait(`document.querySelectorAll('table tbody tr').length === 3`, 'third row shown');
     assert.notEqual((await batches(b)).find(v => v.source_files[0].filename === 'invoice.png').transactions[0].status, 'approved');
   } },
+  { name: 'template-library', async run({b,mocks}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    await click(b, 'Save as template');
+    await text(b, 'It will be suggested for the next purchase invoice from E2E Supplier.');
+    const saved = await b.eval(`JSON.parse(localStorage.getItem('idp-studio.profiles.v1')).map(p => ({ id: p.id, name: p.name, match: p.match }))`);
+    assert.equal(saved.length, 1); assert.equal(saved[0].name, 'E2E Supplier purchase invoice');
+    assert.deepEqual(saved[0].match, { party: 'E2E Supplier', documentType: 'purchase_invoice' });
+    // The next document from the same supplier is read without a template (Auto) and gets the saved one suggested.
+    await home(b); await drop(b, 'invoice2.png'); await text(b, 'You have a template for documents from E2E Supplier');
+    const before = (await batches(b)).find(v => v.source_files[0].filename === 'invoice2.png');
+    assert.equal(await b.eval(`[...document.querySelectorAll('button')].some(e => e.textContent.trim() === 'Read again with “E2E Supplier purchase invoice”')`), true);
+    // Nothing is read or replaced until the question is answered.
+    const requestsBefore = posts(mocks).length;
+    await click(b, 'Read again with “E2E Supplier purchase invoice”'); await text(b, 'Extract this document again?');
+    assert.equal(posts(mocks).length, requestsBefore, 'asking sends nothing to the AI');
+    mocks.setVariant('saved-template'); await click(b, 'Extract again');
+    await b.wait(`location.hash.startsWith('#/doc/') && !location.hash.includes(${js(before.batch.batch_id)})`, 'moved to the result read with the template');
+    await text(b, 'INV-E2E-001');
+    const after = (await batches(b)).filter(v => v.source_files[0].filename === 'invoice2.png');
+    assert.equal(after.length, 1, 'replaced, not duplicated'); assert.notEqual(after[0].batch.batch_id, before.batch.batch_id);
+    const snapshot = await b.eval(`JSON.parse(localStorage.getItem('idp-studio.batch-modes.v1'))[${js(after[0].batch.batch_id)}].mode`);
+    assert.deepEqual(snapshot, { kind: 'targeted', profileId: saved[0].id }, 'read with the saved template itself');
+    assert.equal(await b.eval(`[...document.querySelectorAll('button')].some(e => e.textContent.trim() === 'Save as template')`), false, 'a document read with a template is not offered to be saved again');
+    // The template says who it is for, and the Templates page shows it.
+    await route(b, '#/templates', 'Templates');
+    await text(b, 'Suggested for documents from E2E Supplier, purchase invoice.');
+  } },
   { name: 'customize-fields', async run({b,mocks}) {
     await drop(b); await text(b, 'INV-E2E-001');
     const original = (await batches(b)).find(v => v.source_files[0].filename === 'invoice.png');
