@@ -7,9 +7,9 @@ import { Tooltip } from './Tooltip';
 import { useModalFocus } from './useModalFocus';
 import { useMobile } from '../useMobile';
 export interface SidebarItem { href: string; label: string; icon: IconName; active?: boolean; disabled?: boolean; reason?: string; count?: number }
-export interface SidebarProps { items: readonly SidebarItem[]; footer?: ReactNode; mobileOpen?: boolean; onMobileClose?: () => void; collapsed?: boolean; onToggle?: () => void; onCollapsedChange?: (collapsed: boolean) => void }
+export interface SidebarProps { id?: string; items: readonly SidebarItem[]; footer?: ReactNode; mobileOpen?: boolean; onMobileClose?: () => void; collapsed?: boolean; onToggle?: () => void; onCollapsedChange?: (collapsed: boolean) => void }
 /** Desktop rail persists independently of routes; phone navigation is a modal drawer. */
-export function Sidebar({ items, footer, mobileOpen = false, onMobileClose, collapsed: controlledCollapsed, onToggle, onCollapsedChange }: SidebarProps) {
+export function Sidebar({ id, items, footer, mobileOpen = false, onMobileClose, collapsed: controlledCollapsed, onToggle, onCollapsedChange }: SidebarProps) {
   const [localCollapsed, setLocalCollapsed] = useState(() => { try { return localStorage.getItem('idp-studio.sidebar') === 'collapsed'; } catch { return false; } });
   const collapsed = controlledCollapsed ?? localCollapsed;
   const toggle = () => { if (onToggle) onToggle(); else setLocalCollapsed(!collapsed); };
@@ -23,14 +23,14 @@ export function Sidebar({ items, footer, mobileOpen = false, onMobileClose, coll
   return (
     <>
       {mobile && mobileOpen && <div className="ds-sidebar-backdrop" onClick={close} aria-hidden="true" />}
-      <aside ref={ref}
+      <aside ref={ref} id={id}
         className={`ds-sidebar ${rail ? 'ds-collapsed' : ''} ${mobileOpen ? 'ds-drawer-open' : ''}`}
         role={mobile && mobileOpen ? 'dialog' : undefined}
         aria-modal={mobile && mobileOpen ? true : undefined}
         aria-label="Main navigation" tabIndex={-1} hidden={mobile && !mobileOpen}>
         <IconButton icon={rail ? 'chevron-right' : 'chevron-left'}
           label={mobile ? 'Close navigation' : rail ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={mobile ? mobileOpen : !collapsed}
+          aria-expanded={mobile ? mobileOpen : !collapsed} aria-controls={id}
           onClick={() => mobile ? close() : toggle()} />
         <nav aria-label="Main">{items.map(item => {
           const reason = item.reason ?? 'Coming soon';

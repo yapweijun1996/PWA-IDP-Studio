@@ -27,6 +27,25 @@ describe('theme', () => {
   it('defaults to light and persists an explicit choice', () => { render(<ThemeProvider><ThemeControls /></ThemeProvider>); expect(document.documentElement.dataset.theme).toBe('light'); click(container.querySelector('button')!); expect(localStorage.getItem('idp-studio.theme')).toBe('dark'); act(() => { dark = false; mediaListeners.forEach(fn => fn()); }); expect(document.documentElement.dataset.theme).toBe('dark'); });
 });
 it('sidebar toggles aria-expanded and restores persisted rail state', () => { const items = [{ href: '#/', label: 'Home', icon: 'home' as const, active: true }]; render(<Sidebar items={items} />); const toggle = container.querySelector('button')!; expect(toggle.getAttribute('aria-expanded')).toBe('true'); click(toggle); expect(toggle.getAttribute('aria-expanded')).toBe('false'); expect(localStorage.getItem('idp-studio.sidebar')).toBe('collapsed'); render(<div />); render(<Sidebar items={items} />); expect(container.querySelector('button')!.getAttribute('aria-expanded')).toBe('false'); expect(container.querySelector('a')!.getAttribute('aria-current')).toBe('page'); });
+it('AppShell skip link is first tabbable and focuses main without changing hash', () => {
+  render(<AppShell items={[{ href: '#/', label: 'Home', icon: 'home' }]}><p>Content</p></AppShell>);
+  const skip = container.querySelector<HTMLAnchorElement>('.ds-skip-link')!;
+  const tabbable = Array.from(container.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)')).find(element => element.tabIndex >= 0)!;
+  expect(tabbable).toBe(skip);
+  const hash = location.hash;
+  click(skip);
+  expect(location.hash).toBe(hash);
+  expect(document.activeElement).toBe(container.querySelector('main#main-content'));
+});
+it('AppShell exposes one desktop sidebar toggle and all aria-controls targets resolve', () => {
+  render(<AppShell items={[{ href: '#/', label: 'Home', icon: 'home' }]}><p>Content</p></AppShell>);
+  const toggles = Array.from(container.querySelectorAll<HTMLButtonElement>('button[aria-label]')).filter(button => /sidebar|navigation/i.test(button.getAttribute('aria-label')!));
+  expect(toggles).toHaveLength(1);
+  expect(toggles[0].getAttribute('aria-label')).toMatch(/sidebar/i);
+  for (const control of container.querySelectorAll<HTMLElement>('[aria-controls]')) {
+    expect(document.getElementById(control.getAttribute('aria-controls')!)).not.toBeNull();
+  }
+});
 const rows = [{ id: 'b', name: 'Beta' }, { id: 'a', name: 'Alpha' }];
 const columns = [{ key: 'name', label: 'Name', render: (row: typeof rows[number]) => row.name, sortValue: (row: typeof rows[number]) => row.name }];
 it('table sorts with aria-sort and activates rows with pointer and Enter', () => { const select = vi.fn(); render(<DataTable caption="Files" rows={rows} columns={columns} rowKey={row => row.id} onRowClick={select} selectedKey="a" />); click(container.querySelector('th button')!); expect(container.querySelector('th')!.getAttribute('aria-sort')).toBe('ascending'); expect(container.querySelector('tbody td')!.textContent).toBe('Alpha'); const row = container.querySelector('tbody tr')!; click(row); act(() => { row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }); expect(select.mock.calls).toEqual([[rows[1]], [rows[1]]]); expect(row.getAttribute('aria-selected')).toBe('true'); click(container.querySelector('th button')!); expect(container.querySelector('th')!.getAttribute('aria-sort')).toBe('descending'); expect(container.querySelector('tbody td')!.textContent).toBe('Beta'); });
@@ -45,8 +64,8 @@ it('mobile drawer traps focus and restores the topbar trigger after Escape', () 
     removeEventListener: (_: string, listener: () => void) => listeners.delete(listener),
   }));
   render(<AppShell items={[{ href: '#/', label: 'Home', icon: 'home' }]}><p>Content</p></AppShell>);
-  const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Toggle navigation"]')!;
   act(() => { mobile = true; listeners.forEach(listener => listener()); });
+  const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Toggle navigation"]')!;
   expect(trigger.getAttribute('aria-expanded')).toBe('false');
   trigger.focus();
   click(trigger);
@@ -58,6 +77,8 @@ it('mobile drawer traps focus and restores the topbar trigger after Escape', () 
   expect(drawer.hidden).toBe(true);
   expect(document.activeElement).toBe(trigger);
   expect(document.body.style.overflow).not.toBe('hidden');
+  expect(trigger.getAttribute('aria-controls')).toBe(drawer.id);
+  expect(container.querySelector('[aria-label="Close navigation"]')?.getAttribute('aria-controls')).toBe(drawer.id);
 });
 
 it('tooltip description is attached to the focused trigger', () => {

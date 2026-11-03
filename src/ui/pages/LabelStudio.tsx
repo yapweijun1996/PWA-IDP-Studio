@@ -6,6 +6,7 @@ import { getFileByFileId, putBatch } from '../../lib/db';
 import { createPageSource, releasePageImages } from '../../lib/agent/pageSource';
 import { Badge, Button, Card, Checkbox, Dialog, EmptyState, Field, Input, Notice, PageHeader, Select, Spinner } from '../../ds';
 import { readable, workspaceHref } from '../nav';
+import { formatPageNumbers } from '../pageRanges';
 import { REQUIRED_FIELDS } from '../../lib/standards';
 import { blockingIssues } from '../../contract/rules';
 
@@ -20,13 +21,7 @@ function pageRanges(pages: Pick<Page, 'file_id' | 'page_number'>[]): string {
   const files = new Map<string, number[]>();
   for (const p of pages) files.set(p.file_id, [...(files.get(p.file_id) ?? []), p.page_number]);
   return [...files].map(([file, numbers]) => {
-    const sorted = [...new Set(numbers)].sort((a, b) => a - b), ranges: string[] = [];
-    for (let i = 0; i < sorted.length; i++) {
-      const start = sorted[i];
-      while (i + 1 < sorted.length && sorted[i + 1] === sorted[i] + 1) i++;
-      ranges.push(start === sorted[i] ? String(start) : `${start}–${sorted[i]}`);
-    }
-    return `${file}: ${ranges.join(', ')}`;
+    return `${file}: ${formatPageNumbers(numbers, 2)}`;
   }).join('; ');
 }
 /** Only visible cards own a source or rendered image; late renders are released on exit. */
