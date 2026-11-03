@@ -25,11 +25,11 @@ export function Home({ docs, settings, busy, onFiles, steps = [], search = '', l
     <p id={descriptionId} className="ds-muted">{modeDescription}</p>
     {profile && <Card><Field label="Extraction profile"><Select value={profile.id} onChange={e => { const next = { kind: 'targeted' as const, profileId: e.target.value }; setMode(next); saveMode(next); }}>{profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field><p>{profile.fields.map(f => f.label).join(', ')}{profile.rowFields.length ? ` + ${profile.rowFields.length} row columns` : ''}</p><a href="#/templates">Edit profiles</a></Card>}
     <p className="ds-muted">Pages are sent to <strong>{providerInfo(settings.provider).recipient}</strong>. <a href="#/settings">Change provider</a></p>
-    <Dropzone multiple accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" label="Drag and drop documents here" hint={`PDF, PNG, JPG or WebP, up to ${settings.maxPages} pages per file`} rejectionHint="TIFF is not supported." onFiles={files => onFiles(files, profile)} />
+    <Dropzone multiple accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" hint={`PDF, PNG, JPG or WebP, up to ${settings.maxPages} pages per file`} rejectionHint="TIFF is not supported." onFiles={files => onFiles(files, profile)} />
     {busy && <Progress label={busy} />}
     {busy && <ul role="status" aria-live="polite" aria-label="Agent activity">{steps.map((step, i) => <li key={i}>{step.summary}</li>)}</ul>}
     {docs.filter(b => b.pages.some(p => p.status !== 'classified') || b.batch.status === 'failed').map(b => <UnprocessedUploadCard key={b.batch.batch_id} batch={b} busy={busy} onRetry={onRetry} onDeleted={onDeleted} />)}
     <div className="ds-grid ds-stat-grid"><StatCard icon="document" label="Pages processed" value={summary.pages} caption="Physical pages in uploaded batches" /><StatCard icon="collection" label="Documents detected" value={summary.documents} /><StatCard icon="ledger" label="Transactions extracted" value={summary.transactions} /></div>
-    <Card><div className="ds-row"><h2>Recent uploads</h2><a href="#/documents">View all</a></div><BatchTable docs={docs} search={search} recent loading={loading} onDeleted={onDeleted} /></Card>
+    <Card><div className="ds-row ds-row-between"><h2>Recent uploads</h2><a href="#/documents">View all</a></div><BatchTable docs={docs} search={search} recent loading={loading} onDeleted={onDeleted} /></Card>
   </section>;
 }

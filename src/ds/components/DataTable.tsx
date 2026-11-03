@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
 import { Notice } from './Notice';
@@ -21,12 +21,13 @@ export interface DataTableProps<T> {
   loading?: boolean;
   error?: string;
   emptyMessage?: string;
+  captionHidden?: boolean;
   sort?: { key: string; direction: 'ascending' | 'descending' };
   onSortChange?: (sort: { key: string; direction: 'ascending' | 'descending' }) => void;
 }
 /** Client-side stable sort; interactive row descendants retain their own activation. */
 export function DataTable<T>({
-  caption, columns, rows, rowKey, onRowClick, selectedKey,
+  caption, columns, rows, rowKey, onRowClick, selectedKey, captionHidden = false,
   density = 'normal', loading, error, emptyMessage = 'No records', sort: controlledSort, onSortChange,
 }: DataTableProps<T>) {
   const [localSort, setLocalSort] = useState<{ key: string; direction: 'ascending' | 'descending' }>();
@@ -41,14 +42,31 @@ export function DataTable<T>({
       ? x - y : String(x).localeCompare(String(y));
     return order * (sort?.direction === 'descending' ? -1 : 1);
   }) : rows;
+  const scrollRegion = useRef<HTMLDivElement>(null);
+  const hintId = useId();
+  const [hasOverflow, setHasOverflow] = useState(false);
+  useLayoutEffect(() => {
+    const region = scrollRegion.current;
+    if (!region) return;
+    const measure = () => setHasOverflow(region.scrollWidth > region.clientWidth);
+    measure();
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measure);
+      observer.observe(region);
+      return () => observer.disconnect();
+    }
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [rows, columns, density, loading]);
 
   return (
-    <div className="ds-table-container" role="region" aria-label={caption}
-      tabIndex={0} aria-busy={loading || undefined}>
+    <>
+    <div ref={scrollRegion} className="ds-table-container" role="region" aria-label={caption}
+      tabIndex={0} aria-busy={loading || undefined} aria-describedby={hasOverflow ? hintId : undefined}>
       {loading ? <><Spinner label={`Loading ${caption}`} /><div className="ds-table-skeleton" aria-hidden="true">{[0, 1, 2].map(row => <span key={row} />)}</div></>
         : error ? <Notice tone="error">{error}</Notice>
           : <><table className={`ds-table ds-density-${density}`}>
-            <caption>{caption}</caption>
+            <caption className={captionHidden ? 'ds-visually-hidden' : undefined}>{caption}</caption>
             <thead><tr>{columns.map(item => (
               <th key={item.key} scope="col"
                 aria-sort={item.sortValue ? sort?.key === item.key ? sort.direction : 'none' : undefined}>
@@ -83,5 +101,7 @@ export function DataTable<T>({
             ))}</tbody>
           </table>{!sorted.length && <EmptyState title={emptyMessage} />}</>}
     </div>
+    {hasOverflow && <span id={hintId} className="ds-muted">Scroll sideways to see more columns</span>}
+    </>
   );
 }

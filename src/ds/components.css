@@ -18,6 +18,7 @@ a { color: var(--primary); }
 .ds-size-sm { min-height: var(--control-sm); font-size: var(--font-sm); }
 .ds-size-lg { min-height: var(--control-lg); }
 .ds-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.ds-row-between { justify-content: space-between; }
 .ds-muted { color: var(--muted); }
 .ds-badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border: var(--line) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text); font-size: var(--font-sm); white-space: nowrap; }
 .ds-tone-neutral { color: var(--text); }

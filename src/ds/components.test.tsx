@@ -50,6 +50,38 @@ const rows = [{ id: 'b', name: 'Beta' }, { id: 'a', name: 'Alpha' }];
 const columns = [{ key: 'name', label: 'Name', render: (row: typeof rows[number]) => row.name, sortValue: (row: typeof rows[number]) => row.name }];
 it('table sorts with aria-sort and activates rows with pointer and Enter', () => { const select = vi.fn(); render(<DataTable caption="Files" rows={rows} columns={columns} rowKey={row => row.id} onRowClick={select} selectedKey="a" />); click(container.querySelector('th button')!); expect(container.querySelector('th')!.getAttribute('aria-sort')).toBe('ascending'); expect(container.querySelector('tbody td')!.textContent).toBe('Alpha'); const row = container.querySelector('tbody tr')!; click(row); act(() => { row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }); expect(select.mock.calls).toEqual([[rows[1]], [rows[1]]]); expect(row.getAttribute('aria-selected')).toBe('true'); click(container.querySelector('th button')!); expect(container.querySelector('th')!.getAttribute('aria-sort')).toBe('descending'); expect(container.querySelector('tbody td')!.textContent).toBe('Beta'); });
 it('table exposes empty loading and error states', () => { render(<DataTable caption="Files" rows={[]} columns={columns} rowKey={row => row.id} />); expect(container.textContent).toContain('No records'); render(<DataTable caption="Files" rows={[]} columns={columns} rowKey={row => row.id} loading />); expect(container.querySelector('[role="status"]')!.textContent).toContain('Loading Files'); render(<DataTable caption="Files" rows={[]} columns={columns} rowKey={row => row.id} error="Access denied" />); expect(container.querySelector('[role="alert"]')!.textContent).toContain('Access denied'); });
+it('table describes sideways overflow only while columns exceed the scroll region', () => {
+  const callbacks: Array<() => void> = [];
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(callback: () => void) { callbacks.push(callback); }
+    observe() {}
+    disconnect() {}
+  });
+  render(<DataTable caption="Files" rows={rows} columns={columns} rowKey={row => row.id} />);
+  const region = container.querySelector<HTMLElement>('[role="region"]')!;
+  let scrollWidth = 300;
+  Object.defineProperty(region, 'scrollWidth', { configurable: true, get: () => scrollWidth });
+  Object.defineProperty(region, 'clientWidth', { configurable: true, value: 200 });
+  act(() => callbacks[0]());
+  const hint = container.querySelector('span.ds-muted')!;
+  expect(hint.textContent).toBe('Scroll sideways to see more columns');
+  expect(region.getAttribute('aria-describedby')).toBe(hint.id);
+  expect(hint.hasAttribute('role')).toBe(false);
+  expect(hint.hasAttribute('aria-live')).toBe(false);
+  scrollWidth = 200;
+  act(() => callbacks[0]());
+  expect(container.querySelector('span.ds-muted')).toBeNull();
+  expect(region.hasAttribute('aria-describedby')).toBe(false);
+});
+it('table keeps captions visible by default and preserves hidden captions in the DOM', () => {
+  render(<DataTable caption="Files" rows={rows} columns={columns} rowKey={row => row.id} />);
+  const caption = container.querySelector('caption')!;
+  expect(caption.textContent).toBe('Files');
+  expect(caption.classList.contains('ds-visually-hidden')).toBe(false);
+  render(<DataTable caption="Files" rows={rows} columns={columns} rowKey={row => row.id} captionHidden />);
+  expect(container.querySelector('caption')?.textContent).toBe('Files');
+  expect(container.querySelector('caption')?.classList.contains('ds-visually-hidden')).toBe(true);
+});
 function DialogExample() { const [open, setOpen] = useState(false); const close = useCallback(() => setOpen(false), []); return <><button onClick={() => setOpen(true)}>Open</button><Dialog open={open} onClose={close} title="Edit"><input aria-label="Name" /><button>Save</button></Dialog></>; }
 it('dialog traps focus, closes on Escape and returns focus', () => { render(<DialogExample />); const trigger = container.querySelector('button')!; trigger.focus(); click(trigger); expect(document.querySelector('[role="dialog"]')).not.toBeNull(); expect(document.body.style.overflow).toBe('hidden'); const close = document.querySelector<HTMLButtonElement>('[aria-label="Close dialog"]')!; expect(document.activeElement).toBe(close); act(() => { close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true })); }); expect(document.activeElement?.textContent).toBe('Save'); act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); }); expect(document.querySelector('[role="dialog"]')).toBeNull(); expect(document.activeElement).toBe(trigger); expect(document.body.style.overflow).not.toBe('hidden'); });
 it('tooltip opens on focus and dismisses on Escape', () => { render(<Tooltip text="Useful help"><button>Help</button></Tooltip>); const trigger = container.querySelector('button')!; act(() => trigger.focus()); expect(container.querySelector('[role="tooltip"]')!.textContent).toBe('Useful help'); act(() => { trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); }); expect(container.querySelector('[role="tooltip"]')).toBeNull(); });
