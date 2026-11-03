@@ -152,7 +152,7 @@ it('Workspace selects field evidence on its page, records reason and enables app
   const reason = container.querySelectorAll('form input')[1] as HTMLInputElement; await input(reason, 'Checked original');
   await act(async () => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
   await vi.waitFor(() => expect(saved?.transactions[0].data.currency).toBe('SGD'));
-  expect(saved?.reviews.at(-1)?.reason).toBe('Checked original'); expect(button('Approve').disabled).toBe(false);
+  expect(saved?.reviews.at(-1)?.reason).toBe('Checked original'); await vi.waitFor(() => expect(button('Approve').disabled).toBe(false)); // `saved` is set before React shows the new document
   await click(button('Approve')); await vi.waitFor(() => expect(saved?.transactions[0].status).toBe('approved'));
 });
 it('Home accepts WebP by MIME or extension while rejecting TIFF in the same selection', async () => {
@@ -183,7 +183,7 @@ it('Workspace searches hundreds of statement entries grouped under their documen
   expect(button('Approve').disabled).toBe(false);
   expect(batchSummary([batch]).transactions).toBe(301);
   expect(reviewRows([batch])).toEqual([]);
-}, 15000); // Renders 300 entries (about 2s alone); the 5s default is too tight under parallel load or on slow CI runners.
+}, 30000); // Renders 300 entries: 3-4s alone, about 10s when two test suites share the machine; 15s left too little room on a slow CI runner.
 it('Workspace humanizes issues and switches clean and evidence JSON', async () => {
   const doc = fixture('json'); await render(<Workspace doc={doc} onSaved={() => {}} />);
   const issues = Array.from(container.querySelectorAll('[role="tab"]')).find(n => n.textContent?.startsWith('Issues'))!; await click(issues);
