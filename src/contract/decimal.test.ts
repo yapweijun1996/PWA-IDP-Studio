@@ -28,6 +28,13 @@ describe('decimal helpers', () => {
   it.each([['1,280.00', '1280.00'], [' 1280 ', '1280'], ['001280.00', '1280.00'], [1280, '1280'], [-0.25, '-0.25']] as const)('normalizes %s preserving precision', (input, expected) => {
     expect(normalizeDecimal(input)).toBe(expected);
   });
+  it.each([['14.90000000', '14.90'], ['5.00000000', '5.00'], ['14.12345600', '14.123456'], ['1,234.50000000', '1234.50'], ['-2.10000000', '-2.10'], ['0.0000000', '0.00']] as const)('drops only insignificant trailing zeros past six digits: %s', (input, expected) => {
+    expect(normalizeDecimal(input)).toBe(expected);
+    expect(isDecimalString(normalizeDecimal(input))).toBe(true);
+  });
+  it.each(['1.1234567', '14.9000001', '0.00000001', '1.12345670'])('still rejects a long fraction whose extra digits are not zero: %s', input => {
+    expect(normalizeDecimal(input)).toBeNull();
+  });
   it.each([null, undefined, {}, true, Infinity, NaN, 1e21])('rejects non-decimal input %s', input => {
     expect(normalizeDecimal(input)).toBeNull();
   });

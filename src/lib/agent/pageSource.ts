@@ -1,12 +1,19 @@
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { RenderedPage } from '../pdf';
 
+/**
+ * PDF.js loads non-embedded fonts and CJK CMaps lazily from URLs. Without them it silently skips the affected text,
+ * so rendered page images (and the text layer) lose content the model then cannot read. vite.config.ts copies the
+ * resources to dist/pdfjs/ so they are served from the app origin; nothing is fetched from a third party.
+ */
+export const PDFJS_ASSETS = `${import.meta.env.BASE_URL}pdfjs/`;
+
 /** Shared PDF loading and worker configuration for rendering and metadata reads. */
 export async function openPdf(blob: Blob) {
   // PDF.js requires browser graphics globals, unlike the injected PageSource seam.
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-  return pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+  return pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()), standardFontDataUrl: `${PDFJS_ASSETS}standard_fonts/`, cMapUrl: `${PDFJS_ASSETS}cmaps/`, cMapPacked: true }).promise;
 }
 export interface Crop { x: number; y: number; width: number; height: number }
 export interface TextItem { text: string; bbox: Crop }

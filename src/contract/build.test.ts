@@ -62,6 +62,26 @@ describe('buildBatch', () => {
     input.output.line_items[0].amount = 'bad';
     expect(openCodes(input)).toContain('INVALID_DECIMAL');
   });
+  it('accepts a total that includes a printed tax, but not a missing, wrong or unexplained gap', () => {
+    const input = invoiceInput(); // lines add up to 1280
+    const set = (key: string, value: string) => { const f = input.output.fields.find(x => x.key === key); if (f) f.value = value; else input.output.fields.push({ key, value, page: 1, bbox: null, confidence: 0.99 }); };
+    set('total_amount', '1382.40'); // 1280 + 8% GST
+    expect(openCodes(input)).toContain('TOTALS_MISMATCH'); // no tax printed: the gap is still a real mismatch
+    set('tax_amount', '102.40');
+    expect(openCodes(input)).not.toContain('TOTALS_MISMATCH');
+    set('tax_amount', '90.00');
+    expect(openCodes(input)).toContain('TOTALS_MISMATCH'); // a tax that does not explain the gap
+  });
+  it('keeps a printed price with insignificant trailing zeros valid and stores it canonically', () => {
+    const input = invoiceInput();
+    input.output.fields.find(f => f.key === 'total_amount')!.value = '44.70';
+    input.output.line_items = [{ description: 'Cable', quantity: '3', unit_price: '14.90000000', amount: '44.70' }];
+    const batch = buildBatch(input);
+    expect(batch.issues.filter(i => i.status === 'open').map(i => i.rule_code)).not.toContain('INVALID_DECIMAL');
+    expect(batch.transactions[0].data.line_items).toEqual([{ description: 'Cable', quantity: '3', unit_price: '14.90', amount: '44.70' }]);
+    input.output.line_items[0].unit_price = '14.9000001'; // a non-zero seventh digit would lose precision
+    expect(openCodes(input)).toContain('INVALID_DECIMAL');
+  });
   it('uses threshold 0.85 and never invents evidence for unprocessed pages', () => {
     const input = invoiceInput();
     input.output.fields.forEach(f => { f.confidence = 0.85; f.bbox = [0, 0, 100, 100]; });

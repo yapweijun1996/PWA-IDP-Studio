@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { text, click, radio, field, fill, route, reload, drop, batches, fullJSON, checkEnvelope, overflow, key, settled, js } from '../helpers.mjs';
 import { setProfile, until } from '../cdp.mjs';
 import { TEST_KEY, invoice } from '../mocks.mjs';
-import { makePDF } from '../pdf.mjs';
+import { makePDF, makeCidPDF } from '../pdf.mjs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -78,6 +78,12 @@ export const scenarios = [
       assert.deepEqual(downloaded.transactions, batch.transactions);
       assert.deepEqual(downloaded.documents[0].transaction_ids, batch.documents[0].transaction_ids);
     } finally { await b.eval('URL.createObjectURL = window.__statementURL; delete window.__statementURL; delete window.__statementBlob;'); }
+  } },
+  { name: 'pdf-fonts', async run({b}) {
+    // Text in a non-embedded CID font is only decoded when PDF.js can load its CMap; otherwise the text is silently dropped.
+    await drop(b, 'cid-font.pdf', makeCidPDF().toString('base64'));
+    await b.wait('!!document.querySelector(".ds-evidence-page img")', 'page preview rendered', 30000);
+    assert.ok(!/cMapUrl|standardFontDataUrl|translateFont/.test(JSON.stringify(b.logs)), 'PDF.js must find its CMap and font resources');
   } },
   { name: 'upload-types', async run({b}) {
     await drop(b, 'scan.webp'); await text(b, 'INV-E2E-001');

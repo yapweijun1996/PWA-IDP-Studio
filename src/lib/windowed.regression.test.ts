@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { fakeStream } from './fakeStream';
 import { runWindowedExtraction, type WindowedOptions } from './windowed';
 import { imageLimits } from './providers';
-import { segmentPages, type SegmentPlan } from './agent/segment';
+import { segmentPages, stitchSegments, type SegmentPlan } from './agent/segment';
 import { validateBatch } from '../contract/validate';
 import type { RenderedPage } from './pdf';
 
@@ -122,6 +122,27 @@ it('chunks long segments in order and offsets row evidence and profile pointers'
   expect(s.stats()).toMatchObject({ calls: 4, alive: 0, peak: MAX_EXTRACT_PAGES });
   expect(s.stats().released).toBe(s.stats().rendered);
   expect(s.images.every(image => image.data === '')).toBe(true);
+});
+
+it('never reports the first page of a file as an uncertain boundary, but still checks later boundaries', () => {
+  const decision = (page: number, starts: boolean, confidence: number) => ({ page, document_type: 'unknown' as const, starts_new_document: starts, confidence });
+  const windows = [{ pages: [1, 2, 3], decisions: [decision(1, true, 0.5), decision(2, false, 0.4), decision(3, true, 0.5)] }];
+  expect(stitchSegments(windows, 3, 0.7).map(s => [s.pages, s.boundary_status])).toEqual([[[1, 2], 'confirmed'], [[3], 'needs_review']]);
+});
+
+it('fills a header value that is empty in the first chunk from a later chunk, without replacing values already found', async () => {
+  const chunk = (page: number, fields: { key: string; value: string | null }[]) => JSON.stringify({ document_type: 'unknown', fields: fields.map(f => ({ ...f, page, bbox: [0, 0, 100, 100], confidence: 1 })), line_items: [] });
+  const count = MAX_EXTRACT_PAGES + 1;
+  const s = setup(count, [decisions(range(1, SEGMENT_WINDOW)), decisions(range(SEGMENT_WINDOW, count)),
+    chunk(1, [{ key: 'reference', value: 'ref-first' }, { key: 'total_amount', value: null }]),
+    chunk(count, [{ key: 'reference', value: 'ref-later' }, { key: 'total_amount', value: '7178.43' }])]);
+  const result = await runWindowedExtraction(s.opts);
+  const fields = result.results[0].output!.fields;
+  expect(fields.find(f => f.key === 'reference')).toMatchObject({ value: 'ref-first', page: 1 });
+  expect(fields.find(f => f.key === 'total_amount')).toMatchObject({ value: '7178.43', page: count });
+  expect(result.batch.transactions[0].data).toMatchObject({ reference: 'ref-first', total_amount: '7178.43' });
+  expect(result.batch.evidence.find(e => e.field_pointer === '/total_amount')!.sources[0].page_number).toBe(count);
+  expect(s.stats().calls).toBe(4);
 });
 
 it('expands statement rows after chunk merge and resumes without altering cached outputs', async () => {
@@ -248,6 +269,25 @@ it.each([false, true])('merges three demo chunks with merged required-header che
   expect(result.batch.issues.filter(i => i.rule_code === 'MISSING_REQUIRED').map(i => i.message)).toEqual(missing ? ['/reference: required field is missing.'] : []);
   expect(result.batch.transactions[0].required_fields).toEqual(['/reference', '/line_items/0/sku', '/line_items/1/sku', '/line_items/2/sku']);
   expect(prompts[3]).toContain('Earlier pages of this same document');
+  // Targeted mode names the profile fields that are still empty; a field found by the first chunk is not requested again.
+  if (missing) expect(prompts[3]).toContain('still empty after the earlier pages: reference.');
+  else expect(prompts[3]).not.toContain('still empty after the earlier pages');
+  expect(s.stats().calls).toBe(5);
+});
+
+it('tells each later chunk which totals are still empty and stops asking once one is found', async () => {
+  const chunk = (page: number, fields: { key: string; value: string | null }[]) => JSON.stringify({ document_type: 'unknown', fields: fields.map(f => ({ ...f, page, bbox: [0, 0, 100, 100], confidence: 1 })), line_items: [] });
+  const s = setup(5, [decisions([1, 2, 3, 4]), decisions([4, 5]), chunk(1, [{ key: 'reference', value: 'ref-1' }]), chunk(3, [{ key: 'total_amount', value: '9.00' }]), chunk(5, [])]);
+  s.opts.settings.provider = 'demo';
+  const prompts: string[] = [];
+  const stream = s.opts.streamFn!;
+  s.opts.streamFn = (model, context, options) => { prompts.push(JSON.stringify(context)); return stream(model, context, options); };
+  const result = await runWindowedExtraction(s.opts);
+  expect(prompts[2]).not.toContain('still empty after the earlier pages'); // first chunk: nothing is known yet
+  expect(prompts[3]).toContain('still empty after the earlier pages: total_amount, subtotal_amount, tax_amount.');
+  expect(prompts[4]).toContain('still empty after the earlier pages: subtotal_amount, tax_amount.'); // total_amount was found on page 3
+  expect(prompts[4]).not.toContain('still empty after the earlier pages: total_amount');
+  expect(result.batch.transactions[0].data).toMatchObject({ reference: 'ref-1', total_amount: '9.00' });
   expect(s.stats().calls).toBe(5);
 });
 

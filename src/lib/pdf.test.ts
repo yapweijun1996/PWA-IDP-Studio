@@ -8,11 +8,17 @@ const fake = vi.hoisted(() => {
   const getPage = vi.fn(async () => ({ getViewport: ({ scale, rotation }: { scale: number; rotation?: number }) => ({ width: 595 * scale, height: 842 * scale, rotation }), render }));
   const destroy = vi.fn(async () => {});
   // PDF.js 6 removed PDFDocumentProxy.destroy(); teardown goes through the loading task.
-  return { render, getPage, destroy, doc: { numPages: 30, getPage, loadingTask: { destroy } } };
+  const doc = { numPages: 30, getPage, loadingTask: { destroy } };
+  const getDocument = vi.fn((_options: unknown) => ({ promise: Promise.resolve(doc) }));
+  return { render, getPage, destroy, getDocument, doc };
 });
-vi.mock('pdfjs-dist', () => ({ GlobalWorkerOptions: {}, getDocument: () => ({ promise: Promise.resolve(fake.doc) }) }));
+vi.mock('pdfjs-dist', () => ({ GlobalWorkerOptions: {}, getDocument: fake.getDocument }));
 beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('Blob', NodeBlob); });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+it('gives PDF.js its font and CMap resources so non-embedded text is not silently dropped', async () => {
+  await countPages(new Blob(['pdf'], { type: 'application/pdf' }));
+  expect(fake.getDocument).toHaveBeenCalledWith(expect.objectContaining({ standardFontDataUrl: '/PWA-IDP-Studio/pdfjs/standard_fonts/', cMapUrl: '/PWA-IDP-Studio/pdfjs/cmaps/', cMapPacked: true }));
+});
 it('counts all PDF pages without rendering', async () => {
   expect(await countPages(new Blob(['pdf'], { type: 'application/pdf' }))).toBe(30);
   expect(fake.getPage).not.toHaveBeenCalled();

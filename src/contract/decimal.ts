@@ -21,10 +21,21 @@ export function decimalEquals(a: string, b: string, tolerance = '0.01'): boolean
   const difference = toScaled(a) - toScaled(b);
   return (difference < 0n ? -difference : difference) <= limit;
 }
+/**
+ * Printed prices such as 14.90000000 carry insignificant trailing zeros. When every digit past the sixth is zero
+ * the value is unchanged by dropping them (keeping at least two fractional digits); any other seven-plus digit
+ * fraction would lose precision and stays invalid so a human corrects it.
+ */
+function dropExcessZeros(text: string): string {
+  const match = /^(-?[\d,]+)\.(\d{7,})$/.exec(text);
+  if (!match) return text;
+  const fraction = match[2].replace(/0+$/, '').padEnd(2, '0');
+  return fraction.length <= 6 ? `${match[1]}.${fraction}` : text;
+}
 /** Trim whitespace and validated thousands groups; preserve fractional precision. */
 export function normalizeDecimal(input: unknown): string | null {
   if (typeof input !== 'string' && typeof input !== 'number') return null;
-  const text = String(input).trim();
+  const text = dropExcessZeros(String(input).trim());
   if (!/^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,6})?$/.test(text)) return null;
   const clean = text.replace(/,/g, '');
   const [whole, fraction] = clean.split('.');
