@@ -2,12 +2,13 @@ import { loadBatchMode, loadProfiles, uniqueProfileName } from '../../lib/profil
 import { templateFromTransaction } from '../../lib/template';
 import type { AgentStep, ExtractionProfile } from '../../lib/agent/contract';
 import { CustomizeFields } from '../CustomizeFields';
+import { AddRow, rowColumns } from '../AddRow';
 import { useEffect, useState } from 'react';
 import { getFileByFileId, putBatch } from '../../lib/db';
 import { renderFile, type RenderedPage } from '../../lib/pdf';
 import type { Batch } from '../../contract/types';
 import { transactionView } from '../../contract/view';
-import { approveTransaction, correctField } from '../../contract/review';
+import { addRow, approveTransaction, correctField, handEnteredRows } from '../../contract/review';
 import { exportEligibleTransactions, validateBatch } from '../../contract/validate';
 import { Button, Card, DataTable, EvidenceViewer, Field, Input, Menu, Notice, PageHeader, Progress, Segmented, Select, StatusPill, Tabs } from '../../ds';
 import { readable } from '../nav';
@@ -17,6 +18,7 @@ import { downloadJSON, serializeJSON, transactionJSONValue } from '../../lib/jso
 export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextract, locked = false, steps = [] }: { steps?: AgentStep[]; busy?: string | null; onRetry?: () => void; onReextract?: (profile: ExtractionProfile) => void; locked?: boolean; doc: Batch; onSaved: (d: Batch) => void; transactionId?: string }) {
   const profile = loadBatchMode(doc.batch.batch_id)?.profile;
   const [customizing, setCustomizing] = useState(false);
+  const [addingRow, setAddingRow] = useState(false);
   const label = (key: string) => [...(profile?.fields ?? []), ...(profile?.rowFields ?? [])].find(f => f.key === key)?.label ?? readable(key);
   const [txId, setTxId] = useState(transactionId ?? doc.transactions[0]?.transaction_id);
   const tx = doc.transactions.find(t => t.transaction_id === txId) ?? doc.transactions[0];
@@ -63,6 +65,11 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextr
   const json = full === 'full' ? evidence : clean;
   const base = file.filename.replace(/\.[^.]+$/, '');
   const save = async (next: Batch) => { setSaving(true); setError(''); try { await putBatch(next); onSaved(next); setEditing(undefined); } catch(e) { setError(String(e)); } finally { setSaving(false); } };
+  const handRows = handEnteredRows(doc, tx.transaction_id);
+  const addRowByHand = async (values: Record<string, string>, why: string) => {
+    setSaving(true); setError('');
+    try { const next = addRow(doc, tx.transaction_id, rowColumns(tx, profile), values, why); await putBatch(next); onSaved(next); } finally { setSaving(false); }
+  };
   const approve = async () => { const result = approveTransaction(doc, tx.transaction_id, 'Reviewed and approved in workspace'); if (result.ok) await save(result.batch); else setError(result.error); };
   const copy = async () => { try { await navigator.clipboard.writeText(json); setCopied(true); } catch(e) { setError(`Copy failed: ${String(e)}`); } };
   const selectedField = view.fields.find(f => f.pointer === selected);
@@ -75,7 +82,8 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextr
     <DataTable caption="Line items" rows={view.lineItems.map((item, index) => ({ item, index }))} rowKey={r => String(r.index)} columns={[...new Set(view.lineItems.flatMap(item => Object.keys(item)))].map(key => ({ key, label: label(key), render: (r: { item: Record<string, unknown>; index: number }) => {
       const pointer = `/line_items/${r.index}/${key.replaceAll('~', '~0').replaceAll('/', '~1')}`;
       return editing === pointer ? <form onSubmit={e => { e.preventDefault(); if (reason.trim()) { try { void save(correctField(doc, tx.transaction_id, pointer, draft, reason.trim())); } catch (err) { setError(String(err)); } } }}><Field label={`Edit ${label(key)}`}><Input value={draft} onChange={e => setDraft(e.target.value)} /></Field><Field label="Correction reason"><Input required value={reason} onChange={e => setReason(e.target.value)} /></Field><Button type="submit" disabled={saving || !reason.trim()}>Save correction</Button><Button onClick={() => setEditing(undefined)}>Cancel</Button></form> : <Button aria-label={`Edit ${label(key)} row ${r.index + 1}`} disabled={locked} onClick={() => { setEditing(pointer); setDraft(String(r.item[key] ?? '')); setReason('Manual correction'); }}>{String(r.item[key] ?? '') || 'Missing value'}</Button>;
-    } }))} emptyMessage="No line items" />
+    } })).concat(handRows.size ? [{ key: 'entered_by_hand', label: 'Source', render: (r: { item: Record<string, unknown>; index: number }) => handRows.has(r.index) ? <StatusPill tone="info" icon="info">Entered by hand</StatusPill> : <></> }] : [])} emptyMessage="No line items" />
+    {Array.isArray(tx.data.line_items) && <div className="ds-row"><Button disabled={saving || locked || !!busy} onClick={() => setAddingRow(true)}>Add row</Button></div>}
   </div>;
   return <section className="ds-sheet">
     <PageHeader breadcrumb={<><a href="#/">Home</a> / <a href="#/documents">Documents</a> / Workspace</>} title={file.filename} description={`${readable(view.documentType)} · ${doc.pages.length} pages`} actions={<div className="ds-row"><StatusPill>{readable(tx.status)}</StatusPill><Button variant="primary" disabled={!view.canApprove || saving || locked} aria-describedby="approval-reason" onClick={() => void approve()}>Approve</Button>{onReextract && <Button disabled={saving || locked || !!busy} onClick={() => setCustomizing(true)}>Customize fields</Button>}<Menu label="Export" items={[{ label: 'Clean JSON', disabled: !eligible, onSelect: () => downloadJSON(`${base}.json`, clean) }, { label: 'Full evidence JSON', disabled: !eligible, onSelect: () => downloadJSON(`${base}.evidence.json`, evidence) }]} /><Button disabled={!eligible} onClick={() => void copy()}>Copy</Button></div>} />
@@ -84,7 +92,8 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextr
     {!busy && onRetry && doc.pages.some(p => p.status !== 'classified') && <Button onClick={onRetry}>Retry extraction</Button>}
     {error && <Notice tone="error">{error}</Notice>}{copied && <Notice>JSON copied.</Notice>}
     {locked && <Notice tone="info">Reading this file again with your new template. This result is locked and stays unchanged until the new one finishes; cancel the extraction to keep working on it.</Notice>}
-    {customizing && onReextract && <CustomizeFields start={templateFromTransaction(tx, view.documentType, uniqueProfileName(profile ? `${profile.name} (edited)` : 'My template', loadProfiles()), profile)} reviewCount={doc.reviews.length} documentCount={doc.documents.length} onClose={() => setCustomizing(false)} onExtract={onReextract} />}
+    {addingRow && <AddRow columns={rowColumns(tx, profile)} label={label} rowNumber={view.lineItems.length + 1} approved={tx.status === 'approved'} onClose={() => setAddingRow(false)} onAdd={addRowByHand} />}
+    {customizing && onReextract &&<CustomizeFields start={templateFromTransaction(tx, view.documentType, uniqueProfileName(profile ? `${profile.name} (edited)` : 'My template', loadProfiles()), profile)} reviewCount={doc.reviews.length} documentCount={doc.documents.length} onClose={() => setCustomizing(false)} onExtract={onReextract} />}
     {doc.transactions.length > 1 && <div className="ds-sheet"><Field label="Search transactions"><Input value={transactionSearch} onChange={e => setTransactionSearch(e.target.value)} /></Field><Field label="Transaction"><Select value={tx.transaction_id} onChange={e => { setTxId(e.target.value); setSelected(undefined); setEditing(undefined); }}>{doc.documents.map(document => <optgroup key={document.document_id} label={`${document.document_id} · ${readable(document.document_type)}`}>{doc.transactions.filter(t => t.document_id === document.document_id && (t.transaction_id === tx.transaction_id || `${t.transaction_id} ${t.transaction_type} ${JSON.stringify(t.data)}`.toLowerCase().includes(transactionSearch.toLowerCase()))).map(t => <option key={t.transaction_id} value={t.transaction_id}>{t.transaction_id} · {readable(t.transaction_type)}</option>)}</optgroup>)}</Select></Field></div>}
     <div className="ds-grid"><Card><EvidenceViewer pages={doc.pages.filter(p => p.file_id === file.file_id).map(p => { const rendered = pages.find(r => r.page === p.page_number); return { number: p.page_number, pending: p.status !== 'classified', src: rendered ? `data:${rendered.mimeType};base64,${rendered.data}` : undefined }; })} page={page} onPageChange={setPage} selected={selectedField?.pointer} error={renderError} boxes={view.fields.filter(f => f.evidence?.page === page).map(f => ({ id: f.pointer, label: readable(f.key), ...f.evidence!.bbox }))} /></Card>
     <Card><div id="workspace-issues"><Tabs label="Transaction details" value={tab} onChange={setTab} items={[
