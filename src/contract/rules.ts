@@ -1,18 +1,26 @@
 import type { Batch, Issue, Transaction, Value } from './types';
 import { normalizeDecimal, sumDecimals, decimalEquals } from './decimal';
 import { REQUIRED_FIELDS, TAX_AMOUNT_KEY, isIsoDate, isIsoCurrency } from '../lib/standards';
+import { adjustmentOf } from '../lib/footerLines';
 import { validateBatch, exportEligibleTransactions } from './validate';
 import { ruleCatalogEntry } from './ruleCatalog';
 
 export const pointerFor = (key: string) => '/' + key.replace(/~/g, '~0').replace(/\//g, '~1');
 export const decimalKey = (key: string) => /(amount|price|total|quantity)/i.test(key) || /^(debit|credit|(?:opening_|closing_|running_)?balance)$/.test(key);
+/** A footer line (shipping, discount, rounding …) as it changes the total: `amount` is signed, so a discount is negative. */
+export interface FooterLine { key: string; amount: string }
 /** How the row amounts of a transaction compare with its grand total; `ok` is what the TOTALS_MISMATCH rule decides. */
-export interface TotalsCheck { net: string; tax: string | null; total: string; ok: boolean }
+export interface TotalsCheck { net: string; tax: string | null; lines: FooterLine[]; total: string; ok: boolean }
+const negate = (amount: string) => amount.startsWith('-') ? amount.slice(1) : `-${amount}`;
 /**
  * The line sum against `total_amount`, or null when the rule does not apply (no total, no rows, a row without a numeric
  * `amount`, or a Targeted template that does not declare total_amount as an amount). Auto output always reconciles; a Targeted
  * template reconciles when it declares total_amount as an amount (the built-in invoice template does). A total may be the line
- * sum plus a separately printed tax (e.g. 673.50 + 8% GST 53.88 = 727.38).
+ * sum plus a separately printed tax (e.g. 673.50 + 8% GST 53.88 = 727.38), and, when the document prints other charges under the
+ * rows (shipping, freight, handling, rounding …) or takes something off (discount, rebate), those too: 450.00 - 45.00 discount
+ * + 25.00 shipping + 38.70 tax = 468.70. Which header keys are such lines comes from their names (`adjustmentOf`); a discount's
+ * size is taken off whichever sign it is printed with. The total must equal the rows alone, the rows plus tax, or either of those
+ * plus every line: never some of the lines, which would let a wrong total through by luck.
  */
 export function reconcileTotals(tx: Transaction): TotalsCheck | null {
   const rows = tx.data.line_items;
@@ -22,7 +30,15 @@ export function reconcileTotals(tx: Transaction): TotalsCheck | null {
   if (!amounts.every((v): v is string => v !== null)) return null;
   const net = sumDecimals(amounts);
   const tax = normalizeDecimal(tx.data[TAX_AMOUNT_KEY]);
-  return { net, tax, total, ok: decimalEquals(net, total) || (tax !== null && decimalEquals(sumDecimals([net, tax]), total)) };
+  const lines: FooterLine[] = [];
+  for (const [key, value] of Object.entries(tx.data)) {
+    const effect = key === TAX_AMOUNT_KEY || key === 'line_items' ? undefined : adjustmentOf(key);
+    const amount = effect ? normalizeDecimal(value) : null;
+    if (effect && amount !== null) lines.push({ key, amount: effect === 'subtract' ? (amount.startsWith('-') ? amount : negate(amount)) : amount });
+  }
+  const without = tax === null ? [net] : [net, sumDecimals([net, tax])];
+  const candidates = lines.length ? [...without, ...without.map(base => sumDecimals([base, ...lines.map(line => line.amount)]))] : without;
+  return { net, tax, lines, total, ok: candidates.some(candidate => decimalEquals(candidate, total)) };
 }
 export function businessIssues(batch: Batch): Issue[] {
   const issues: Issue[] = [];

@@ -12,6 +12,13 @@ export function customized(withBatchNo = true) {
   const cell = value => ({ value, page: 1, bbox: [300, 100, 340, 900], confidence: 0.98 });
   return { document_type: 'purchase_invoice', fields: Object.entries({ supplier_name: 'E2E Supplier', invoice_no: 'INV-E2E-001', invoice_date: '2026-10-26', currency: 'SGD', total_amount: '10.00', ...(withBatchNo ? { batch_no: 'BATCH-77' } : {}) }).map(([key, value]) => ({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 })), line_items: [Object.fromEntries(Object.entries({ description: 'E2E service', quantity: '1', unit_price: '10.00', amount: '10.00' }).map(([key, value]) => [key, cell(value)]))] };
 }
+/** The invoice read with a template that also has Shipping Fee and Discount: 10.00 + 15.00 shipping - 5.00 discount = 20.00. */
+export function footerLines() {
+  const output = customized(false);
+  output.fields.find(field => field.key === 'total_amount').value = '20.00';
+  for (const [key, value] of [['shipping_fee', '15.00'], ['discount', '5.00']]) output.fields.push({ key, value, page: 1, bbox: [100, 100, 200, 500], confidence: 0.99 });
+  return output;
+}
 export function statement() {
   return {
     document_type: 'statement',
@@ -119,7 +126,7 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
           : toolResponseStream('crop_zoom', { page: 1, ymin: 100, xmin: 100, ymax: 500, xmax: 900, scale: 6 }, 'crop_e2e'), 'text/event-stream');
         return;
       }
-      const output = variant === 'statement-entries' ? statement() : variant === 'targeted' || variant === 'validation-targeted' ? targeted() : variant === 'customized' ? customized() : variant === 'saved-template' ? customized(false) : invoice(variant === 'bad');
+      const output = variant === 'statement-entries' ? statement() : variant === 'targeted' || variant === 'validation-targeted' ? targeted() : variant === 'customized' ? customized() : variant === 'saved-template' ? customized(false) : variant === 'footer-lines' ? footerLines() : invoice(variant === 'bad');
       if (variant === 'validation-targeted') {
         output.fields.find(f => f.key === 'document_no').value = '';
         output.fields.find(f => f.key === 'remarks').confidence = 0.5;

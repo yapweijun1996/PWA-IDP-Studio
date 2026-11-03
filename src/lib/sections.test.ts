@@ -33,14 +33,14 @@ describe('defaultSection', () => {
 
 describe('sectionOf', () => {
   const profile: ExtractionProfile = { id: 'p', name: 'P', rowFields: [], fields: [
-    { key: 'handling', label: 'Handling', type: 'amount', section: 'footer' },
+    { key: 'admin_fee', label: 'Admin fee', type: 'amount', section: 'footer' },
     { key: 'discount_code', label: 'Discount code', type: 'code', section: 'info' },
     { key: 'total_amount', label: 'Total', type: 'amount', section: 'info' },
     { key: 'shipping_fee', label: 'Shipping', type: 'amount' },
     { key: 'supplier_name', label: 'Supplier', type: 'text' },
   ] };
   it('uses the template\'s explicit choice, even against the default', () => {
-    expect(sectionOf('handling', profile)).toBe('footer'); // no default would say so
+    expect(sectionOf('admin_fee', profile)).toBe('footer'); // no default would say so
     expect(sectionOf('total_amount', profile)).toBe('info'); // the user moved it up
   });
   it('falls back to the default for a field with no choice, and for a key the template does not have', () => {

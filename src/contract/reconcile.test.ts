@@ -12,12 +12,12 @@ describe('reconcileTotals', () => {
   it('matches when the rows add up to the total', () => {
     const { tx } = make();
     setRows(tx, ['100.00', '250.50']); tx.data.total_amount = '350.50';
-    expect(reconcileTotals(tx)).toEqual({ net: '350.5', tax: null, total: '350.50', ok: true });
+    expect(reconcileTotals(tx)).toEqual({ net: '350.5', tax: null, lines: [], total: '350.50', ok: true });
   });
   it('matches when the rows plus a separately printed tax add up to the total', () => {
     const { tx } = make();
     setRows(tx, ['350.00']); tx.data.tax_amount = '31.50'; tx.data.total_amount = '381.50';
-    expect(reconcileTotals(tx)).toEqual({ net: '350', tax: '31.50', total: '381.50', ok: true });
+    expect(reconcileTotals(tx)).toEqual({ net: '350', tax: '31.50', lines: [], total: '381.50', ok: true });
   });
   it('reports a total that does not match', () => {
     const { tx } = make();
