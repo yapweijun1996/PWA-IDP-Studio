@@ -89,5 +89,6 @@ export default defineConfig({
     }),
   ],
   build: { chunkSizeWarningLimit: 1500 },
-  test: { environment: 'jsdom', include: ['src/**/*.test.ts', 'src/ui/validation.test.tsx', 'src/ui/customize.test.tsx', 'src/ui/addRow.test.tsx', 'src/ui/sections.test.tsx'], poolOptions: { forks: { execArgv: noNodeWebStorage } } },
+  // The slowest jsdom tests take 4-5 s on a developer machine and about twice that under load, so the 5 s default is too tight.
+  test: { environment: 'jsdom', include: ['src/**/*.test.{ts,tsx}'], testTimeout: 15000, poolOptions: { forks: { execArgv: noNodeWebStorage } } },
 });
