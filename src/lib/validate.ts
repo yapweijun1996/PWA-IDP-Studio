@@ -86,7 +86,7 @@ export function checkProfileOutput(value: unknown, profile: ExtractionProfile): 
   output.requiredPointers = profile.fields.filter(f => f.required).map(f => pointer(f.key));
   output.fieldTypes = Object.fromEntries(profile.fields.map(f => [pointer(f.key), f.type]));
   output.rowEvidence = [];
-  if (!profile.rowFields.length && output.line_items.length) throw new Error('Rows are not allowed by this profile');
+  if (!profile.rowFields.length && output.line_items.length) throw new Error('Rows are not allowed by this template');
   output.includeRows = profile.rowFields.length > 0;
   output.line_items = ((raw.line_items ?? []) as Record<string, unknown>[]).map((row, index) => {
     const record = row as Record<string, unknown>;

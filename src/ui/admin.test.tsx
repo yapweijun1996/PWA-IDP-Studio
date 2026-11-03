@@ -74,7 +74,7 @@ it('Home describes the selected extraction mode and places provider disclosure b
   const description = document.getElementById(group.getAttribute('aria-describedby')!)!;
   expect(description.textContent).toBe('AI chooses the document type and extracts every field it finds.');
   await click(container.querySelector('input[value="targeted"]')!);
-  expect(description.textContent).toBe('Only the fields of the selected profile are extracted.');
+  expect(description.textContent).toBe('Only the fields of the selected template are extracted.');
   const disclosure = Array.from(container.querySelectorAll('p')).find(p => p.textContent?.startsWith('Pages are sent to'))!;
   expect(disclosure.textContent).toContain(providerInfo(loadSettings().provider).recipient);
   const dropzone = container.querySelector('.ds-dropzone')!;
