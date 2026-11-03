@@ -2,13 +2,19 @@
 
 Drop → Detect → Extract → Label → Review → Export JSON. Browser-first PWA (React + Vite + TypeScript), deployed to GitHub Pages.
 
+Product direction: an IDP system ordinary users can run without understanding JSON. They upload a file, AI extracts the data, they review it next to the
+original and add the fields they need from the interface, and the system validates the amounts, required fields and source evidence before it generates the
+JSON. Template configuration stays separate from document extraction, so nobody has to configure anything before the first result. The
+[Product design](docs/PRODUCT-DESIGN.md) describes the four-step workflow, the Document Info / Row Data / Footer model, the difference between Add Field,
+Add Column and Add Row, and a gap analysis of what the code does today against that design.
+
 - AI harness: `@mariozechner/pi-agent-core` + `@mariozechner/pi-ai` (browser). Providers: demo endpoint, OpenAI / OpenRouter / Gemini (BYOK).
 - Files, results and keys stay in this browser (IndexedDB / localStorage). Pages are sent only to the provider chosen in Settings.
 - BBoxes are drawn by the AI as read-only evidence; the canonical batch uses normalized `{x,y,width,height}` coordinates, origin top-left. Users correct values, never boxes.
 - The demo endpoint only serves the published origin (`https://yapweijun1996.github.io`), so test it on the deployed site; local tests use `src/lib/fakeStream.ts`.
-- Data uses the v2.0.0 Batch contract with decimal-string amounts, explicit issues and human reviews. All physical pages remain in the manifest; the configurable extraction limit defaults to 20 pages, and unprocessed pages block export.
+- Data uses the v2.0.0 Batch contract with decimal-string amounts, explicit issues and human reviews. All physical pages remain in the manifest; the configurable extraction limit defaults to 100 pages (1–500, set in Settings), and unprocessed pages block export.
 - IndexedDB upgrades preserve legacy rows and migrate available originals once. See [Local data model](docs/DATA-MODEL.md) for migration, validation and export behavior.
-- Auto extraction lets AI choose fields; Targeted extraction uses built-in or custom profiles with header fields and row columns. Settings supports profile creation, duplication and editing. Retries retain the original profile snapshot; live agent activity appears during processing.
+- Auto extraction lets AI choose fields; Targeted extraction uses built-in or custom profiles with header fields and row columns. The Templates page supports profile creation, duplication, import/export and editing. Retries retain the original profile snapshot; live agent activity appears during processing.
 
 ```bash
 npm ci && npm run dev      # local
