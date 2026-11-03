@@ -169,7 +169,7 @@ it('Workspace searches hundreds of statement entries grouped under their documen
   expect(button('Approve').disabled).toBe(false);
   expect(batchSummary([batch]).transactions).toBe(301);
   expect(reviewRows([batch])).toEqual([]);
-});
+}, 15000); // Renders 300 entries (about 2s alone); the 5s default is too tight under parallel load or on slow CI runners.
 it('Workspace humanizes issues and switches clean and evidence JSON', async () => {
   const doc = fixture('json'); await render(<Workspace doc={doc} onSaved={() => {}} />);
   const issues = Array.from(container.querySelectorAll('[role="tab"]')).find(n => n.textContent?.startsWith('Issues'))!; await click(issues);
