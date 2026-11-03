@@ -10,10 +10,13 @@ function baseSelectors(source) {
 /** Production source only: fixtures, tests and generated icon geometry are not UI. */
 export function countViolations(source, file) {
   const counts = {};
-  const count = (rule, regex) => { const total = [...source.matchAll(regex)].length; if (total) counts[rule] = total; };
+  const count = (rule, regex, text = source) => { const total = [...text.matchAll(regex)].length; if (total) counts[rule] = total; };
   if (file !== 'src/ds/tokens.css' && !file.endsWith('icons.generated.ts')) count('raw-colour', /#[\da-f]{3,8}\b|\b(?:rgb|hsl)a?\s*\(/gi);
   if (file.endsWith('.css') && file !== 'src/ds/tokens.css') {
     count('raw-css-value', /\b(?:border(?:-[\w]+)?-radius|box-shadow|font-size)\s*:[^;{}]*\b\d*\.?\d+px\b|\bz-index\s*:\s*-?\d+\b/gim);
+    // Sizes must come from tokens or relative units. @media preludes are breakpoints, not declarations, so drop them first.
+    const declarations = source.replace(/@media[^{]*/g, '@media ');
+    count('raw-size', /(?:^|[;{\s])(?:min-|max-)?(?:width|height)\s*:[^;{}]*\b\d*\.?\d+px\b/gim, declarations);
     const seen = new Set();
     let duplicates = 0;
     // Base class definitions only; state, descendant and responsive overrides are intentional.
@@ -23,6 +26,8 @@ export function countViolations(source, file) {
   if (/\.[jt]sx?$/.test(file) && !file.endsWith('icons.generated.ts')) {
     count('native-disclosure', /<(?:details|summary|dialog)\b/g);
     if (file !== 'src/ui/Icon.tsx') count('raw-svg', /<svg\b/g);
+    // Native controls belong to the DS components that wrap them; everything else must import from src/ds.
+    if (!file.startsWith('src/ds/components/')) count('native-control', /<(?:button|input|select|textarea|table)\b/g);
     count('inline-paint', /style\s*=\s*\{\{[^}]*\b(?:color|background\w*|border\w*)\s*:/gs);
   }
   return counts;

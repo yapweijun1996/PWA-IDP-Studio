@@ -19,6 +19,10 @@ function buildId() {
   } catch { return 'dev'; }
 }
 
+// Node 25 enables a built-in localStorage that shadows jsdom's, breaking tests ("localStorage.clear is not a function").
+// Feature-detect the opt-out flag so older Node versions never receive an unknown option.
+const noNodeWebStorage = process.allowedNodeEnvironmentFlags.has('--no-experimental-webstorage') ? ['--no-experimental-webstorage'] : [];
+
 const base = '/PWA-IDP-Studio/';
 const BUILD = process.env.IDP_BUILD_ID || buildId();
 
@@ -59,5 +63,5 @@ export default defineConfig({
     }),
   ],
   build: { chunkSizeWarningLimit: 1500 },
-  test: { environment: 'jsdom', include: ['src/**/*.test.ts', 'src/ui/validation.test.tsx'] },
+  test: { environment: 'jsdom', include: ['src/**/*.test.ts', 'src/ui/validation.test.tsx'], poolOptions: { forks: { execArgv: noNodeWebStorage } } },
 });
