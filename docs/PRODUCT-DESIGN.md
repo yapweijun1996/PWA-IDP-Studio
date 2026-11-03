@@ -1,6 +1,7 @@
 # IDP Studio product design
 
-Status: product direction plus a gap analysis against the code on `main` (build `a72256d`, reviewed 2026-11-03).
+Status: product direction plus a gap analysis against the code on `main`. First reviewed 2026-11-03 at build `a72256d`; roadmap phase P1 was
+implemented and verified the same day (sections 7 and 9 say what changed).
 Nothing in sections 1–6 is a promise that it already exists; section 7 says exactly what does and does not.
 
 ## 1. Goal
@@ -77,10 +78,9 @@ The user can add Shipping Fee, Discount, Rounding and similar lines. The example
 |---|---|---|
 | Document Info | `fields` | header keys on the transaction `data` |
 | Row Data | `rowFields` | `data.line_items` |
-| Footer | **no separate section**; totals are ordinary header fields | `total_amount`, `subtotal_amount`, `tax_amount` (Auto mode asks for these three) |
+| Footer | **no separate section**; totals are ordinary header fields | `total_amount`, `subtotal_amount`, `tax_amount` (Auto mode asks for these three; the built-in *Invoice with totals* template includes them) |
 
-Illustrative clean JSON as produced today (flat, one transaction; the stock code is shown because a Targeted profile can capture it, Auto mode
-does not – see gap 6):
+Illustrative clean JSON as produced today (flat, one transaction; Auto mode and the built-in invoice template both capture the stock code):
 
 ```json
 {
@@ -116,7 +116,7 @@ program. Here the user clicks **Add Column → Batch No → Save**, and the next
 
 Rules for these controls:
 
-- The user types a **label** ("Batch No"). The system derives the technical key (`batch_no`) itself. A key is only shown under an "advanced" disclosure.
+- The user types a **label** ("Batch No"). The system derives the technical key (`batch_no`) itself. A key is only shown under an "advanced" disclosure. Implemented in the template editor: `keyFromLabel()` derives a unique snake_case key, *Show technical keys* reveals it, it follows the label while the field is new, and it never changes for a field that was already saved.
 - A new Field or Column is saved into the template, so it applies to later documents; Add Row never touches the template.
 - Every manually added value is marked as human-entered and has no source-page evidence, so validation reports it as such instead of faking evidence.
 
@@ -135,14 +135,14 @@ File references are for the reviewer; they describe `main` at build `a72256d`.
 | 0 | Upload and AI auto extract with no setup | Done | Home dropzone, Auto mode by default (`src/ui/pages/Home.tsx`) | – |
 | 0 | Side-by-side review: document left, data right, evidence boxes | Done | `Workspace.tsx`: viewer plus Fields / Issues / JSON tabs; every correction needs a reason | – |
 | 0 | Validate and export | Done | Required fields, decimals, ISO dates and currencies, line sum plus optional tax equals total, per-transaction export gating, waivers with a reason (`src/contract/rules.ts`) | – |
-| 1 | Edit fields without knowing JSON | Partial | `ProfileEditor.tsx` offers "Add header field" and "Add row column", but asks the user to type a **snake_case key** and rejects anything else (`validateProfile`) | Derive the key from the label; hide it |
+| 1 | Edit fields without knowing JSON | Done (P1) | `ProfileEditor.tsx`: the user names a field or column ("Add field", "Add column"); `keyFromLabel()` derives a unique, valid snake_case key; keys are hidden unless *Show technical keys* is on; a saved field's key never changes. Verified in Chrome: "Customer Code" and "Batch No" were saved as `customer_code` and `batch_no` with no key shown | The editor is still only on the Templates page (gap 2) |
 | 2 | Customize Fields reachable from the review screen | Missing | Templates are edited only at `#/templates`, in a dialog | A "Customize Fields" panel inside the review screen |
 | 3 | Extract again with the updated template | Missing | Retry reuses the profile **snapshot** taken at upload time (`idp-studio.batch-modes.v1`) | An explicit "Extract again with updated template" action |
 | 4 | Add Row (manual detail record) | Missing | Cells of existing rows can be corrected; rows cannot be added | Add Row with human-entered marking and audit entry |
-| 5 | Footer as its own section | Partial | Totals exist as header fields; no section marker in the profile or UI; the built-in profiles (`doc-info`, `doc-info-rows`) have no footer fields | A section marker on each field, grouped display, a built-in invoice template with footer fields |
-| 6 | Stock Code (item code) extracted automatically | Missing | Auto row keys are only `description`, `quantity`, `unit_price`, `amount` (`src/lib/standards.ts`). Real purchase-order tests showed item codes being dropped | Add `stock_code` and `uom` to the Auto row keys and prompt |
+| 5 | Footer as its own section | Partial | Totals are header fields; there is still no section marker in the profile or UI. The built-in **Invoice with totals** template (P1) now has Sub total, Tax (GST) and Grand total, and a Targeted template that declares `total_amount` as an amount is reconciled (rows + tax = total). Verified on 12 real purchase orders: 673.50 + 53.88 = 727.38 and the like, no mismatch | A section marker on each field and grouped display (P3) |
+| 6 | Stock Code (item code) extracted automatically | Done (P1) | Auto row keys are `stock_code`, `description`, `quantity`, `uom`, `unit_price`, `amount` (`src/lib/standards.ts`) and the prompt says to copy the code as printed, never to build it from other columns. Verified on 6 real purchase orders: filled on every row (for example 8100234, 2154815, 1913177), none synthesized | – |
 | 7 | Templates per supplier / document type, suggested automatically | Missing | Custom profiles can be created, duplicated, imported and exported, and are picked by hand on Home (Targeted mode) | Template library with suggestion by supplier or document type; "save as template" from a reviewed document |
-| 8 | Template screen a non-technical user can use | Partial | `Templates.tsx` also lists the raw Auto-mode keys and the per-type required keys | Plain-language copy; keep technical keys behind "advanced" |
+| 8 | Template screen a non-technical user can use | Partial (P1) | `Templates.tsx` explains templates in plain words and lists the Auto-mode fields as readable names; the raw keys are behind *Show technical keys* | The UI still says "profile" in places (Create profile, Use … for next upload) on a page called Templates; the label formatter shows acronyms as "Uom" and "Po no" |
 | 9 | One name for "document number" across types | Partial | Auto uses `invoice_no`, `po_no`, `do_no` … per type; a Targeted profile uses `document_no` | Decide a single ERP-facing name or an alias map |
 
 ## 8. Research notes
@@ -163,7 +163,7 @@ Short, checked against the pages named. Brief reads, not a product comparison.
   orders and returns structured JSON. Its field schema is published on a separate page; **field names were not verified here**, so none are copied into this
   document. [Invoice model](https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/concept-invoice)
 - **Our own tests** with seven real purchase orders (digital and scanned) found concrete product gaps that feed this list: item codes dropped by Auto mode
-  (gap 6), totals that include GST (now reconciled through `tax_amount`), and text in non-embedded PDF fonts that used to be invisible to the model (fixed).
+  (gap 6, fixed in P1), totals that include GST (now reconciled through `tax_amount`), and text in non-embedded PDF fonts that used to be invisible to the model (fixed).
 
 ## 9. Roadmap proposal
 
@@ -171,7 +171,7 @@ Ordered by value for a non-technical user against effort. Sizes: S = days, M = 1
 
 | Phase | Work | Size | Done when |
 |---|---|---|---|
-| P1 Quick wins | Derive keys from labels (gap 1); `stock_code` and `uom` in Auto rows (6); plain-language Templates copy (8); a built-in invoice template with footer fields (5, first part) | S | A user adds "Batch No" without seeing a key; Auto extracts the stock code on a real purchase order |
+| P1 Quick wins (**done**) | Derive keys from labels (gap 1); `stock_code` and `uom` in Auto rows (6); plain-language Templates copy (8); a built-in invoice template with footer fields (5, first part) | S | A user adds "Batch No" without seeing a key; Auto extracts the stock code on a real purchase order. **Verified** in Chrome on build `df81f2b`: Batch No saved as `batch_no`; stock code and UOM filled on every row of 6 real purchase orders; the invoice template reconciled the GST totals of 12 real orders. Left over: unify "profile" and "template" wording (gap 8) |
 | P2 Customize in review | Customize Fields panel in the review screen (2); Add Field / Add Column from it; "Extract again with updated template" (3); Add Row (4) | M | From a reviewed invoice: Add Column → Batch No → Save → Extract again; the new column is filled and validated |
 | P3 Sections | Section marker on fields; grouped display of Document Info / Row Data / Footer (5); optional grouped JSON export | M | The review screen shows the three sections; footer lines are editable and reconcile with the row sum |
 | P4 Template intelligence | Template library; suggestion by supplier or document type; "save as template" from a reviewed document (7); alias for document number (9) | M–L | A second invoice from a known supplier opens with that supplier's template suggested |

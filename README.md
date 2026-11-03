@@ -14,7 +14,7 @@ Add Column and Add Row, and a gap analysis of what the code does today against t
 - The demo endpoint only serves the published origin (`https://yapweijun1996.github.io`), so test it on the deployed site; local tests use `src/lib/fakeStream.ts`.
 - Data uses the v2.0.0 Batch contract with decimal-string amounts, explicit issues and human reviews. All physical pages remain in the manifest; the configurable extraction limit defaults to 100 pages (1–500, set in Settings), and unprocessed pages block export.
 - IndexedDB upgrades preserve legacy rows and migrate available originals once. See [Local data model](docs/DATA-MODEL.md) for migration, validation and export behavior.
-- Auto extraction lets AI choose fields; Targeted extraction uses built-in or custom profiles with header fields and row columns. The Templates page supports profile creation, duplication, import/export and editing. Retries retain the original profile snapshot; live agent activity appears during processing.
+- Auto extraction lets AI choose fields; Targeted extraction uses built-in (Document info, Document info + rows, Invoice with totals) or custom profiles with header fields and row columns. Auto mode reads each row's stock code and UOM as well as its description, quantity, unit price and amount. The Templates page supports profile creation, duplication, import/export and editing; a user only names a field or column and its technical key is derived (shown with *Show technical keys*). Retries retain the original profile snapshot; live agent activity appears during processing.
 
 ```bash
 npm ci && npm run dev      # local
