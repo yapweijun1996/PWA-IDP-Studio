@@ -25,7 +25,7 @@ it('keyboard focus is kept clear of the sticky topbar and scroll-to-top button',
 });
 it('the sidebar never hides links: it scrolls in the phone drawer and unsticks on short desktop windows', () => {
   expect(css).toMatch(/@media \(max-width: 759px\) \{[\s\S]*\.ds-sidebar \{[^}]*overflow-y: auto/);
-  expect(css).toMatch(/@media \(min-width: 760px\) and \(max-height: 560px\) \{\s*\.ds-sidebar \{[^}]*position: static/);
+  expect(css).toMatch(/@media \(min-width: 760px\) and \(max-height: 600px\) \{\s*\.ds-sidebar \{[^}]*position: static/);
 });
 it('the sheet gap is the only section spacing', () => {
   expect(rule('.ds-sheet > .ds-page-header')).toContain('margin-bottom: 0');
