@@ -2,6 +2,7 @@ import { runExtraction, type ExtractOptions } from './extract';
 import { createPageSource, releasePageImages } from './agent/pageSource';
 import { getFileByFileId } from './db';
 import { segmentPages, stitchSegments, type SegmentPlan } from './agent/segment';
+import { withDuplicateNumberBoundaries } from './agent/sameDocument';
 import { buildBatchFromSegments } from '../contract/build';
 import { modelFor } from './settings';
 import { imageLimits } from './providers';
@@ -62,10 +63,10 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
     const keys = new Set(plan.segments.map(s => s.pages.join(',')));
     for (let i = results.length - 1; i >= 0; i--) if (!keys.has(results[i].pages.join(','))) results.splice(i, 1);
   };
-  const build = () => buildBatchFromSegments({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, rowsAsTransactions: opts.profile ? opts.profile.rowsAsTransactions === true : undefined, model: { provider: opts.settings.provider, model: modelFor(opts.settings, opts.settings.provider) }, unknownPages: plan.unassigned, segments: plan.segments.flatMap(s => {
+  const build = () => buildBatchFromSegments({ batchId: opts.batchId, createdAt: opts.createdAt, file: opts.file, pages: opts.manifest, rowsAsTransactions: opts.profile ? opts.profile.rowsAsTransactions === true : undefined, model: { provider: opts.settings.provider, model: modelFor(opts.settings, opts.settings.provider) }, unknownPages: plan.unassigned, segments: withDuplicateNumberBoundaries(plan.segments.flatMap(s => {
     const result = results.find(r => r.pages.join(',') === s.pages.join(','));
     return result?.output ? [{ pages: s.pages, output: result.output, boundary_status: s.boundary_status }] : [];
-  }), failedPages: [...plan.failed, ...results.filter(r => !r.output).flatMap(r => r.pages)] });
+  })), failedPages: [...plan.failed, ...results.filter(r => !r.output).flatMap(r => r.pages)] });
   const progress = (phase: WindowedProgress['phase'], done: number, total: number) => {
     pruneResults();
     opts.onProgress?.({ phase, done, total, batch: build(), plan: structuredClone(plan), results: structuredClone(results) });
