@@ -145,7 +145,7 @@ it('Workspace selects field evidence on its page, records reason and enables app
   await click(container.querySelector('a[href="#workspace-issues"]')!);
   expect(Array.from(container.querySelectorAll('[role="tab"]')).find(n => n.textContent?.startsWith('Issues'))?.getAttribute('aria-selected')).toBe('true');
   await click(Array.from(container.querySelectorAll('[role="tab"]')).find(n => n.textContent === 'Fields')!);
-  await click(button('Supplier name'));
+  await click(button('Details for Supplier name')); await click(button('View source for Supplier name'));
   expect(container.textContent).toContain('Page 2 of 2');
   await vi.waitFor(() => expect(container.querySelector('[data-testid="bbox"]')?.getAttribute('aria-label')).toContain('Supplier name (selected)'));
   await click(button('Edit Currency')); await input(container.querySelector('[aria-label="Edit currency"]') ?? container.querySelector('form input')!, 'SGD');
@@ -154,6 +154,47 @@ it('Workspace selects field evidence on its page, records reason and enables app
   await vi.waitFor(() => expect(saved?.transactions[0].data.currency).toBe('SGD'));
   expect(saved?.reviews.at(-1)?.reason).toBe('Checked original'); await vi.waitFor(() => expect(button('Approve').disabled).toBe(false)); // `saved` is set before React shows the new document
   await click(button('Approve')); await vi.waitFor(() => expect(saved?.transactions[0].status).toBe('approved'));
+});
+it('Workspace separates confidence from field validation and locates a matching issue in the PDF', async () => {
+  let doc = fixture('validation-source');
+  doc.transactions[0].data.total_amount = '13755.00';
+  doc.evidence.find(e => e.field_pointer === '/total_amount')!.confidence = 1;
+  doc = recomputeIssues(doc);
+  await putFile(doc.source_files[0].file_id, new Blob(['image'], { type: 'image/png' }));
+  await render(<Workspace doc={doc} onSaved={() => {}} />);
+  const row = [...container.querySelectorAll('.workspace-field')].find(e => e.querySelector('strong')?.textContent === 'Total amount')!;
+  expect(row.textContent).toContain('Extraction confidence: 100%');
+  expect(row.textContent).toContain('Validation result: line amounts do not match total.');
+  await click(Array.from(container.querySelectorAll('[role="tab"]')).find(n => n.textContent?.startsWith('Issues'))!);
+  const issue = [...container.querySelectorAll('.ds-card')].find(e => e.textContent?.includes('/total_amount: line amounts do not match total.'))!;
+  await click([...issue.querySelectorAll('button')].find(b => b.textContent === 'View source for Total amount')!);
+  await vi.waitFor(() => expect(container.querySelector('[data-testid="bbox"]')?.getAttribute('aria-label')).toContain('Total amount (selected)'));
+});
+it('Workspace divider adjusts the viewer width with keyboard and clamps its range', async () => {
+  await render(<Workspace doc={fixture('divider')} onSaved={() => {}} />);
+  const divider = container.querySelector<HTMLElement>('[role="separator"][aria-label="Resize document viewer"]')!;
+  const press = (key: string) => act(() => divider.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })));
+  expect(divider.getAttribute('aria-valuenow')).toBe('50');
+  press('ArrowRight'); expect(divider.getAttribute('aria-valuenow')).toBe('52');
+  press('End'); press('ArrowRight'); expect(divider.getAttribute('aria-valuenow')).toBe('70');
+  press('Home'); press('ArrowLeft'); expect(divider.getAttribute('aria-valuenow')).toBe('30');
+  expect(container.querySelector('.workspace-split')?.getAttribute('style')).toContain('--viewer-width: 30%');
+});
+it('Workspace adds and edits a document-only row column with audit history', async () => {
+  const original = fixture('new-column');
+  let saved: Batch | undefined;
+  function Page() { const [doc, setDoc] = useState(original); return <Workspace doc={doc} onSaved={next => { saved = next; setDoc(next); }} />; }
+  await render(<Page />);
+  await click(button('Add row column'));
+  await input(container.querySelector('form input')!, 'Warehouse');
+  await act(async () => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+  await vi.waitFor(() => expect(saved?.transactions[0].data.line_items).toMatchObject([{ warehouse: null }]));
+  await click(button('Edit Warehouse row 1'));
+  await input(container.querySelector('form input')!, 'West');
+  await act(async () => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+  await vi.waitFor(() => expect(saved?.transactions[0].data.line_items).toMatchObject([{ warehouse: 'West' }]));
+  expect((await getBatch(original.batch.batch_id))?.transactions[0].data.line_items).toMatchObject([{ warehouse: 'West' }]);
+  expect(saved?.reviews.slice(-2).map(r => r.action)).toEqual(['correct', 'correct']);
 });
 it('Home accepts WebP by MIME or extension while rejecting TIFF in the same selection', async () => {
   const accepted: File[][] = [];

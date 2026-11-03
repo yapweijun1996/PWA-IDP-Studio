@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { invoiceInput } from './fixtures';
 import { buildBatch } from './build';
-import { approveTransaction, correctField, recomputeIssues, waiveIssue, reopenIssue } from './review';
+import { addLineItemColumn, approveTransaction, correctField, recomputeIssues, waiveIssue, reopenIssue } from './review';
 import { validateBatch } from './validate';
 
 describe('audited issue waivers', () => {
@@ -135,6 +135,20 @@ describe('immutable batch reviews', () => {
     expect(fixed.transactions[0].data.line_items).toMatchObject([{ amount: '1280.00' }]);
     expect(validateBatch(fixed).ok).toBe(true);
     for (const pointer of ['/__proto__/polluted', '/line_items/9/amount', '/bad~pointer']) expect(() => correctField(b, 't_1', pointer, 'x', 'Invalid')).toThrow();
+  });
+  it('adds an optional column to this transaction with an audit and invalidates approval', () => {
+    const original = buildBatch(invoiceInput());
+    original.transactions[0].status = 'approved';
+    const result = addLineItemColumn(original, 't_1', 'warehouse', 'Added column: Warehouse');
+    expect(original.transactions[0].data.line_items).not.toMatchObject([{ warehouse: null }]);
+    expect(result.transactions[0].data.line_items).toMatchObject([{ warehouse: null }]);
+    expect(result.transactions[0].status).not.toBe('approved');
+    expect(result.reviews.at(-1)).toMatchObject({ action: 'correct', reason: 'Added column: Warehouse' });
+    expect(result.transactions[0].field_evidence['/line_items/0/warehouse']).toBeUndefined();
+    expect(validateBatch(result).ok).toBe(true);
+    expect(() => addLineItemColumn(result, 't_1', 'warehouse', 'Duplicate')).toThrow('already exists');
+    expect(() => addLineItemColumn(original, 't_1', 'extra_price', 'Add')).toThrow('automatic');
+    expect(() => addLineItemColumn(original, 't_1', 'constructor', 'Add')).toThrow();
   });
   it('preserves waived and resolved history without duplicating current issues', () => {
     const b = buildBatch(invoiceInput());

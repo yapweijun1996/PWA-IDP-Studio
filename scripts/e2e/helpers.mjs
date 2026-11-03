@@ -41,5 +41,5 @@ export function checkEnvelope(batch) {
   }
 }
 export async function overflow(b) { assert.equal(await b.eval('document.documentElement.scrollWidth <= innerWidth + 1'), true, 'Horizontal viewport overflow'); }
-export async function key(b, key, modifiers = 0) { const code = {Tab:9,Escape:27,Enter:13}[key]; await b.send('Input.dispatchKeyEvent', {type:'keyDown',key,code:key,modifiers,windowsVirtualKeyCode:code}); await b.send('Input.dispatchKeyEvent', {type:'keyUp',key,code:key,modifiers,windowsVirtualKeyCode:code}); }
+export async function key(b, key, modifiers = 0) { const code = {Tab:9,Escape:27,Enter:13,' ':32,ArrowLeft:37,ArrowRight:39,Home:36,End:35}[key]; const physical = key === ' ' ? 'Space' : key; await b.send('Input.dispatchKeyEvent', {type:'keyDown',key,code:physical,modifiers,windowsVirtualKeyCode:code}); await b.send('Input.dispatchKeyEvent', {type:'keyUp',key,code:physical,modifiers,windowsVirtualKeyCode:code}); }
 export async function settled(b) { await b.eval('new Promise(resolve => requestAnimationFrame(()=>requestAnimationFrame(resolve)))'); }

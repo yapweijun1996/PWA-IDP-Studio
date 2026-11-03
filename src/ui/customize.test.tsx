@@ -131,7 +131,17 @@ it('freezes the current result while the new one is being read', async () => {
   expect(document.body.textContent).toContain('This result is locked');
   expect(button('Approve')!.disabled).toBe(true);
   expect(button('Customize fields')!.disabled).toBe(true);
-  const edits = [...document.querySelectorAll('button')].filter(b => /^Edit /.test(b.textContent ?? '') || /^Edit .* row \d+$/.test(b.getAttribute('aria-label') ?? ''));
+  const edits = [...document.querySelectorAll('button')].filter(b => /^Edit /.test(b.textContent ?? '') || /^Edit /.test(b.getAttribute('aria-label') ?? ''));
   expect(edits.length).toBeGreaterThan(0);
   expect(edits.every(b => b.disabled)).toBe(true);
+  expect(button('Add row column')!.disabled).toBe(true);
+});
+
+it('disables a correction already open when re-extraction locks the result', async () => {
+  const doc = buildBatch(invoiceInput());
+  await render({ doc, onReextract: () => {} });
+  await click('Edit Supplier name');
+  expect(button('Save correction')!.disabled).toBe(false);
+  await render({ doc, onReextract: () => {}, locked: true });
+  expect(button('Save correction')!.disabled).toBe(true);
 });

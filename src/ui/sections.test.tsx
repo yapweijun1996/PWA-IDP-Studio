@@ -46,8 +46,8 @@ describe('the review screen shows three sections', () => {
   it('keeps every field editable in its section', async () => {
     const onSaved = vi.fn();
     await render(buildBatch(invoiceInput()), { onSaved });
-    expect([...section('Footer')!.querySelectorAll('button')].some(b => b.textContent === 'Edit Total amount')).toBe(true);
-    expect([...section('Document info')!.querySelectorAll('button')].some(b => b.textContent === 'Edit Supplier name')).toBe(true);
+    expect([...section('Footer')!.querySelectorAll('button')].some(b => b.getAttribute('aria-label') === 'Edit Total amount')).toBe(true);
+    expect([...section('Document info')!.querySelectorAll('button')].some(b => b.getAttribute('aria-label') === 'Edit Supplier name')).toBe(true);
     await click('Edit Total amount');
     await fill('Edit total_amount', '1,300.00');
     await click('Save correction');
@@ -74,7 +74,7 @@ describe('the review screen shows three sections', () => {
     await render(doc);
     const check = section('Footer')!.querySelector('[role="group"]')!.textContent!;
     expect(check).toContain('Rows add up to 673.50'); expect(check).toContain('tax 53.88'); expect(check).toContain('grand total 727.38'); expect(check).toContain('Matches');
-    expect([...section('Footer')!.querySelectorAll('button')].some(b => b.textContent === 'Edit Tax amount')).toBe(true); // a footer line, editable
+    expect([...section('Footer')!.querySelectorAll('button')].some(b => b.getAttribute('aria-label') === 'Edit Tax amount')).toBe(true); // a footer line, editable
   });
 
   it('follows the template: a field the template puts in the footer is shown there, and one it keeps in the info stays there', async () => {

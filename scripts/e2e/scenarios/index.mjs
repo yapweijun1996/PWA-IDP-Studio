@@ -11,7 +11,7 @@ const buttonDisabled = (b, label) => b.eval(`[...document.querySelectorAll('butt
 async function home(b) { await route(b, '#/', 'Upload Documents'); }
 async function settings(b) { await route(b, '#/settings', 'Settings'); }
 async function correct(b, name, value) {
-  await b.eval(`(() => {const e=[...document.querySelectorAll('button')].find(e=>e.textContent.trim()===${js('Edit ' + name.replaceAll('_',' ').replace(/^./, c=>c.toUpperCase()))});if(!e)throw new Error('Missing field edit');e.click()})()`);
+  await b.eval(`(() => {const e=[...document.querySelectorAll('button')].find(e=>e.getAttribute('aria-label')===${js('Edit ' + name.replaceAll('_',' ').replace(/^./, c=>c.toUpperCase()))});if(!e)throw new Error('Missing field edit');e.focus()})()`); await key(b, ' ');
   await field(b, `Edit ${name}`, value); await field(b, 'Correction reason', `E2E correction of ${name}`); await click(b, 'Save correction');
   await b.wait(`![...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Save correction')`, 'correction persisted');
 }
@@ -376,11 +376,17 @@ export const scenarios = [
     assert.equal(await b.eval('document.querySelectorAll("table tbody tr").length'), 2);
     await b.eval(`document.querySelector('button[aria-label="Edit Stock code row 1"]').click()`);
     await field(b, 'Edit Stock code', 'SKU-EDIT'); await click(b, 'Save correction'); await text(b, 'SKU-EDIT');
+    await click(b, 'Add row column'); await field(b, 'Column name', 'Warehouse'); await click(b, 'Add row column');
+    await b.wait(`!!document.querySelector('button[aria-label="Edit Warehouse row 1"]')`, 'new column appears');
+    await b.eval(`document.querySelector('button[aria-label="Edit Warehouse row 1"]').click()`);
+    await field(b, 'Edit Warehouse', 'West'); await click(b, 'Save correction'); await reload(b);
+    await b.wait(`!!document.querySelector('button[aria-label="Edit Warehouse row 1"]')`, 'new column persists after reload');
     await click(b, 'JSON');
     const output = await b.eval('JSON.parse(document.querySelector("pre").textContent)');
     assert.deepEqual(Object.keys(output).sort(), ['document_no','transaction_date','remarks','line_items'].sort());
     assert.equal(output.line_items[0].stock_code, 'SKU-EDIT');
-    assert.deepEqual(Object.keys(output.line_items[0]).sort(), ['row_no','stock_code','stock_description','quantity','uom','unit_price','line_subtotal'].sort());
+    assert.equal(output.line_items[0].warehouse, 'West');
+    assert.deepEqual(Object.keys(output.line_items[0]).sort(), ['row_no','stock_code','stock_description','quantity','uom','unit_price','line_subtotal','warehouse'].sort());
   } },
   { name: 'sections', async run({b}) {
     await drop(b); await text(b, 'INV-E2E-001');
@@ -507,6 +513,28 @@ export const scenarios = [
     assert.deepEqual(stats, [['Pages processed','1'],['Documents detected','1'],['Transactions extracted','1']]);
     await b.eval(`document.querySelector('tbody tr').click()`); await text(b, 'INV-E2E-001');
   } },
+  { name: 'workspace-divider', async run({b}) {
+    await drop(b); await text(b, 'INV-E2E-001');
+    const divider = `document.querySelector('[role="separator"][aria-label="Resize document viewer"]')`;
+    await b.wait(`${divider} && getComputedStyle(${divider}).display!=='none'`, 'desktop divider is available');
+    assert.equal(await b.eval(`${divider}.getAttribute('aria-valuenow')`), '50');
+    await b.eval(`${divider}.focus()`); await key(b, 'ArrowRight');
+    assert.equal(await b.eval(`${divider}.getAttribute('aria-valuenow')`), '52');
+    await key(b, 'End'); assert.equal(await b.eval(`${divider}.getAttribute('aria-valuenow')`), '70'); await overflow(b);
+    await key(b, 'Home'); assert.equal(await b.eval(`${divider}.getAttribute('aria-valuenow')`), '30'); await overflow(b);
+    const point = await b.eval(`(()=>{const d=${divider}.getBoundingClientRect(),p=document.querySelector('.workspace-split').getBoundingClientRect(); return {x:d.left+d.width/2,y:d.top+Math.min(d.height/2,100),target:p.left+p.width*0.6}})()`);
+    await b.send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',buttons:1,clickCount:1});
+    await b.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.target,y:point.y,button:'left',buttons:1});
+    await b.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.target,y:point.y,button:'left',buttons:0,clickCount:1});
+    await b.wait(`Number(${divider}.getAttribute('aria-valuenow'))>=58 && Number(${divider}.getAttribute('aria-valuenow'))<=62`, 'pointer drag changes the split');
+    assert.equal(await b.eval(`document.querySelector('.workspace-split > section').getBoundingClientRect().width > 0 && document.querySelector('#workspace-issues').getBoundingClientRect().width > 0`), true);
+    await b.send('Emulation.setDeviceMetricsOverride', { width: 1024, height: 768, deviceScaleFactor: 1, mobile: false });
+    await b.wait('innerWidth===1024', 'desktop breakpoint'); await b.eval(`${divider}.focus()`);
+    await key(b, 'Home'); await overflow(b); await key(b, 'End'); await overflow(b);
+    await setProfile(b, 'phone'); await b.wait(`getComputedStyle(${divider}).display==='none'`, 'divider hidden on phone'); await overflow(b);
+    await setProfile(b, 'desktop'); await b.wait(`getComputedStyle(${divider}).display!=='none'`, 'divider returns on desktop');
+    assert.equal(await b.eval(`${divider}.getAttribute('aria-valuenow')`), '70', 'split survives viewport changes');
+  } },
   { name: 'review-flow', async run({b,mocks}) {
     mocks.setVariant('bad'); await drop(b); assert.equal(await buttonDisabled(b,'Approve'), true); await text(b, 'blocking issues before approval');
     await b.eval(`[...document.querySelectorAll('[role="tab"]')].find(e=>e.textContent.startsWith('Issues')).click()`);
@@ -516,7 +544,7 @@ export const scenarios = [
     // The bad fixture deliberately has TWO blockers. Fixing the date must not hide the totals blocker.
     assert.equal(await buttonDisabled(b,'Approve'), true); await correct(b, 'total_amount', '10.00');
     await b.wait(`[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Approve'&&!e.disabled)`, 'approval enabled');
-    await click(b, 'Invoice date');
+    await click(b, 'Details for Invoice date'); await click(b, 'View source for Invoice date');
     await b.wait(`!!document.querySelector('[role="img"][aria-label="Invoice date (selected) — read-only evidence"]')`, 'selected evidence box');
     assert.equal(await b.eval(`document.querySelector('.ds-evidence-viewer img[alt="Page 1"]')!==null`), true);
     assert.equal(await b.eval(`[...document.querySelectorAll('.ds-evidence-viewer button, .ds-evidence-viewer input, .ds-evidence-viewer [draggable="true"]')].some(e=>/draw|move|resize|edit.*box/i.test(e.textContent+' '+e.getAttribute('aria-label')))`), false, 'No box editing controls');
@@ -565,6 +593,7 @@ export const scenarios = [
     const batch=(await batches(b)).find(v=>v.source_files[0].filename==='limited.pdf');
     checkEnvelope(batch);
     assert.equal(batch.pages.filter(p=>p.status==='classified').length,12);
+    assert.equal(await b.eval(`(()=>{const strip=document.querySelector('.ds-page-strip'); const buttons=[...strip.querySelectorAll('button')]; return strip.scrollWidth>strip.clientWidth && buttons.every(button=>Math.abs(button.getBoundingClientRect().top-buttons[0].getBoundingClientRect().top)<1)})()`),true,'Page thumbnails stay on one horizontal strip');
     assert.deepEqual(batch.pages.filter(p=>p.status==='pending').map(p=>p.page_number),Array.from({length:13},(_,i)=>i+13));
     assert.ok(batch.issues.some(i=>i.rule_code==='PAGE_LIMIT_EXCEEDED'&&i.severity==='blocking'&&i.status==='open'));
     assert.equal(await buttonDisabled(b,'Approve'),true);

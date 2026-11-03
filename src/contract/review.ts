@@ -110,6 +110,25 @@ export function addRow(batch: Batch, transactionId: string, columns: readonly Ro
   appendReview(next, transactionId, 'correct', `${ROW_ADDED_PREFIX}${index + 1}. ${reason.trim()}`);
   return assertValid(refreshIssues(next));
 }
+/** Add an optional text column to existing rows in this transaction only. */
+export function addLineItemColumn(batch: Batch, transactionId: string, key: string, reason: string): Batch {
+  if (!/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(key) || ['constructor', 'prototype', '__proto__'].includes(key)) throw new Error('Invalid column key');
+  if (!reason.trim()) throw new Error('A correction reason is required');
+  const next = structuredClone(batch);
+  const tx = next.transactions.find(t => t.transaction_id === transactionId);
+  if (!tx) throw new Error('Unknown transaction');
+  if (!tx.field_types && (decimalKey(key) || key.endsWith('_date') || key === 'currency')) throw new Error('This column name is reserved for automatic numeric, date or currency validation. Choose another name.');
+  const rows = tx.data.line_items;
+  if (!Array.isArray(rows) || !rows.length || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw new Error('At least one line item is required');
+  if (rows.some(row => Object.hasOwn(row as Record<string, Value>, key))) throw new Error('Column already exists');
+  rows.forEach((row, index) => {
+    Object.defineProperty(row!, key, { value: null, writable: true, enumerable: true, configurable: true });
+    if (tx.field_types) tx.field_types[`/line_items/${index}/${key}`] = 'text';
+  });
+  tx.status = 'validated';
+  appendReview(next, transactionId, 'correct', reason.trim());
+  return assertValid(refreshIssues(next));
+}
 export type ApprovalResult = { ok: true; batch: Batch } | { ok: false; error: string };
 export function approveTransaction(batch: Batch, transactionId: string, reason: string): ApprovalResult {
   const next = recomputeIssues(batch);
