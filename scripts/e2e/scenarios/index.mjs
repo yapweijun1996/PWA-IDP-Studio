@@ -623,6 +623,33 @@ export const scenarios = [
     await b.eval('document.querySelector(\'[aria-label="Scroll to top"]\').click()');
     assert.equal(await b.eval('window.scrollY'), 0, 'Reduced-motion scroll-to-top is immediate');
   } })),
+  { name: 'top-bar-boundaries', profile: 'phone', async run({b}) {
+    await route(b, '#/design', 'Design system');
+    await b.eval(`document.querySelector('[aria-label="Toggle navigation"]').focus(); document.querySelector('[aria-label="Toggle navigation"]').click()`);
+    await b.wait(`document.querySelector('aside[role="dialog"]') && document.activeElement?.getAttribute('aria-label')==='Close navigation'`, 'drawer opens and takes focus');
+    await b.send('Emulation.setDeviceMetricsOverride', { width: 1024, height: 768, deviceScaleFactor: 1, mobile: false });
+    await b.wait(`!document.querySelector('aside[role="dialog"]') && document.body.style.overflow!=='hidden'`, 'desktop releases drawer lock');
+    await b.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await b.wait(`document.querySelector('[aria-label="Toggle navigation"]')?.getAttribute('aria-expanded')==='false' && document.querySelector('aside').hidden`, 'drawer stays closed on return to phone');
+    await b.eval(`document.querySelector('[aria-label="Toggle navigation"]').focus(); document.querySelector('[aria-label="Toggle navigation"]').click()`);
+    await b.wait(`!!document.querySelector('aside[role="dialog"]')`, 'drawer reopens');
+    await b.eval(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await b.wait(`document.activeElement?.getAttribute('aria-label')==='Toggle navigation' && document.querySelector('aside').hidden`, 'Escape restores trigger focus');
+    for (const label of ['Open dialog', 'Actions', 'More actions']) {
+      await b.eval(`document.activeElement?.blur();window.scrollTo(0,0)`);
+      await b.wait('window.scrollY===0', 'start at top');
+      await b.eval(`new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))`);
+      await b.eval(`window.scrollTo(0,window.innerHeight+300)`);
+      await b.wait(`getComputedStyle(document.querySelector('.ds-topbar')).transform!=='none'`, `header hides before ${label}`);
+      await b.eval(`[...document.querySelectorAll('button')].find(e=>e.textContent.trim()===${js(label)}).click()`);
+      await b.wait(`!!document.querySelector('[role="dialog"], [role="menu"]') && getComputedStyle(document.querySelector('.ds-topbar')).transform==='none'`, `${label} reveals header`);
+      await b.eval(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+      if (label !== 'Open dialog') await b.eval(`document.querySelector('[role="menu"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+      await b.wait(`!document.querySelector('[role="dialog"], [role="menu"]')`, `${label} closes`);
+      await b.eval(`document.activeElement?.blur();window.scrollTo(0,0)`);
+      await b.wait('window.scrollY===0', 'reset scroll');
+    }
+  } },
   { name: 'unknown-route-update', async run({b,server,buildApp,buildB}) {
     await pwa(b); await reload(b); await b.wait('!!navigator.serviceWorker.controller', 'controlled build A');
     await route(b, '#/missing', 'Page not found');

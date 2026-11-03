@@ -55,7 +55,7 @@ it('dialog traps focus, closes on Escape and returns focus', () => { render(<Dia
 it('tooltip opens on focus and dismisses on Escape', () => { render(<Tooltip text="Useful help"><button>Help</button></Tooltip>); const trigger = container.querySelector('button')!; act(() => trigger.focus()); expect(container.querySelector('[role="tooltip"]')!.textContent).toBe('Useful help'); act(() => { trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); }); expect(container.querySelector('[role="tooltip"]')).toBeNull(); });
 it('dropzone filters chooser files by extension and MIME and respects multiple', () => { const report = vi.fn(); render(<Dropzone accept=".pdf,image/*" multiple onFiles={report} />); const input = container.querySelector('input')!; const pdf = new File(['pdf'], 'invoice.PDF', { type: 'application/pdf' }); const image = new File(['png'], 'scan.png', { type: 'image/png' }); const text = new File(['txt'], 'notes.txt', { type: 'text/plain' }); Object.defineProperty(input, 'files', { configurable: true, value: [pdf, text, image] }); act(() => { input.dispatchEvent(new Event('change', { bubbles: true })); }); expect(report).toHaveBeenCalledWith([pdf, image]); expect(container.querySelector('[role="status"]')!.textContent).toContain('not accepted'); render(<Dropzone accept=".pdf" onFiles={report} />); Object.defineProperty(container.querySelector('input')!, 'files', { configurable: true, value: [pdf, pdf] }); act(() => { container.querySelector('input')!.dispatchEvent(new Event('change', { bubbles: true })); }); expect(report.mock.calls.at(-1)).toEqual([[pdf]]); });
 
-it('mobile drawer traps focus and restores the topbar trigger after Escape', () => {
+it('mobile drawer traps focus and restores the topbar trigger after Escape', async () => {
   let mobile = false;
   const listeners = new Set<() => void>();
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -67,8 +67,9 @@ it('mobile drawer traps focus and restores the topbar trigger after Escape', () 
   act(() => { mobile = true; listeners.forEach(listener => listener()); });
   const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Toggle navigation"]')!;
   expect(trigger.getAttribute('aria-expanded')).toBe('false');
-  trigger.focus();
+  act(() => trigger.focus());
   click(trigger);
+  await act(async () => {});
   const drawer = container.querySelector('aside')!;
   expect(drawer.getAttribute('aria-modal')).toBe('true');
   expect(document.body.style.overflow).toBe('hidden');
@@ -79,6 +80,15 @@ it('mobile drawer traps focus and restores the topbar trigger after Escape', () 
   expect(document.body.style.overflow).not.toBe('hidden');
   expect(trigger.getAttribute('aria-controls')).toBe(drawer.id);
   expect(container.querySelector('[aria-label="Close navigation"]')?.getAttribute('aria-controls')).toBe(drawer.id);
+  act(() => { trigger.focus(); });
+  click(trigger);
+  await act(async () => {});
+  act(() => { mobile = false; listeners.forEach(listener => listener()); });
+  expect(document.body.style.overflow).not.toBe('hidden');
+  act(() => { mobile = true; listeners.forEach(listener => listener()); });
+  expect(container.querySelector<HTMLButtonElement>('[aria-label="Toggle navigation"]')!.getAttribute('aria-expanded')).toBe('false');
+  expect(container.querySelector('aside')!.hidden).toBe(true);
+  await act(async () => {});
 });
 
 it('tooltip description is attached to the focused trigger', () => {

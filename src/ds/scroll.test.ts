@@ -4,6 +4,24 @@ import { expect, it, vi } from 'vitest';
 import { scrollDirection, useSmartScroll } from './useSmartScroll';
 import { ScrollTopButton } from './components/ScrollTopButton';
 
+it('does not interpret the current scroll position as a new downward scroll on mount or unlock', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  vi.stubGlobal('scrollY', 500);
+  const scrolling = document.scrollingElement || document.documentElement;
+  Object.defineProperty(scrolling, 'scrollHeight', { configurable: true, value: 5000 });
+  const host = document.createElement('div'); document.body.append(host);
+  const root = createRoot(host);
+  function Sample({ forced }: { forced: boolean }) { const state = useSmartScroll(forced); return createElement('div', { 'data-hidden': state.hidden }); }
+  try {
+    await act(async () => root.render(createElement(Sample, { forced: true })));
+    await act(async () => root.render(createElement(Sample, { forced: false })));
+    expect(host.firstElementChild?.getAttribute('data-hidden')).toBe('false');
+    vi.stubGlobal('scrollY', 510);
+    act(() => document.dispatchEvent(new Event('scroll')));
+    expect(host.firstElementChild?.getAttribute('data-hidden')).toBe('true');
+  } finally { act(() => root.unmount()); host.remove(); delete (scrolling as unknown as Record<string, unknown>).scrollHeight; vi.unstubAllGlobals(); }
+});
+
 it('accumulates directional movement, rejects jitter, and resets near top or forced visible', () => {
   expect(scrollDirection(100, 104, 0, false, false)).toEqual({ hidden: false, movement: 4 });
   expect(scrollDirection(104, 108, 4, false, false).hidden).toBe(true);

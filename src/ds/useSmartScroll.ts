@@ -12,7 +12,7 @@ export function scrollDirection(previous: number, current: number, movement: num
 export function useSmartScroll(forced = false) {
   const [state, setState] = useState({ hidden: false, showTop: false });
   useEffect(() => {
-    let previous = 0;
+    let previous = Math.max(0, window.scrollY);
     let movement = 0;
     let hidden = false;
     const target = document.scrollingElement || document.documentElement;

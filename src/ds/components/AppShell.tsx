@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useId, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useId, type ReactNode } from 'react';
 import { Sidebar, type SidebarItem } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useMobile } from '../useMobile';
@@ -8,6 +8,7 @@ import { ScrollTopButton } from './ScrollTopButton';
 export function AppShell({ children, items, search, right, footer, brand }: { children: ReactNode; items: readonly SidebarItem[]; search?: ReactNode; right?: ReactNode; footer?: ReactNode; brand?: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobile = useMobile();
+  useEffect(() => { if (!mobile) setMobileOpen(false); }, [mobile]);
   const sidebarId = useId();
   const mainRef = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('idp-studio.sidebar') === 'collapsed'; } catch { return false; } });
