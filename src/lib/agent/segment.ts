@@ -24,7 +24,9 @@ export function stitchSegments(windows: SegmentWindow[], pageCount: number, thre
     const decision = decisions.get(page);
     if (!decision) continue;
     const previous = segments.at(-1);
-    if (!previous || previous.pages.at(-1) !== page - 1 || decision.starts_new_document || page === 1) segments.push({ pages: [page], document_type: decision.document_type, confidence: decision.confidence, boundary_status: decision.confidence < threshold ? 'needs_review' : 'confirmed' });
+    // Page 1 is always the start of a document: its confidence says how sure the model is of the classification,
+    // not of a boundary, so a blurry first page must not block export as BOUNDARY_UNCERTAIN.
+    if (!previous || previous.pages.at(-1) !== page - 1 || decision.starts_new_document || page === 1) segments.push({ pages: [page], document_type: decision.document_type, confidence: decision.confidence, boundary_status: page === 1 || decision.confidence >= threshold ? 'confirmed' : 'needs_review' });
     else previous.pages.push(page);
   }
   for (const segment of segments) {

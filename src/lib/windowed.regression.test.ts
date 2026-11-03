@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { fakeStream } from './fakeStream';
 import { runWindowedExtraction, type WindowedOptions } from './windowed';
 import { imageLimits } from './providers';
-import { segmentPages, type SegmentPlan } from './agent/segment';
+import { segmentPages, stitchSegments, type SegmentPlan } from './agent/segment';
 import { validateBatch } from '../contract/validate';
 import type { RenderedPage } from './pdf';
 
@@ -122,6 +122,12 @@ it('chunks long segments in order and offsets row evidence and profile pointers'
   expect(s.stats()).toMatchObject({ calls: 4, alive: 0, peak: MAX_EXTRACT_PAGES });
   expect(s.stats().released).toBe(s.stats().rendered);
   expect(s.images.every(image => image.data === '')).toBe(true);
+});
+
+it('never reports the first page of a file as an uncertain boundary, but still checks later boundaries', () => {
+  const decision = (page: number, starts: boolean, confidence: number) => ({ page, document_type: 'unknown' as const, starts_new_document: starts, confidence });
+  const windows = [{ pages: [1, 2, 3], decisions: [decision(1, true, 0.5), decision(2, false, 0.4), decision(3, true, 0.5)] }];
+  expect(stitchSegments(windows, 3, 0.7).map(s => [s.pages, s.boundary_status])).toEqual([[[1, 2], 'confirmed'], [[3], 'needs_review']]);
 });
 
 it('fills a header value that is empty in the first chunk from a later chunk, without replacing values already found', async () => {

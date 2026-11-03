@@ -24,7 +24,9 @@ it('omits disabled tools while retaining mandatory tools', () => {
   expect(tools.map(t => t.name)).toEqual(['get_page_image', 'submit_result']);
 });
 it('uses the configured confidence threshold at document boundaries', () => {
-  const windows = [{ pages: [1], decisions: [{ page: 1, document_type: 'purchase_invoice' as const, starts_new_document: true, confidence: 0.8 }] }];
-  expect(stitchSegments(windows, 1, 0.9)[0].boundary_status).toBe('needs_review');
-  expect(stitchSegments(windows, 1, 0.8)[0].boundary_status).toBe('confirmed');
+  // Page 1 is always a document start, so the threshold is exercised on the boundary at page 2.
+  const decision = (page: number, confidence: number) => ({ page, document_type: 'purchase_invoice' as const, starts_new_document: true, confidence });
+  const windows = [{ pages: [1, 2], decisions: [decision(1, 1), decision(2, 0.8)] }];
+  expect(stitchSegments(windows, 2, 0.9)[1].boundary_status).toBe('needs_review');
+  expect(stitchSegments(windows, 2, 0.8)[1].boundary_status).toBe('confirmed');
 });
