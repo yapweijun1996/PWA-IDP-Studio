@@ -269,6 +269,25 @@ it.each([false, true])('merges three demo chunks with merged required-header che
   expect(result.batch.issues.filter(i => i.rule_code === 'MISSING_REQUIRED').map(i => i.message)).toEqual(missing ? ['/reference: required field is missing.'] : []);
   expect(result.batch.transactions[0].required_fields).toEqual(['/reference', '/line_items/0/sku', '/line_items/1/sku', '/line_items/2/sku']);
   expect(prompts[3]).toContain('Earlier pages of this same document');
+  // Targeted mode names the profile fields that are still empty; a field found by the first chunk is not requested again.
+  if (missing) expect(prompts[3]).toContain('still empty after the earlier pages: reference.');
+  else expect(prompts[3]).not.toContain('still empty after the earlier pages');
+  expect(s.stats().calls).toBe(5);
+});
+
+it('tells each later chunk which totals are still empty and stops asking once one is found', async () => {
+  const chunk = (page: number, fields: { key: string; value: string | null }[]) => JSON.stringify({ document_type: 'unknown', fields: fields.map(f => ({ ...f, page, bbox: [0, 0, 100, 100], confidence: 1 })), line_items: [] });
+  const s = setup(5, [decisions([1, 2, 3, 4]), decisions([4, 5]), chunk(1, [{ key: 'reference', value: 'ref-1' }]), chunk(3, [{ key: 'total_amount', value: '9.00' }]), chunk(5, [])]);
+  s.opts.settings.provider = 'demo';
+  const prompts: string[] = [];
+  const stream = s.opts.streamFn!;
+  s.opts.streamFn = (model, context, options) => { prompts.push(JSON.stringify(context)); return stream(model, context, options); };
+  const result = await runWindowedExtraction(s.opts);
+  expect(prompts[2]).not.toContain('still empty after the earlier pages'); // first chunk: nothing is known yet
+  expect(prompts[3]).toContain('still empty after the earlier pages: total_amount, subtotal_amount, tax_amount.');
+  expect(prompts[4]).toContain('still empty after the earlier pages: subtotal_amount, tax_amount.'); // total_amount was found on page 3
+  expect(prompts[4]).not.toContain('still empty after the earlier pages: total_amount');
+  expect(result.batch.transactions[0].data).toMatchObject({ reference: 'ref-1', total_amount: '9.00' });
   expect(s.stats().calls).toBe(5);
 });
 

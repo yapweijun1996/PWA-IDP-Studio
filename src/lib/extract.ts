@@ -58,6 +58,8 @@ export interface ExtractOptions {
   absolutePages?: number[];
   /** Earlier pages of this document have already been extracted. */
   continuation?: boolean;
+  /** With `continuation`: header keys still empty after the earlier chunks, so the model looks for them on these pages. */
+  missingHeaders?: string[];
   onOutput?: (output: ModelOutput) => void;
 }
 
@@ -121,8 +123,10 @@ Each row is a record keyed ONLY by the selected row keys, each cell is {value,pa
 ${opts.profile.rowFields.length ? 'Include line_items rows when present.' : 'Do not extract rows; line_items must be empty.'}
 Types: amount/quantity decimal strings, integer safe integers, date ISO YYYY-MM-DD, text/code strings.
 Do not add unselected keys. document_type is still required and may be unknown.` : '';
+  const wanted = opts.missingHeaders?.length ? ` These header fields are still empty after the earlier pages: ${opts.missingHeaders.join(', ')}. If a value for one of them is printed on these pages (a grand total is usually printed on the last page), return it with its evidence; otherwise leave it out.` : '';
+  const continuation = opts.continuation ? `\nEarlier pages of this same document were already processed. Return only rows and fields found on these pages; use null/[] otherwise. Do not repeat earlier header data or rows.${wanted}` : '';
   const agent = new Agent({
-    initialState: { systemPrompt: SYSTEM_PROMPT + TOOL_PROMPT + targeted + (opts.continuation ? '\nEarlier pages of this same document were already processed. Return only rows and fields found on these pages; use null/[] otherwise. Do not repeat earlier header data or rows.' : ''), model, tools: createExtractionTools({ source, submit, maxImages: opts.maxToolImages ?? config.toolImages, enabled: config.tools, decoder: opts.decoder }) },
+    initialState: { systemPrompt: SYSTEM_PROMPT + TOOL_PROMPT + targeted + continuation, model, tools: createExtractionTools({ source, submit, maxImages: opts.maxToolImages ?? config.toolImages, enabled: config.tools, decoder: opts.decoder }) },
     toolExecution: 'sequential',
     streamFn: (requestModel, context, options) => {
       if (!stopped && !output) return (opts.streamFn ?? streamSimple)(requestModel, context, options);

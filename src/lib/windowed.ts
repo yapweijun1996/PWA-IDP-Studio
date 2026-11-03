@@ -5,6 +5,8 @@ import { segmentPages, stitchSegments, type SegmentPlan } from './agent/segment'
 import { buildBatchFromSegments } from '../contract/build';
 import { modelFor } from './settings';
 import { imageLimits } from './providers';
+import { TOTAL_KEYS } from './standards';
+import type { ExtractionProfile } from './agent/contract';
 import type { ModelOutput } from './validate';
 import type { Batch } from '../contract/types';
 import { loadAgentConfig } from './agentConfig';
@@ -28,6 +30,15 @@ export function fillMissingHeaders(merged: ModelOutput, chunk: ModelOutput): voi
     if (index < 0) merged.fields.push(field);
     else if (isEmpty(merged.fields[index].value)) merged.fields[index] = field;
   }
+}
+
+/** Header keys still empty after the earlier chunks: the profile's fields in Targeted mode, otherwise the amounts a document usually prints last. */
+export function missingHeaders(merged: ModelOutput, profile?: ExtractionProfile): string[] {
+  return (profile ? profile.fields.map(f => f.key) : TOTAL_KEYS).filter(key => {
+    let value: unknown;
+    merged.fields.forEach(field => { if (field.key === key) value = field.value; });
+    return isEmpty(value);
+  });
 }
 
 export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ batch: Batch; plan: SegmentPlan; results: SegmentResult[] }> {
@@ -90,7 +101,7 @@ export async function runWindowedExtraction(opts: WindowedOptions): Promise<{ ba
           try {
             for (const page of absolutePages) { opts.signal?.throwIfAborted(); pages.push(await source.render(page)); }
             let chunk: ModelOutput | undefined;
-            await runExtraction({ ...opts, pages, absolutePages, continuation: offset > 0, pageSource: source, onOutput: out => { chunk = out; } });
+            await runExtraction({ ...opts, pages, absolutePages, continuation: offset > 0, missingHeaders: merged ? missingHeaders(merged, opts.profile) : undefined, pageSource: source, onOutput: out => { chunk = out; } });
             if (!chunk) throw new Error('Extraction produced no output');
             if (!merged) merged = chunk;
             else {
