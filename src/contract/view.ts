@@ -1,4 +1,4 @@
-import type { Batch, BBox, Value } from './types';
+import type { Batch, BBox, DocumentType, Transaction, Value } from './types';
 import { REQUIRED_FIELDS } from '../lib/standards';
 import { blockingIssues, pointerFor } from './rules';
 import { validateBatch } from './validate';
@@ -8,14 +8,18 @@ export interface FieldView {
   evidence: { page: number; bbox: BBox } | null;
   exception: 'missing' | 'low_confidence' | 'invalid' | null;
 }
+/** Header keys a transaction must have: its template's required fields, or the standard set for its document type. */
+export function requiredKeys(tx: Transaction, documentType: DocumentType): string[] {
+  return tx.required_fields
+    ? tx.required_fields.filter(p => /^\/[^/]+$/.test(p)).map(p => p.slice(1).replace(/~1/g, '/').replace(/~0/g, '~'))
+    : tx.transaction_type === 'statement_entry' ? [] : REQUIRED_FIELDS[documentType];
+}
 export function transactionView(batch: Batch, transactionId: string) {
   const tx = batch.transactions.find(t => t.transaction_id === transactionId);
   if (!tx) throw new Error('Unknown transaction');
   const doc = batch.documents.find(d => d.document_id === tx.document_id)!;
   const issues = batch.issues.filter(i => i.scope === 'batch' || i.target_id === transactionId || i.target_id === doc.document_id || batch.evidence.some(e => e.evidence_id === i.target_id && e.transaction_id === transactionId));
-  const required = tx.required_fields
-    ? tx.required_fields.filter(p => /^\/[^/]+$/.test(p)).map(p => p.slice(1).replace(/~1/g, '/').replace(/~0/g, '~'))
-    : tx.transaction_type === 'statement_entry' ? [] : REQUIRED_FIELDS[doc.document_type];
+  const required = requiredKeys(tx, doc.document_type);
   const keys = [...new Set([...Object.keys(tx.data).filter(k => k !== 'line_items'), ...required])];
   const fields: FieldView[] = keys.map(key => {
     const pointer = pointerFor(key);

@@ -1,6 +1,7 @@
 import type { SidebarItem } from '../ds';
 import type { Batch } from '../contract/types';
 import { transactionView } from '../contract/view';
+import { labelFromKey } from '../lib/profiles';
 export function reviewRows(batches: readonly Batch[]) {
   return batches.flatMap(batch => batch.transactions.map(tx => ({ batch, tx, view: transactionView(batch, tx.transaction_id) })))
     .filter(({ tx, view }) => !['validated', 'approved'].includes(tx.status) || view.blockingCount > 0 || view.fields.some(f => f.exception === 'missing'))
@@ -20,4 +21,5 @@ export function navItems(active: string, count: number): SidebarItem[] {
   ];
 }
 export const workspaceHref = (batch: Batch, transactionId?: string) => `#/doc/${encodeURIComponent(batch.batch.batch_id)}${transactionId ? `/${encodeURIComponent(transactionId)}` : ''}`;
-export const readable = (text: string) => text.toLowerCase().replaceAll('_', ' ').replace(/^./, c => c.toUpperCase());
+/** Plain-words label for a technical key or status ("po_no" -> "PO no"); see labelFromKey. */
+export const readable = labelFromKey;

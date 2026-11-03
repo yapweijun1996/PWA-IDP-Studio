@@ -1,7 +1,7 @@
 import { loadBatchMode, saveBatchMode } from '../lib/profiles';
 import type { AgentStep, ExtractionProfile } from '../lib/agent/contract';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getBatch, getFile, getWindowedState, listBatches, putBatch, putFile, putWindowedProgress, type WindowedState } from '../lib/db';
+import { deleteBatch, getBatch, getFile, getWindowedState, listBatches, putBatch, putFile, putWindowedProgress, type WindowedState } from '../lib/db';
 import { runWindowedExtraction } from '../lib/windowed';
 import { putRun, type RunTrace } from '../lib/db';
 import { modelFor } from '../lib/settings';
@@ -47,6 +47,8 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [migration, setMigration] = useState<{ migrated: number; skipped: number }>();
   const [current, setCurrent] = useState<Batch | null | undefined>(undefined);
+  /** Id of the batch being read again with a customized template; its result is frozen until the new one finishes. */
+  const [replacing, setReplacing] = useState<string | null>(null);
   const refresh = useCallback(async () => {
     const batches = await listBatches();
     setDocs(batches);
@@ -149,6 +151,54 @@ export function App() {
     setBusy(null);
   };
 
+  /**
+   * Read a stored file again with a customized template. The new result is built as a separate batch and the current one is
+   * only removed once the new one is complete, so a failed or cancelled run (or a closed tab) never costs the user their
+   * existing result. Corrections and approvals on the old result are replaced; the confirmation says so.
+   */
+  const reextract = async (batchId: string, profile: ExtractionProfile) => {
+    if (navigator.onLine === false) { setOfflineUpload(true); return; }
+    if (busy) return;
+    setError(''); setNotice('');
+    let id: string | undefined;
+    try {
+      const old = await getBatch(batchId);
+      const source = old?.source_files[0];
+      const blob = source ? await getFile(source.file_id) : undefined;
+      if (!old || !source || !blob) throw new Error('The original file is missing from this browser. Upload it again.');
+      id = `batch_${crypto.randomUUID()}`;
+      const info = { file_id: source.file_id, filename: source.filename, media_type: source.media_type, sha256: source.sha256, size: blob.size };
+      const manifest = old.pages.map(p => ({ page_number: p.page_number, width: p.width, height: p.height }));
+      const placeholder = buildBatch({ batchId: id, createdAt: old.batch.created_at, file: info, pages: manifest, renderedPageCount: 1, model: null, output: { document_type: 'unknown', fields: [], line_items: [] } });
+      for (const page of placeholder.pages) { page.status = 'pending'; page.regions = []; page.unassigned_reason = 'review_pending'; }
+      placeholder.documents = []; placeholder.transactions = [];
+      const pending = recomputeIssues(placeholder);
+      pending.batch.status = 'processing';
+      saveBatchMode(id, { kind: 'targeted', profileId: profile.id }, structuredClone(profile));
+      await putBatch(pending);
+      setReplacing(batchId);
+      await refresh();
+      const cancelled = await extractInto({ file: blob, info, manifest, id, createdAt: old.batch.created_at, pending, profile: structuredClone(profile) });
+      const fresh = await getBatch(id);
+      const complete = !cancelled && !!fresh && fresh.batch.status !== 'failed' && fresh.transactions.length > 0 && fresh.pages.every(p => p.status === 'classified');
+      if (complete) {
+        await deleteBatch(batchId);
+        await refresh();
+        if (location.hash.startsWith(`#/doc/${encodeURIComponent(batchId)}`)) go(`#/doc/${encodeURIComponent(id)}`);
+        setNotice(`${source.filename} was read again with “${profile.name}”. The earlier result was replaced.`);
+      } else {
+        await deleteBatch(id);
+        await refresh();
+        setNotice(cancelled ? 'Extraction cancelled. Your earlier result was kept unchanged.' : 'The new template could not be applied to the whole file. Your earlier result was kept unchanged.');
+      }
+    } catch (e) {
+      if (id) { try { await deleteBatch(id); await refresh(); } catch { /* The earlier result is untouched either way. */ } }
+      setError(`${String((e as Error).message)} Your earlier result was kept unchanged.`);
+    }
+    setReplacing(null);
+    setBusy(null);
+  };
+
   const process = async (files: File[], selectedProfile?: ExtractionProfile) => {
     const profile = selectedProfile ? structuredClone(selectedProfile) : undefined;
     if (navigator.onLine === false) { setOfflineUpload(true); return; }
@@ -202,7 +252,7 @@ export function App() {
   else if (route.name === 'doc') {
     if (current === undefined) body = <Spinner label="Loading document…" />;
     else if (current === null) body = <Notice tone="error">Document not found. <a href="#/documents">Back to Documents</a></Notice>;
-    else body = <Workspace steps={steps} key={current.batch.batch_id} doc={current} busy={busy} onRetry={() => retry(current.batch.batch_id)} transactionId={route.transactionId} onSaved={d => { setCurrent(d); void refresh(); }} />;
+    else body = <Workspace steps={steps} key={current.batch.batch_id} doc={current} busy={busy} onRetry={() => retry(current.batch.batch_id)} onReextract={profile => void reextract(current.batch.batch_id, profile)} locked={replacing === current.batch.batch_id} transactionId={route.transactionId} onSaved={d => { setCurrent(d); void refresh(); }} />;
   } else body = <Home steps={steps} onRetry={retry} docs={docs} settings={settings} busy={busy} search={search} loading={loading} offlineUpload={offlineUpload} onFiles={process} onDeleted={refresh} />;
   return (
     <AppShell brand="IDP Studio" items={navItems(route.name, reviewRows(docs).length)} search={route.name === 'home' || route.name === 'documents' ? <SearchInput placeholder="Search documents…" value={search} onChange={setSearch} /> : undefined} right={<OnlineStatus />} footer={<>Version {APP_VERSION} · Build {BUILD_ID}</>}>
