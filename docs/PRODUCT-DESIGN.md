@@ -186,3 +186,34 @@ Ordered by value for a non-technical user against effort. Sizes: S = days, M = 1
 2. **Cost of "Extract again"** – it repeats the AI calls for the whole file (including page segmentation for a bundle of more than 10 pages). The confirmation now says so; still open is whether to reuse the pages already read and whether to carry the user's earlier corrections over to the new result.
 3. **Where templates live** – in this browser only today. Sharing templates between users needs a backend.
 4. **Manual rows and approval** – decided as a default, open to change: a hand-added row does not block approval by itself (the approval, if any, is withdrawn when the row is added, and the row is badged and audited). The stricter alternative is to make approval ask for an explicit acknowledgement of each hand-entered row; it would fit `approveTransaction` and the Approve button without a contract change.
+
+## 10. What is left
+
+State at the end of roadmap phases P1 to P4. Everything in sections 3 to 7 that the vision asks for exists; what follows is what is **not** done, ordered by how much it matters to a user. Each item was checked against the code or configuration when this list was written.
+
+### Needs a decision from the product owner
+
+1. **Approval and hand-entered rows** – a row added by hand does not block approval by itself (it is badged, audited, and withdraws an earlier approval). Whether approval should ask for an explicit acknowledgement of each such row is open (see open decision 4).
+2. **Cost of reading again** – *Extract again* and *Read again with a template* read the whole file again and do not carry the user's earlier corrections over (open decision 2).
+3. **Where templates live** – in this browser only. Sharing them between users, and any real login, needs a backend; today every review action is recorded as `local_user` (open decision 3).
+4. **One name for the document number** – Auto uses `po_no`, `invoice_no`, `do_no` …; a template uses `document_no` (gap 9). An alias map would let a template and Auto agree.
+
+### Not built
+
+- **Footer lines beyond subtotal, tax and total** (shipping fee, discount, rounding) are shown and editable but do not take part in the totals check; a total that includes them raises TOTALS_MISMATCH, which can be waived with a reason (gap 11).
+- **Hand-added rows** cannot be deleted or inserted in the middle, only corrected; a result whose rows are separate transactions (statements) has no *Add row*.
+- **A template cannot be applied before a document has been read once**, because the supplier is unknown until then; a new supplier's first document therefore costs two reads if its template is wanted.
+
+### Known rough edges
+
+- **An empty required amount is reported twice in Auto mode**: `MISSING_REQUIRED` (blocking) and `INVALID_DECIMAL`. A result read with a template reports it once.
+- **The Templates page still says "profile"** (*Create profile*, *Save profile*, *Extraction profiles*) on a page called Templates (gap 8).
+- **CJK CMaps are online-only** (about 1.5 MB, not in the offline cache); stored PDFs that need them render less text offline.
+- **Scanned documents can still be split by the model**, which is not deterministic. The safety net flags a split only when the two parts repeat the document number; a split between parts that do not is not caught (gap 12).
+
+### How it is tested
+
+- **GitHub CI runs typecheck, the unit tests (`npm test`, every `*.test.ts` and `*.test.tsx`), the SSOT check and the build. It does not run the 36 browser (E2E) scenarios**; they are run by hand with `npm run e2e`.
+- **Two E2E scenarios are occasionally unstable on Windows** when the whole suite runs: `windowed-multi-doc` (a race when the same batch route is opened twice) and a temp-folder cleanup error (`EBUSY`) in `migration`. Both pass when run alone.
+- **Accuracy with a real AI has been checked on seven real files** (purchase orders, digital and scanned, from a few rows to 128) and two composite bundles built from them, all from one tester, not on a wider set; there is no accuracy benchmark.
+- The real test files and my local test tools live in `test/`, which is git-ignored, so they are not in the repository.
