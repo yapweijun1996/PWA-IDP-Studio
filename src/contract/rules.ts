@@ -52,7 +52,10 @@ export function businessIssues(batch: Batch): Issue[] {
         const pointer = prefix + pointerFor(key);
         const type = tx.field_types?.[pointer];
         const present = v !== null && v !== '';
-        if ((tx.field_types ? present && (type === 'amount' || type === 'quantity') : decimalKey(key) && (!entry || present)) && normalizeDecimal(v) === null) add('transaction', tx.transaction_id, 'INVALID_DECIMAL', 'error', `${pointer}: invalid decimal.`);
+        // An empty header amount is not an invalid one: a required one is reported as missing, an optional one is just absent. A row cell
+        // in an Auto result that is empty is still reported, because the totals check cannot run without every row amount.
+        const emptyIsInvalid = !entry && prefix !== '';
+        if ((tx.field_types ? present && (type === 'amount' || type === 'quantity') : decimalKey(key) && (emptyIsInvalid || present)) && normalizeDecimal(v) === null) add('transaction', tx.transaction_id, 'INVALID_DECIMAL', 'error', `${pointer}: invalid decimal.`);
         if ((tx.field_types ? present && type === 'date' : (key.endsWith('_date') && (!entry || present)) || (entry && key === 'date' && present)) && !isIsoDate(v)) add('transaction', tx.transaction_id, 'STANDARDS_ISO8601', 'blocking', `${pointer}: not ISO 8601.`);
         if (present && type === 'integer' && (typeof v !== 'number' || !Number.isSafeInteger(v))) add('transaction', tx.transaction_id, 'INVALID_INTEGER', 'blocking', `${pointer}: not an integer.`);
         // Auto checks every currency. A Targeted result checks one that is present, so an optional currency the document does not print
