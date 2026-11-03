@@ -1,7 +1,26 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { BUILTIN_PROFILES } from './agent/contract';
-import { clearProfiles, loadBatchMode, loadMode, loadProfiles, saveBatchMode, saveMode, saveProfiles, validateProfile } from './profiles';
+import { clearProfiles, keyFromLabel, loadBatchMode, loadMode, loadProfiles, saveBatchMode, saveMode, saveProfiles, validateProfile } from './profiles';
 beforeEach(() => { clearProfiles(); localStorage.clear(); });
+it.each([['Batch No', 'batch_no'], ['  Unit   Price (SGD) ', 'unit_price_sgd'], ['Qty/UOM', 'qty_uom'], ['Café Ünit', 'cafe_unit'], ['2nd Qty', 'field_2nd_qty'], ['批号', 'field'], ['', 'field'], ['---', 'field']])('derives the key for the label %j as %s', (label, key) => {
+  expect(keyFromLabel(label)).toBe(key);
+});
+it('keeps derived keys unique and always valid snake_case', () => {
+  expect(keyFromLabel('Batch No', ['batch_no'])).toBe('batch_no_2');
+  expect(keyFromLabel('Batch No', ['batch_no', 'batch_no_2'])).toBe('batch_no_3');
+  for (const label of ['Batch No', '批号', '2nd', 'A', ' x y ', 'ÄÖÜ ß', 'Remark (see note)']) {
+    expect(validateProfile({ id: 'x', name: 'x', fields: [{ key: keyFromLabel(label), label: 'L', type: 'text' }], rowFields: [] })).toEqual([]);
+  }
+});
+it('ships valid built-in templates, including the footer totals in the invoice template', () => {
+  for (const profile of BUILTIN_PROFILES) expect(validateProfile(profile)).toEqual([]);
+  expect(new Set(BUILTIN_PROFILES.map(p => p.id)).size).toBe(BUILTIN_PROFILES.length);
+  const invoice = BUILTIN_PROFILES.find(p => p.id === 'invoice')!;
+  expect(invoice.fields.map(f => f.key)).toEqual(expect.arrayContaining(['subtotal_amount', 'tax_amount', 'total_amount']));
+  expect(invoice.fields.find(f => f.key === 'total_amount')).toMatchObject({ type: 'amount', required: true });
+  expect(invoice.rowFields.map(f => f.key)).toEqual(expect.arrayContaining(['stock_code', 'uom', 'amount']));
+  expect(BUILTIN_PROFILES.slice(0, 2).map(p => p.id)).toEqual(['doc-info', 'doc-info-rows']); // other code addresses these by position
+});
 it('validates keys across headers and rows and rejects empty or oversized profiles', () => {
   const profile = structuredClone(BUILTIN_PROFILES[1]);
   expect(validateProfile(profile)).toEqual([]);
@@ -15,7 +34,7 @@ it('validates keys across headers and rows and rejects empty or oversized profil
 it('protects builtin identities and persists user profiles and mode', () => {
   const custom = { ...structuredClone(BUILTIN_PROFILES[0]), id: 'custom', builtin: false, name: 'Custom' };
   saveProfiles([{ ...BUILTIN_PROFILES[0], name: 'Overwritten', builtin: false }, custom]);
-  expect(loadProfiles().map(p => p.name)).toEqual(['Document info', 'Document info + rows', 'Custom']);
+  expect(loadProfiles().map(p => p.name)).toEqual(['Document info', 'Document info + rows', 'Invoice with totals', 'Custom']);
   saveMode({ kind: 'targeted', profileId: 'custom' }); expect(loadMode()).toEqual({ kind: 'targeted', profileId: 'custom' });
   saveProfiles([]); expect(loadMode()).toEqual({ kind: 'auto' });
 });

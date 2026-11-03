@@ -23,6 +23,19 @@ export function validateProfile(profile: ExtractionProfile): string[] {
   }
   return errors;
 }
+/**
+ * The technical snake_case key for a label a user typed ("Batch No" -> batch_no), unique among `taken`, so nobody has to
+ * type a key. A label with no Latin letters or digits falls back to `field`; a leading digit gets a `field_` prefix.
+ */
+export function keyFromLabel(label: string, taken: Iterable<string> = []): string {
+  const used = new Set(taken);
+  let base = label.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!base) base = 'field';
+  else if (/^[0-9]/.test(base)) base = `field_${base}`;
+  let key = base; let n = 2;
+  while (used.has(key)) key = `${base}_${n++}`;
+  return key;
+}
 export function loadProfiles(): ExtractionProfile[] {
   const stored = load<unknown>(PROFILE_KEYS[0], []);
   const users = Array.isArray(stored) ? stored.filter((p): p is ExtractionProfile => !!p && typeof p.id === 'string' && Array.isArray(p.fields) && Array.isArray(p.rowFields) && !BUILTIN_PROFILES.some(b => b.id === p.id) && validateProfile(p).length === 0) : [];

@@ -32,13 +32,14 @@ it('creates a profile only after valid fields and duplicates a locked builtin', 
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
   await click('Create profile'); await click('Save profile');
   expect(document.body.textContent).toContain('Use 1–30 fields in total.');
-  await fill('Profile name', 'Shipping'); await click('Add header field');
-  await fill('Header fields 1 key', 'tracking_no'); await fill('Header fields 1 label', 'Tracking number');
-  await click('Add row column'); await fill('Row columns 1 key', 'stock_code'); await fill('Row columns 1 label', 'Stock code');
+  await fill('Profile name', 'Shipping'); await click('Add field');
+  await fill('Header fields 1 label', 'Tracking number'); // the user only names the field; its key is derived
+  await click('Add column'); await fill('Row columns 1 label', 'Stock code');
+  expect(document.body.textContent).not.toContain('Header fields 1 key'); // technical keys are hidden by default
   await act(async () => { (document.querySelector('[role="dialog"] input[type="checkbox"]') as HTMLInputElement).click(); });
   await click('Save profile');
   const shipping = loadProfiles().find(p => p.name === 'Shipping')!;
-  expect(shipping.fields).toEqual([{ key: 'tracking_no', label: 'Tracking number', type: 'text', required: true }]);
+  expect(shipping.fields).toEqual([{ key: 'tracking_number', label: 'Tracking number', type: 'text', required: true }]);
   expect(shipping.rowFields).toEqual([{ key: 'stock_code', label: 'Stock code', type: 'text' }]);
   expect(container.textContent).toContain('Required *');
   await click('Edit Shipping'); await fill('Profile name', 'Shipping updated'); await click('Save profile');
@@ -48,6 +49,37 @@ it('creates a profile only after valid fields and duplicates a locked builtin', 
   expect(copy.builtin).toBe(false); expect(copy.id).not.toBe('doc-info'); expect(copy.fields).toEqual(BUILTIN_PROFILES[0].fields);
   expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Edit Document info')).toBe(false);
   expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Delete Document info')).toBe(false);
+});
+const toggle = async (label: string) => { await act(async () => { ([...document.querySelectorAll('label')].find(l => l.textContent === label)!.control as HTMLInputElement).click(); }); };
+it('derives a new field key from its label, never renames a saved key, and shows keys only on request', async () => {
+  saveProfiles([{ ...structuredClone(BUILTIN_PROFILES[0]), id: 'shipping', name: 'Shipping', builtin: false }]);
+  await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
+  expect(container.textContent).toContain('You do not need one'); // plain-language page by default
+  expect(container.textContent).not.toContain('Auto-mode header keys');
+  expect(container.textContent).not.toContain('(document_no)');
+  await click('Edit Shipping');
+  await fill('Header fields 1 label', 'Doc no.'); // saved field: the label changes, the key must not
+  await click('Add field'); await fill('Header fields 4 label', 'Batch No');
+  await fill('Header fields 4 label', 'Batch Number');  // the key keeps following the label while it was derived
+  await click('Add field'); await fill('Header fields 5 label', 'Batch Number'); // same label twice -> unique key
+  await click('Save profile');
+  const saved = loadProfiles().find(p => p.id === 'shipping')!;
+  expect(saved.fields[0]).toMatchObject({ key: 'document_no', label: 'Doc no.' });
+  expect(saved.fields.slice(3).map(f => [f.key, f.label])).toEqual([['batch_number', 'Batch Number'], ['batch_number_2', 'Batch Number']]);
+  await toggle('Show technical keys');
+  expect(container.textContent).toContain('(batch_number)');
+  expect(container.textContent).toContain('Auto-mode header keys');
+  expect(container.textContent).toContain('stock_code'); // the Auto row keys now include the item code
+});
+it('stops following the label once a key is typed by hand', async () => {
+  await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
+  await toggle('Show technical keys');
+  await click('Create profile'); await fill('Profile name', 'Lots'); await click('Add field');
+  await fill('Header fields 1 label', 'Batch No');
+  await fill('Header fields 1 key', 'lot');
+  await fill('Header fields 1 label', 'Batch Number');
+  await click('Save profile');
+  expect(loadProfiles().find(p => p.name === 'Lots')!.fields).toEqual([{ key: 'lot', label: 'Batch Number', type: 'text' }]);
 });
 it('saves the row-transaction option in a custom profile snapshot', async () => {
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));

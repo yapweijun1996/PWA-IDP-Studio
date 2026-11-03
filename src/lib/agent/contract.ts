@@ -71,4 +71,28 @@ export const BUILTIN_PROFILES: ExtractionProfile[] = [
       { key: 'line_subtotal', label: 'Line subtotal', type: 'amount' },
     ],
   },
+  // Document info + rows + the totals printed at the bottom. Appended last: other code addresses the built-ins by position.
+  {
+    id: 'invoice',
+    name: 'Invoice with totals',
+    builtin: true,
+    fields: [
+      { key: 'document_no', label: 'Document number', type: 'code', required: true },
+      { key: 'transaction_date', label: 'Transaction date', type: 'date', required: true },
+      { key: 'customer_name', label: 'Customer', type: 'text' },
+      { key: 'currency', label: 'Currency', type: 'code' },
+      { key: 'subtotal_amount', label: 'Sub total', type: 'amount' },
+      { key: 'tax_amount', label: 'Tax (GST)', type: 'amount' },
+      { key: 'total_amount', label: 'Grand total', type: 'amount', required: true },
+    ],
+    rowFields: [
+      { key: 'row_no', label: 'Row number', type: 'integer' },
+      { key: 'stock_code', label: 'Stock code', type: 'code' },
+      { key: 'description', label: 'Description', type: 'text' },
+      { key: 'quantity', label: 'Quantity', type: 'quantity' },
+      { key: 'uom', label: 'UOM', type: 'code' },
+      { key: 'unit_price', label: 'Unit price', type: 'amount' },
+      { key: 'amount', label: 'Amount', type: 'amount' },
+    ],
+  },
 ];

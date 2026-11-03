@@ -1,11 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runExtraction } from './extract';
+import { runExtraction, SYSTEM_PROMPT } from './extract';
 import { fakeStream } from './fakeStream';
 import type { Settings } from './settings';
 import { validateBatch } from '../contract/validate';
 import type { PageSource } from './agent/pageSource';
 import type { AgentStep } from './agent/contract';
 import { imageLimits } from './providers';
+import { AUTO_HEADER_KEYS, AUTO_ROW_KEYS } from './standards';
+
+it('asks Auto mode for every standard header and row key, including the item code and unit of measure', () => {
+  for (const key of [...AUTO_HEADER_KEYS, ...AUTO_ROW_KEYS]) expect(SYSTEM_PROMPT).toContain(key);
+  expect(AUTO_ROW_KEYS).toEqual(expect.arrayContaining(['stock_code', 'uom']));
+  // The item code must be copied as printed: models used to build descriptions out of article and EAN numbers.
+  expect(SYSTEM_PROMPT).toContain('never built from other columns');
+});
 
 const settings: Settings = { provider: 'openai', keys: { openai: 'sk-test' }, models: {}, maxPages: 20 };
 const pages = [{ page: 1, width: 10, height: 10, data: 'AAAA', mimeType: 'image/jpeg' as const }];
