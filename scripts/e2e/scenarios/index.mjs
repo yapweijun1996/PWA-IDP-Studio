@@ -416,7 +416,7 @@ export const scenarios = [
     // A template can put a field in the footer; the choice is saved and survives a reload.
     await route(b, '#/templates', 'Templates');
     await click(b, 'Create template'); await field(b, 'Template name', 'Sectioned');
-    await click(b, 'Add field'); await field(b, 'Header fields 1 label', 'Handling charge');
+    await click(b, 'Add field'); await field(b, 'Header fields 1 label', 'Admin fee');
     await click(b, 'Add field'); await field(b, 'Header fields 2 label', 'Shipping Fee');
     const sectionValue = label => b.eval(`[...document.querySelectorAll('label')].find(e => e.textContent === ${js(label)}).control.value`);
     assert.equal(await sectionValue('Header fields 1 section'), 'info', 'no name says footer, so it starts in the info');
@@ -425,7 +425,7 @@ export const scenarios = [
     await click(b, 'Save template'); await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile saved');
     await reload(b); await route(b, '#/templates', 'Templates');
     const stored = await b.eval(`JSON.parse(localStorage.getItem('idp-studio.profiles.v1')).find(p => p.name === 'Sectioned').fields.map(f => [f.key, f.section ?? null])`);
-    assert.deepEqual(stored, [['handling_charge', 'footer'], ['shipping_fee', null]]);
+    assert.deepEqual(stored, [['admin_fee', 'footer'], ['shipping_fee', null]]);
     assert.equal(await b.eval(`[...document.querySelectorAll('main li')].filter(li => li.innerText.includes('Footer')).length`) >= 2, true, 'both footer fields are marked in the list');
   } },
   { name: 'add-row', async run({b}) {
