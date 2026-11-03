@@ -65,7 +65,7 @@ export async function createPageSource(blob: Blob, { maxPages }: { maxPages: num
         return [{ text: item.str, bbox: { x: left, y: top, width: Math.min(1 - left, Math.abs(item.width) / vp.width), height: Math.min(1 - top, Math.abs(item.height) / vp.height) } }];
       });
     },
-    async dispose() { image?.close(); await doc?.destroy(); },
+    async dispose() { image?.close(); await doc?.loadingTask.destroy(); },
   };
 }
 

@@ -27,7 +27,7 @@ export async function renderFile(file: Blob, { maxPages }: { maxPages: number })
 export async function countPages(blob: Blob): Promise<number> {
   if (blob.type !== 'application/pdf') return 1;
   const doc = await openPdf(blob);
-  try { return doc.numPages; } finally { await doc.destroy(); }
+  try { return doc.numPages; } finally { await doc.loadingTask.destroy(); }
 }
 
 /** Physical, unrotated dimensions for every page, independent of the AI image limit. */
@@ -46,5 +46,5 @@ export async function pageManifest(blob: Blob): Promise<{ page_number: number; w
       pages.push({ page_number: n, width: viewport.width, height: viewport.height });
     }
     return pages;
-  } finally { await doc.destroy(); }
+  } finally { await doc.loadingTask.destroy(); }
 }

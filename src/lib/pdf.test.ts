@@ -7,7 +7,8 @@ const fake = vi.hoisted(() => {
   const render = vi.fn((_options: unknown) => ({ promise: Promise.resolve() }));
   const getPage = vi.fn(async () => ({ getViewport: ({ scale, rotation }: { scale: number; rotation?: number }) => ({ width: 595 * scale, height: 842 * scale, rotation }), render }));
   const destroy = vi.fn(async () => {});
-  return { render, getPage, destroy, doc: { numPages: 30, getPage, destroy } };
+  // PDF.js 6 removed PDFDocumentProxy.destroy(); teardown goes through the loading task.
+  return { render, getPage, destroy, doc: { numPages: 30, getPage, loadingTask: { destroy } } };
 });
 vi.mock('pdfjs-dist', () => ({ GlobalWorkerOptions: {}, getDocument: () => ({ promise: Promise.resolve(fake.doc) }) }));
 beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('Blob', NodeBlob); });
