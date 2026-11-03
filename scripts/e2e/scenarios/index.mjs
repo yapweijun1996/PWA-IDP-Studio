@@ -533,7 +533,14 @@ export const scenarios = [
     assert.deepEqual(await b.eval(`new Promise((resolve,reject)=>{const r=indexedDB.open('idp-studio');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const d=r.result;const t=d.transaction(['documents','files'],'readonly');const a=t.objectStore('documents').get('old-e2e'),f=t.objectStore('files').get('old-e2e');t.oncomplete=()=>{d.close();resolve([!!a.result, f.result instanceof Blob])}}})`),[true,true]);
   } },
   { name: 'theme-sidebar', async run({b}) {
-    assert.equal(await b.eval('document.documentElement.dataset.theme'),'light'); await settings(b); await radio(b,'Theme','dark'); await b.wait('document.documentElement.dataset.theme==="dark"','dark theme'); await reload(b); assert.equal(await b.eval('document.documentElement.dataset.theme'),'dark');
+    assert.equal(await b.eval('document.documentElement.dataset.theme'),'light'); await settings(b);
+    assert.equal(await b.eval(`['Theme','Default sidebar layout'].every(t=>[...document.querySelectorAll('.settings-appearance h3')].some(e=>e.textContent===t))`),true,'Appearance group headings');
+    assert.equal(await b.eval(`document.querySelector('#theme-help').textContent.includes('immediately') && document.querySelector('#sidebar-help').textContent.includes('next app load')`),true,'Appearance timing descriptions');
+    await radio(b,'Sidebar default','collapsed');
+    assert.equal(await b.eval(`!!document.querySelector('aside:not(.ds-collapsed)') && localStorage.getItem('idp-studio.sidebar')==='collapsed'`),true,'Sidebar preference does not change current layout');
+    await reload(b); await b.wait(`!!document.querySelector('aside.ds-collapsed')`,'Sidebar preference applies on reload');
+    await radio(b,'Sidebar default','expanded'); await reload(b); await b.wait(`!!document.querySelector('aside:not(.ds-collapsed)')`,'Expanded preference applies on reload');
+    await radio(b,'Theme','dark'); await b.wait('document.documentElement.dataset.theme==="dark"','dark theme'); await reload(b); assert.equal(await b.eval('document.documentElement.dataset.theme'),'dark');
     await radio(b,'Theme','system'); for(const value of ['light','dark','light']) { await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value}]}); await b.wait(`document.documentElement.dataset.theme===${js(value)}`,'system theme '+value); }
     await click(b,'Collapse sidebar'); await reload(b); assert.equal(await b.eval('!!document.querySelector("aside.ds-collapsed")'),true);
     await b.eval(`document.querySelector('aside nav a[aria-label="Home"]').focus()`); await b.wait(`!![...document.querySelectorAll('[role="tooltip"]')].find(e=>e.textContent==='Home')`,'rail focus tooltip');
@@ -603,12 +610,18 @@ export const scenarios = [
     const hidden = `getComputedStyle(document.querySelector('.ds-topbar')).transform!=='none'&&document.querySelector('.ds-topbar').getBoundingClientRect().bottom<=1`;
     await b.eval('window.scrollTo(0,window.innerHeight+300)');
     await b.wait(`window.scrollY>window.innerHeight&&${hidden}`, 'topbar hides after downward scrolling');
+    if (profile === 'desktop') await b.wait(`Math.abs(document.querySelector('.ds-sidebar').getBoundingClientRect().top - parseFloat(getComputedStyle(document.querySelector('.ds-safe-top')).height)) <= 1 && document.querySelector('.ds-sidebar').getBoundingClientRect().bottom >= innerHeight - 1`, 'sidebar fills viewport when header is hidden');
+    if (profile === 'desktop') {
+      await b.eval(`document.querySelector('[aria-label="Collapse sidebar"]').click()`);
+      await b.wait(`document.querySelector('.ds-sidebar.ds-collapsed') && Math.abs(document.querySelector('.ds-sidebar').getBoundingClientRect().top - parseFloat(getComputedStyle(document.querySelector('.ds-safe-top')).height)) <= 1 && document.querySelector('.ds-sidebar').getBoundingClientRect().bottom >= innerHeight - 1`, 'collapsed sidebar fills viewport when header is hidden');
+    }
     await b.wait('!!document.querySelector(\'[aria-label="Scroll to top"]\')', 'scroll-to-top is available');
     await b.eval(`[...document.querySelectorAll('button')].find(e=>e.textContent==='Show toast').click()`);
     await b.wait(`document.querySelector('.ds-scroll-top').getBoundingClientRect().bottom<document.querySelector('.ds-toast').getBoundingClientRect().top`, 'scroll-to-top clears the toast');
     await b.eval(`document.querySelector('[aria-label="Dismiss notification"]').click()`);
     await b.eval('window.scrollBy(0,-80)');
     await b.wait(`getComputedStyle(document.querySelector('.ds-topbar')).transform==='none'`, 'topbar reveals after upward scrolling');
+    if (profile === 'desktop') await b.wait(`Math.abs(document.querySelector('.ds-sidebar').getBoundingClientRect().top - document.querySelector('.ds-topbar').getBoundingClientRect().bottom) <= 1`, 'sidebar sits below visible header');
     await b.eval('window.scrollTo(0,32)');
     await b.wait(`getComputedStyle(document.querySelector('.ds-topbar')).transform==='none'`, 'near-top header remains visible');
     await b.eval('window.scrollTo(0,window.innerHeight+300)');

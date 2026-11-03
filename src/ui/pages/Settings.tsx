@@ -35,7 +35,12 @@ export function SettingsPage({ settings, onChange, migration, batchCount = 0, on
       {diagnostics === 'running' && <Notice>Testing connection…</Notice>}
       {Array.isArray(diagnostics) && <ul aria-label="Connection test results">{diagnostics.map(step => <li key={step.label}><strong>{step.ok ? 'OK' : 'Failed'}</strong> · {step.label}: {step.detail}</li>)}</ul>}
     </Card>
-    <Card><h2>Appearance</h2><Segmented label="Theme" value={theme} onChange={value => setTheme(value as Theme)} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'system', label: 'System' }]} /><Segmented label="Sidebar default" value={sidebar} onChange={value => { setSidebar(value); try { localStorage.setItem('idp-studio.sidebar', value); } catch { /* Session only. */ } }} options={[{ value: 'expanded', label: 'Expanded' }, { value: 'collapsed', label: 'Collapsed' }]} /><p className="ds-muted">Sidebar default applies on the next app load. The menu toggle changes the current layout.</p></Card>
+    <Card className="settings-appearance"><h2>Appearance</h2>
+      <div className="settings-appearance-groups">
+        <section className="settings-appearance-group"><h3>Theme</h3><Segmented label="Theme" describedBy="theme-help" value={theme} onChange={value => setTheme(value as Theme)} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'system', label: 'System' }]} /><p id="theme-help" className="ds-muted">Theme applies immediately and is saved in this browser when available.</p></section>
+        <section className="settings-appearance-group"><h3>Default sidebar layout</h3><Segmented label="Sidebar default" describedBy="sidebar-help" value={sidebar} onChange={value => { setSidebar(value); try { localStorage.setItem('idp-studio.sidebar', value); } catch { /* Session only. */ } }} options={[{ value: 'expanded', label: 'Expanded' }, { value: 'collapsed', label: 'Collapsed' }]} /><p id="sidebar-help" className="ds-muted">Sidebar preference applies on the next app load when browser storage is available. The sidebar toggle changes the current layout.</p></section>
+      </div>
+    </Card>
     <Card><h2>Data &amp; Storage</h2><p>{batchCount} batches stored in this browser.</p><p>{migration ? `v1 migration: ${migration.migrated} migrated, ${migration.skipped} skipped (missing or unsupported originals). Legacy records are retained.` : 'Checking legacy records…'}</p><Button variant="danger" onClick={() => setConfirm(true)}>Clear all local data</Button>{error && <Notice tone="error">{error}</Notice>}</Card>
     <Card><h2>About &amp; updates</h2>
       <p>Version {APP_VERSION} · Build {BUILD_ID}</p>
