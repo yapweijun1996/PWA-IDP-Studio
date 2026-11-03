@@ -56,6 +56,14 @@ it('Home stats use batchSummary; document type search and clear restore real upl
   await click(container.querySelector('[aria-label="Clear search"]')!);
   expect(container.querySelector('tbody')?.textContent).toContain('alpha.pdf');
 });
+it('Home keeps the Recent uploads caption available while hiding the duplicate heading visually', async () => {
+  await render(<Home docs={[fixture('recent')]} settings={loadSettings()} busy={null} onFiles={() => {}} />);
+  const caption = container.querySelector('caption')!;
+  expect(caption.classList.contains('ds-visually-hidden')).toBe(true);
+  expect(caption.textContent).toBe('Recent uploads');
+  expect(container.querySelector('.ds-row-between h2')?.textContent).toBe('Recent uploads');
+  expect(container.querySelector('a[href="#/documents"]')?.textContent).toBe('View all');
+});
 it('Home describes the selected extraction mode and places provider disclosure before upload', async () => {
   await render(<Home docs={[]} settings={loadSettings()} busy={null} onFiles={() => {}} />);
   expect(container.querySelector('nav[aria-label="Breadcrumb"]')).toBeNull();
@@ -68,6 +76,9 @@ it('Home describes the selected extraction mode and places provider disclosure b
   expect(disclosure.textContent).toContain(providerInfo(loadSettings().provider).recipient);
   const dropzone = container.querySelector('.ds-dropzone')!;
   expect(disclosure.compareDocumentPosition(dropzone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(container.querySelector('section[aria-label="Upload documents"]')).toBe(dropzone);
+  expect(dropzone.textContent).toContain('Upload documents');
+  expect(dropzone.textContent).not.toContain('Drag and drop documents here');
 });
 it('Home exposes only the Agent activity live region while busy', async () => {
   await render(<Home docs={[]} settings={loadSettings()} busy="Reading page 1" onFiles={() => {}} steps={[{ summary: 'Classifying' } as never]} />);
