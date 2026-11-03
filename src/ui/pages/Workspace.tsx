@@ -8,12 +8,15 @@ import { getFileByFileId, putBatch } from '../../lib/db';
 import { renderFile, type RenderedPage } from '../../lib/pdf';
 import type { Batch } from '../../contract/types';
 import { transactionView } from '../../contract/view';
+import { reconcileTotals } from '../../contract/rules';
 import { addRow, approveTransaction, correctField, handEnteredRows } from '../../contract/review';
 import { exportEligibleTransactions, validateBatch } from '../../contract/validate';
 import { Button, Card, DataTable, EvidenceViewer, Field, Input, Menu, Notice, PageHeader, Progress, Segmented, Select, StatusPill, Tabs } from '../../ds';
 import { readable } from '../nav';
 import { issueTitle } from '../issues';
-import { downloadJSON, serializeJSON, transactionJSONValue } from '../../lib/jsonExport';
+import { downloadJSON, groupedJSONValue, serializeJSON, transactionJSONValue } from '../../lib/jsonExport';
+import { sectionOf } from '../../lib/sections';
+import { padDecimals } from '../../contract/decimal';
 /** `onReextract` reads this file again with a customized template; `locked` freezes the current result while that runs. */
 export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextract, locked = false, steps = [] }: { steps?: AgentStep[]; busy?: string | null; onRetry?: () => void; onReextract?: (profile: ExtractionProfile) => void; locked?: boolean; doc: Batch; onSaved: (d: Batch) => void; transactionId?: string }) {
   const profile = loadBatchMode(doc.batch.batch_id)?.profile;
@@ -62,7 +65,8 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextr
   const eligible = validateBatch(doc).ok && exportEligibleTransactions(doc).includes(tx.transaction_id);
   const clean = serializeJSON(transactionJSONValue(doc, tx.transaction_id));
   const evidence = serializeJSON(doc);
-  const json = full === 'full' ? evidence : clean;
+  const grouped = serializeJSON(groupedJSONValue(doc, tx.transaction_id));
+  const json = full === 'full' ? evidence : full === 'grouped' ? grouped : clean;
   const base = file.filename.replace(/\.[^.]+$/, '');
   const save = async (next: Batch) => { setSaving(true); setError(''); try { await putBatch(next); onSaved(next); setEditing(undefined); } catch(e) { setError(String(e)); } finally { setSaving(false); } };
   const handRows = handEnteredRows(doc, tx.transaction_id);
@@ -73,20 +77,32 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextr
   const approve = async () => { const result = approveTransaction(doc, tx.transaction_id, 'Reviewed and approved in workspace'); if (result.ok) await save(result.batch); else setError(result.error); };
   const copy = async () => { try { await navigator.clipboard.writeText(json); setCopied(true); } catch(e) { setError(`Copy failed: ${String(e)}`); } };
   const selectedField = view.fields.find(f => f.pointer === selected);
-  const fieldContent = <div className="ds-sheet">
-    {view.fields.filter(field => !profile || Object.hasOwn(tx.data, field.key) || field.exception === 'missing').map(field => <Card key={field.pointer}><div className="ds-row"><Button aria-pressed={selected === field.pointer} onClick={() => { setSelected(field.pointer); if (field.evidence) setPage(field.evidence.page); }}>{label(field.key)}</Button>{field.exception && <StatusPill tone="warning" icon="alert">{readable(field.exception)}</StatusPill>}</div>
+  const shown = view.fields.filter(field => !profile || Object.hasOwn(tx.data, field.key) || field.exception === 'missing');
+  const infoFields = shown.filter(field => sectionOf(field.key, profile) === 'info');
+  const footerFields = shown.filter(field => sectionOf(field.key, profile) === 'footer');
+  const totals = reconcileTotals(tx);
+  const renderField = (field: (typeof shown)[number]) => <Card key={field.pointer}><div className="ds-row"><Button aria-pressed={selected === field.pointer} onClick={() => { setSelected(field.pointer); if (field.evidence) setPage(field.evidence.page); }}>{label(field.key)}</Button>{field.exception && <StatusPill tone="warning" icon="alert">{readable(field.exception)}</StatusPill>}</div>
       <p>{typeof field.value === 'object' && field.value !== null ? JSON.stringify(field.value) : String(field.value ?? '') || 'Missing value'}</p>
       {field.confidence === null ? <p className="ds-muted">Confidence unavailable</p> : <><span>Confidence {Math.round(field.confidence * 100)}%</span><Progress label={`${readable(field.key)} confidence`} value={field.confidence * 100} max={100} /></>}
       {editing === field.pointer ? <form onSubmit={e => { e.preventDefault(); if (!reason.trim()) return; try { void save(correctField(doc, tx.transaction_id, field.pointer, draft, reason.trim())); } catch(err) { setError(String(err)); } }}><Field label={`Edit ${field.key}`}><Input autoFocus value={draft} onChange={e => setDraft(e.target.value)} /></Field><Field label="Correction reason"><Input required value={reason} onChange={e => setReason(e.target.value)} /></Field><Button type="submit" disabled={saving || !reason.trim()}>Save correction</Button><Button disabled={saving} onClick={() => setEditing(undefined)}>Cancel</Button></form> : <Button disabled={saving || locked} onClick={() => { setEditing(field.pointer); setDraft(String(field.value ?? '')); setReason('Manual correction'); }}>Edit {readable(field.key)}</Button>}
-    </Card>)}
+    </Card>;
+  const fieldContent = <div className="ds-sheet">
+    <section aria-label="Document info" className="ds-sheet"><h3>Document info</h3>{infoFields.length ? infoFields.map(renderField) : <p className="ds-muted">No document info fields.</p>}</section>
+    <section aria-label="Row data" className="ds-sheet"><h3>Row data</h3>
     <DataTable caption="Line items" rows={view.lineItems.map((item, index) => ({ item, index }))} rowKey={r => String(r.index)} columns={[...new Set(view.lineItems.flatMap(item => Object.keys(item)))].map(key => ({ key, label: label(key), render: (r: { item: Record<string, unknown>; index: number }) => {
       const pointer = `/line_items/${r.index}/${key.replaceAll('~', '~0').replaceAll('/', '~1')}`;
       return editing === pointer ? <form onSubmit={e => { e.preventDefault(); if (reason.trim()) { try { void save(correctField(doc, tx.transaction_id, pointer, draft, reason.trim())); } catch (err) { setError(String(err)); } } }}><Field label={`Edit ${label(key)}`}><Input value={draft} onChange={e => setDraft(e.target.value)} /></Field><Field label="Correction reason"><Input required value={reason} onChange={e => setReason(e.target.value)} /></Field><Button type="submit" disabled={saving || !reason.trim()}>Save correction</Button><Button onClick={() => setEditing(undefined)}>Cancel</Button></form> : <Button aria-label={`Edit ${label(key)} row ${r.index + 1}`} disabled={locked} onClick={() => { setEditing(pointer); setDraft(String(r.item[key] ?? '')); setReason('Manual correction'); }}>{String(r.item[key] ?? '') || 'Missing value'}</Button>;
     } })).concat(handRows.size ? [{ key: 'entered_by_hand', label: 'Source', render: (r: { item: Record<string, unknown>; index: number }) => handRows.has(r.index) ? <StatusPill tone="info" icon="info">Entered by hand</StatusPill> : <></> }] : [])} emptyMessage="No line items" />
     {Array.isArray(tx.data.line_items) && <div className="ds-row"><Button disabled={saving || locked || !!busy} onClick={() => setAddingRow(true)}>Add row</Button></div>}
+    </section>
+    {(footerFields.length > 0 || totals) && <section aria-label="Footer" className="ds-sheet"><h3>Footer</h3>
+      {totals && <div className="ds-row" role="group" aria-label="Totals check"><span>Rows add up to {padDecimals(totals.net)}{totals.tax !== null && <> · tax {totals.tax}</>} · grand total {totals.total}</span><StatusPill tone={totals.ok ? 'success' : 'danger'} icon={totals.ok ? 'check' : 'alert'}>{totals.ok ? 'Matches' : 'Does not match'}</StatusPill></div>}
+      {totals && !totals.ok && <p className="ds-muted">The rows and the grand total disagree. Correct a value, or waive the mismatch under Issues if the document prints other charges.</p>}
+      {footerFields.map(renderField)}
+    </section>}
   </div>;
   return <section className="ds-sheet">
-    <PageHeader breadcrumb={<><a href="#/">Home</a> / <a href="#/documents">Documents</a> / Workspace</>} title={file.filename} description={`${readable(view.documentType)} · ${doc.pages.length} pages`} actions={<div className="ds-row"><StatusPill>{readable(tx.status)}</StatusPill><Button variant="primary" disabled={!view.canApprove || saving || locked} aria-describedby="approval-reason" onClick={() => void approve()}>Approve</Button>{onReextract && <Button disabled={saving || locked || !!busy} onClick={() => setCustomizing(true)}>Customize fields</Button>}<Menu label="Export" items={[{ label: 'Clean JSON', disabled: !eligible, onSelect: () => downloadJSON(`${base}.json`, clean) }, { label: 'Full evidence JSON', disabled: !eligible, onSelect: () => downloadJSON(`${base}.evidence.json`, evidence) }]} /><Button disabled={!eligible} onClick={() => void copy()}>Copy</Button></div>} />
+    <PageHeader breadcrumb={<><a href="#/">Home</a> / <a href="#/documents">Documents</a> / Workspace</>} title={file.filename} description={`${readable(view.documentType)} · ${doc.pages.length} pages`} actions={<div className="ds-row"><StatusPill>{readable(tx.status)}</StatusPill><Button variant="primary" disabled={!view.canApprove || saving || locked} aria-describedby="approval-reason" onClick={() => void approve()}>Approve</Button>{onReextract && <Button disabled={saving || locked || !!busy} onClick={() => setCustomizing(true)}>Customize fields</Button>}<Menu label="Export" items={[{ label: 'Clean JSON', disabled: !eligible, onSelect: () => downloadJSON(`${base}.json`, clean) }, { label: 'Grouped JSON', disabled: !eligible, onSelect: () => downloadJSON(`${base}.grouped.json`, grouped) }, { label: 'Full evidence JSON', disabled: !eligible, onSelect: () => downloadJSON(`${base}.evidence.json`, evidence) }]} /><Button disabled={!eligible} onClick={() => void copy()}>Copy</Button></div>} />
     {(!view.canApprove || !eligible) && <Notice tone="warning"><span id="approval-reason">{view.blockingCount} blockers. {tx.status === 'approved' ? 'This transaction is already approved.' : view.blockingCount ? 'Resolve blocking issues before approval, copying or exporting.' : 'Confirm document boundaries and resolve validation errors before approval or export.'} <a href="#workspace-issues" onClick={event => { event.preventDefault(); setTab('issues'); }}>Review issues</a></span></Notice>}
     {busy && <Notice><Progress label={busy} /><ul role="status" aria-live="polite" aria-label="Agent activity">{steps.map((step, i) => <li key={i}>{step.summary}</li>)}</ul></Notice>}
     {!busy && onRetry && doc.pages.some(p => p.status !== 'classified') && <Button onClick={onRetry}>Retry extraction</Button>}
@@ -99,7 +115,7 @@ export function Workspace({ doc, onSaved, transactionId, busy, onRetry, onReextr
     <Card><div id="workspace-issues"><Tabs label="Transaction details" value={tab} onChange={setTab} items={[
       { id: 'fields', label: 'Fields', content: fieldContent },
       { id: 'issues', label: `Issues (${view.issues.filter(i => i.status === 'open').length})`, content: <div className="ds-sheet">{view.issues.length ? view.issues.map(i => <Card key={i.issue_id}><h2>{issueTitle(i.rule_code)}</h2><StatusPill tone={['blocking','error'].includes(i.severity) ? 'danger' : i.severity === 'info' ? 'info' : 'warning'} icon={i.severity === 'info' ? 'info' : 'alert'}>{readable(i.severity)}</StatusPill><p>{i.message}</p><p>Target: {i.scope} · {i.target_id} · {readable(i.status)}</p><small className="ds-muted">{i.rule_code}</small></Card>) : <p>No issues found.</p>}</div> },
-      { id: 'json', label: 'JSON', content: <div className="ds-sheet"><Segmented label="JSON format" value={full} onChange={v => { setFull(v); setCopied(false); }} options={[{ value: 'clean', label: 'Clean' }, { value: 'full', label: 'Full evidence' }]} /><div className="ds-row"><Button disabled={!eligible} onClick={() => void copy()}>Copy JSON</Button><Button disabled={!eligible} onClick={() => downloadJSON(`${base}${full === 'full' ? '.evidence' : ''}.json`, json)}>Download JSON</Button></div><pre className="ds-json">{json}</pre></div> },
+      { id: 'json', label: 'JSON', content: <div className="ds-sheet"><Segmented label="JSON format" value={full} onChange={v => { setFull(v); setCopied(false); }} options={[{ value: 'clean', label: 'Clean' }, { value: 'grouped', label: 'Grouped' }, { value: 'full', label: 'Full evidence' }]} /><div className="ds-row"><Button disabled={!eligible} onClick={() => void copy()}>Copy JSON</Button><Button disabled={!eligible} onClick={() => downloadJSON(`${base}${full === 'full' ? '.evidence' : full === 'grouped' ? '.grouped' : ''}.json`, json)}>Download JSON</Button></div><pre className="ds-json">{json}</pre></div> },
     ]} /></div></Card></div>
   </section>;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decimalEquals, isDecimalString, normalizeDecimal, sumDecimals, toScaled } from './decimal';
+import { decimalEquals, isDecimalString, normalizeDecimal, padDecimals, sumDecimals, toScaled } from './decimal';
 
 describe('decimal helpers', () => {
   it('adds without binary floating-point error', () => {
@@ -37,5 +37,16 @@ describe('decimal helpers', () => {
   });
   it.each([null, undefined, {}, true, Infinity, NaN, 1e21])('rejects non-decimal input %s', input => {
     expect(normalizeDecimal(input)).toBeNull();
+  });
+});
+
+describe('padDecimals', () => {
+  it('shows money with at least two decimals and never shortens or rounds a longer one', () => {
+    expect(padDecimals('350')).toBe('350.00');
+    expect(padDecimals('350.5')).toBe('350.50');
+    expect(padDecimals('350.50')).toBe('350.50');
+    expect(padDecimals('0.125')).toBe('0.125');
+    expect(padDecimals('-12.3')).toBe('-12.30');
+    expect(padDecimals('1', 4)).toBe('1.0000');
   });
 });

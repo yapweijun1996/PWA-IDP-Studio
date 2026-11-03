@@ -21,6 +21,8 @@ export function validateProfile(profile: ExtractionProfile): string[] {
     if (typeof field.label !== 'string' || !field.label.trim()) errors.push(`Enter a label for ${field.key || 'each field'}.`);
     if (!['text', 'date', 'amount', 'quantity', 'integer', 'code'].includes(field.type)) errors.push(`Unknown type for ${field.key}.`);
   }
+  for (const field of profile.fields ?? []) if (field && field.section !== undefined && field.section !== 'info' && field.section !== 'footer') errors.push(`Unknown section for ${field.key}.`);
+  for (const field of profile.rowFields ?? []) if (field && field.section !== undefined) errors.push(`Row column ${field.key} cannot have a section; rows are always Row Data.`);
   return errors;
 }
 /**
@@ -83,7 +85,7 @@ export function parseProfileImport(text: string): { profiles: ExtractionProfile[
     if (!object(p) || Object.keys(p).some(k => !['id', 'name', 'fields', 'rowFields', 'rowsAsTransactions', 'builtin'].includes(k)) || typeof p.id !== 'string' || !p.id.trim() || typeof p.name !== 'string' || !Array.isArray(p.fields) || !Array.isArray(p.rowFields) || (p.builtin !== undefined && typeof p.builtin !== 'boolean')) {
       errors.push(`${prefix}Expected id, name, header fields and row columns.`); return;
     }
-    if ([...p.fields, ...p.rowFields].some(f => !object(f) || Object.keys(f).some(k => !['key', 'label', 'type', 'required'].includes(k)) || (f.required !== undefined && typeof f.required !== 'boolean'))) {
+    if ([...p.fields, ...p.rowFields].some(f => !object(f) || Object.keys(f).some(k => !['key', 'label', 'type', 'required', 'section'].includes(k)) || (f.required !== undefined && typeof f.required !== 'boolean'))) {
       errors.push(`${prefix}Unknown field shape or invalid required mark.`); return;
     }
     const profile = p as unknown as ExtractionProfile;

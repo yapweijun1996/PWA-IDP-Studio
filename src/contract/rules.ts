@@ -6,6 +6,24 @@ import { ruleCatalogEntry } from './ruleCatalog';
 
 export const pointerFor = (key: string) => '/' + key.replace(/~/g, '~0').replace(/\//g, '~1');
 export const decimalKey = (key: string) => /(amount|price|total|quantity)/i.test(key) || /^(debit|credit|(?:opening_|closing_|running_)?balance)$/.test(key);
+/** How the row amounts of a transaction compare with its grand total; `ok` is what the TOTALS_MISMATCH rule decides. */
+export interface TotalsCheck { net: string; tax: string | null; total: string; ok: boolean }
+/**
+ * The line sum against `total_amount`, or null when the rule does not apply (no total, no rows, a row without a numeric
+ * `amount`, or a Targeted template that does not declare total_amount as an amount). Auto output always reconciles; a Targeted
+ * template reconciles when it declares total_amount as an amount (the built-in invoice template does). A total may be the line
+ * sum plus a separately printed tax (e.g. 673.50 + 8% GST 53.88 = 727.38).
+ */
+export function reconcileTotals(tx: Transaction): TotalsCheck | null {
+  const rows = tx.data.line_items;
+  const total = normalizeDecimal(tx.data.total_amount);
+  if (!((!tx.field_types || tx.field_types['/total_amount'] === 'amount') && total !== null && Array.isArray(rows) && rows.length)) return null;
+  const amounts = rows.map(row => row && typeof row === 'object' && !Array.isArray(row) ? normalizeDecimal(row.amount) : null);
+  if (!amounts.every((v): v is string => v !== null)) return null;
+  const net = sumDecimals(amounts);
+  const tax = normalizeDecimal(tx.data[TAX_AMOUNT_KEY]);
+  return { net, tax, total, ok: decimalEquals(net, total) || (tax !== null && decimalEquals(sumDecimals([net, tax]), total)) };
+}
 export function businessIssues(batch: Batch): Issue[] {
   const issues: Issue[] = [];
   const add = (scope: Issue['scope'], target_id: string, rule_code: string, severity: Issue['severity'], message: string) => {
@@ -42,19 +60,8 @@ export function businessIssues(batch: Batch): Issue[] {
       }
     };
     walk(tx.data);
-    const rows = tx.data.line_items;
-    const total = normalizeDecimal(tx.data.total_amount);
-    // Auto output always reconciles. A Targeted template reconciles too when it declares total_amount as an amount
-    // (the built-in invoice template does); rows without an `amount` value are skipped below, never reported.
-    if ((!tx.field_types || tx.field_types['/total_amount'] === 'amount') && total !== null && Array.isArray(rows) && rows.length) {
-      const amounts = rows.map(row => row && typeof row === 'object' && !Array.isArray(row) ? normalizeDecimal(row.amount) : null);
-      if (amounts.every((v): v is string => v !== null)) {
-        // A total may be the line sum plus a separately printed tax (e.g. 673.50 + 8% GST 53.88 = 727.38).
-        const net = sumDecimals(amounts);
-        const tax = normalizeDecimal(tx.data[TAX_AMOUNT_KEY]);
-        if (!decimalEquals(net, total) && !(tax !== null && decimalEquals(sumDecimals([net, tax]), total))) add('transaction', tx.transaction_id, 'TOTALS_MISMATCH', 'blocking', '/total_amount: line amounts do not match total.');
-      }
-    }
+    const totals = reconcileTotals(tx);
+    if (totals && !totals.ok) add('transaction', tx.transaction_id, 'TOTALS_MISMATCH', 'blocking', '/total_amount: line amounts do not match total.');
     for (const key of Object.keys(tx.data).filter(k => k !== 'line_items')) {
       const pointer = pointerFor(key);
       if (!tx.field_evidence[pointer]?.length) add('transaction', tx.transaction_id, 'FIELD_WITHOUT_EVIDENCE', 'info', `${pointer}: no bounding box evidence.`);

@@ -43,3 +43,8 @@ export function normalizeDecimal(input: unknown): string | null {
   const negativeFraction = whole.startsWith('-') && integer === '0' && fraction && /[1-9]/.test(fraction);
   return `${negativeFraction ? '-' : ''}${integer}${fraction === undefined ? '' : `.${fraction}`}`;
 }
+/** A decimal string with at least `places` fractional digits, for showing money: 350.5 -> 350.50, 350 -> 350.00. */
+export function padDecimals(value: string, places = 2): string {
+  const [whole, fraction = ''] = value.split('.');
+  return fraction.length >= places ? value : `${whole}.${fraction.padEnd(places, '0')}`;
+}
