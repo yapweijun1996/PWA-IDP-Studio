@@ -93,7 +93,7 @@ export const scenarios = [
     assert.equal(batch.pages.length, 1);
     assert.equal(batch.validation.structural_valid, true);
     await home(b);
-    await b.eval(`(() => { const dataTransfer=new DataTransfer();dataTransfer.items.add(new File(['unsupported'],'scan.tiff',{type:'image/tiff'}));document.querySelector('section[aria-label="Upload documents"]').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer})); })()`);
+    await b.eval(`(() => { const dataTransfer=new DataTransfer();dataTransfer.items.add(new File(['unsupported'],'scan.tiff',{type:'image/tiff'}));document.querySelector('section[aria-label="Add documents"]').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer})); })()`);
     await text(b, 'Some files were not accepted.');
     await text(b, 'TIFF is not supported.');
     assert.equal((await batches(b)).length, 1);
