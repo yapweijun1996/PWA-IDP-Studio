@@ -125,6 +125,8 @@ export async function installMocks(b, { baseURL, live = false } = {}) {
         output.fields.find(f => f.key === 'remarks').confidence = 0.5;
       }
       output.fields.forEach(field => { field.page = start; });
+      // The documents of a real bundle carry different numbers; one number on every document would look like one document cut in pieces.
+      if (variant === 'windowed') { const number = output.fields.find(field => field.key === 'invoice_no'); if (number) number.value = `INV-E2E-${String(start).padStart(3, '0')}`; }
       if (variant === 'six-page') {
         output.document_type = 'unknown';
         output.fields = start === 1 ? [{ key: 'reference', value: 'SIX-PAGES', page: 1, bbox: [100, 100, 200, 500], confidence: 1 }] : [];
