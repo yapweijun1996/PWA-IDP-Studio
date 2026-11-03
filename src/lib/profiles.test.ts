@@ -65,7 +65,7 @@ it('exports and imports a footer choice, and drops nothing else from the field',
   const imported = parseProfileImport(exportProfiles([profile]));
   expect(imported.errors).toEqual([]);
   expect(imported.profiles[0].fields).toEqual(profile.fields);
-  expect(parseProfileImport(JSON.stringify({ idp_studio_profiles: 1, profiles: [{ ...profile, fields: [{ ...profile.fields[0], section: 'middle' }] }] })).errors).toEqual(['Profile 1: Unknown section for handling.']);
+  expect(parseProfileImport(JSON.stringify({ idp_studio_profiles: 1, profiles: [{ ...profile, fields: [{ ...profile.fields[0], section: 'middle' }] }] })).errors).toEqual(['Template 1: Unknown section for handling.']);
   saveProfiles([{ ...profile, builtin: false }]);
   expect(loadProfiles().find(p => p.id === 'p')?.fields[0].section).toBe('footer'); // survives a save and load
 });

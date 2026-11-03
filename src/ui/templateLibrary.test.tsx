@@ -149,36 +149,36 @@ describe('a saved template is suggested for the next document like it', () => {
 describe('who a template is for, in the template editor', () => {
   it('sets, shows and clears the supplier and document type', async () => {
     await act(async () => root.render(<ProfileEditor />));
-    await click('Create profile');
-    await fill('Profile name', 'ABC purchase orders');
+    await click('Create template');
+    await fill('Template name', 'ABC purchase orders');
     await click('Add field'); await fill('Header fields 1 label', 'PO no');
     await fill('Suggest for supplier or customer (optional)', 'ABC Trading');
     await choose('Suggest for document type (optional)', 'purchase_order');
-    await click('Save profile');
+    await click('Save template');
     const saved = loadProfiles().find(p => p.name === 'ABC purchase orders')!;
     expect(saved.match).toEqual({ party: 'ABC Trading', documentType: 'purchase_order' });
     expect(text()).toContain('Suggested for documents from ABC Trading, purchase order.');
     await click('Edit ABC purchase orders');
     expect((control('Suggest for supplier or customer (optional)') as HTMLInputElement).value).toBe('ABC Trading');
     await fill('Suggest for supplier or customer (optional)', ''); await choose('Suggest for document type (optional)', '');
-    await click('Save profile');
+    await click('Save template');
     expect(loadProfiles().find(p => p.name === 'ABC purchase orders')!.match).toBeUndefined();
     expect(text()).not.toContain('Suggested for');
   });
 
   it('refuses a supplier name that is only spaces', async () => {
     await act(async () => root.render(<ProfileEditor />));
-    await click('Create profile'); await fill('Profile name', 'Spaces');
+    await click('Create template'); await fill('Template name', 'Spaces');
     await click('Add field'); await fill('Header fields 1 label', 'PO no');
     await fill('Suggest for supplier or customer (optional)', '   ');
-    await click('Save profile');
+    await click('Save template');
     expect(text()).toContain('Enter a supplier or customer name for the suggestion, or leave it empty.');
     expect(loadProfiles().some(p => p.name === 'Spaces')).toBe(false);
   });
 
   it('only offers real document types', async () => {
     await act(async () => root.render(<ProfileEditor />));
-    await click('Create profile');
+    await click('Create template');
     const options = [...(control('Suggest for document type (optional)') as HTMLSelectElement).options].map(o => o.value);
     expect(options[0]).toBe(''); expect(options).toContain('purchase_order'); expect(options).not.toContain('unknown');
   });

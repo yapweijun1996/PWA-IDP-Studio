@@ -9,7 +9,7 @@ function load<T>(key: string, fallback: T): T {
 function save(key: string, value: unknown): void { session.set(key, value); try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Session only. */ } }
 export function validateProfile(profile: ExtractionProfile): string[] {
   const errors: string[] = [];
-  if (typeof profile.name !== 'string' || !profile.name.trim()) errors.push('Enter a profile name.');
+  if (typeof profile.name !== 'string' || !profile.name.trim()) errors.push('Enter a template name.');
   if (profile.rowsAsTransactions !== undefined && typeof profile.rowsAsTransactions !== 'boolean') errors.push('rowsAsTransactions must be a boolean.');
   const fields = [...(profile.fields ?? []), ...(profile.rowFields ?? [])];
   if (fields.length < 1 || fields.length > 30) errors.push('Use 1–30 fields in total.');
@@ -91,7 +91,7 @@ export function parseProfileImport(text: string): { profiles: ExtractionProfile[
   }
   const profiles: ExtractionProfile[] = [];
   value.profiles.forEach((p: unknown, index: number) => {
-    const prefix = `Profile ${index + 1}: `;
+    const prefix = `Template ${index + 1}: `;
     if (!object(p) || Object.keys(p).some(k => !['id', 'name', 'fields', 'rowFields', 'rowsAsTransactions', 'builtin', 'match'].includes(k)) || typeof p.id !== 'string' || !p.id.trim() || typeof p.name !== 'string' || !Array.isArray(p.fields) || !Array.isArray(p.rowFields) || (p.builtin !== undefined && typeof p.builtin !== 'boolean')) {
       errors.push(`${prefix}Expected id, name, header fields and row columns.`); return;
     }

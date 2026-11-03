@@ -181,13 +181,13 @@ export const scenarios = [
   } },
   { name: 'templates', async run({b,mocks}) {
     await route(b, '#/templates', 'Templates');
-    await text(b, 'Extraction profiles'); await text(b, 'Built-in · locked');
+    await text(b, 'Extraction templates'); await text(b, 'Built-in · locked');
     await text(b, 'Standard fields by document type'); await overflow(b);
     await setProfile(b, 'phone'); await settled(b); await overflow(b);
     // Labels are chosen so the keys derived from them (Document no -> document_no) match the mocked model output.
     const headers = [{ key: 'document_no', label: 'Document no', type: 'text' }, { key: 'transaction_date', label: 'Transaction date', type: 'text' }, { key: 'remarks', label: 'Remarks', type: 'text' }];
     const columns = [{ key: 'row_no', label: 'Row no', type: 'text' }, { key: 'stock_code', label: 'Stock code', type: 'text' }, { key: 'stock_description', label: 'Stock description', type: 'text' }, { key: 'quantity', label: 'Quantity', type: 'text' }, { key: 'uom', label: 'UOM', type: 'text' }, { key: 'unit_price', label: 'Unit price', type: 'text' }, { key: 'line_subtotal', label: 'Line subtotal', type: 'text' }];
-    await click(b, 'Create profile'); await field(b, 'Profile name', 'Shipping');
+    await click(b, 'Create template'); await field(b, 'Template name', 'Shipping');
     for (const [i, item] of headers.entries()) {
       await click(b, 'Add field'); await field(b, `Header fields ${i + 1} label`, item.label);
       assert.equal(await b.eval(`![...document.querySelectorAll('label')].some(l => l.textContent.endsWith(' key'))`), true, 'Technical keys stay hidden');
@@ -195,11 +195,11 @@ export const scenarios = [
     for (const [i, item] of columns.entries()) {
       await click(b, 'Add column'); await field(b, `Row columns ${i + 1} label`, item.label);
     }
-    await overflow(b); await click(b, 'Save profile');
+    await overflow(b); await click(b, 'Save template');
     await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile saved');
-    await click(b, 'Edit Shipping'); await field(b, 'Header fields 1 label', 'Shipping number'); await click(b, 'Save profile');
+    await click(b, 'Edit Shipping'); await field(b, 'Header fields 1 label', 'Shipping number'); await click(b, 'Save template');
     await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile edited');
-    await click(b, 'Duplicate Document info'); await click(b, 'Save profile'); await text(b, 'Document info copy');
+    await click(b, 'Duplicate Document info'); await click(b, 'Save template'); await text(b, 'Document info copy');
     const originalCreateObjectURL = 'window.__templatesCreateObjectURL';
     await b.eval(`${originalCreateObjectURL} = URL.createObjectURL; window.__profileBlob = null; URL.createObjectURL = blob => { window.__profileBlob = blob; return ${originalCreateObjectURL}.call(URL, blob); };`);
     let exported;
@@ -211,7 +211,7 @@ export const scenarios = [
       assert.deepEqual(exported.profiles.map(p => p.name), ['Shipping']);
       assert.deepEqual(exported.profiles[0].fields, [{ ...headers[0], label: 'Shipping number' }, ...headers.slice(1)]);
       assert.deepEqual(exported.profiles[0].rowFields, columns);
-      await click(b, 'Export all custom profiles');
+      await click(b, 'Export all custom templates');
       const all = await b.eval('window.__profileBlob.text().then(JSON.parse)');
       assert.deepEqual(all.profiles.map(p => p.name).sort(), ['Document info copy', 'Shipping']);
       assert.ok(all.profiles.every(p => !Object.hasOwn(p, 'builtin')));
@@ -219,9 +219,9 @@ export const scenarios = [
       await b.eval(`URL.createObjectURL = ${originalCreateObjectURL}; delete ${originalCreateObjectURL}; delete window.__profileBlob;`);
     }
     const importExport = () => b.eval(`(() => { const input = document.querySelector('input[type=file]'); const transfer = new DataTransfer(); transfer.items.add(new File([${js(JSON.stringify(exported))}], 'profiles.json', {type:'application/json'})); input.files = transfer.files; input.dispatchEvent(new Event('change', {bubbles:true})); })()`);
-    await importExport(); await text(b, 'Import profile conflicts'); await click(b, 'Cancel');
+    await importExport(); await text(b, 'Import template conflicts'); await click(b, 'Cancel');
     assert.equal(await b.eval(`[...document.querySelectorAll('h3')].some(e=>e.textContent==='Shipping copy')`), false);
-    await importExport(); await text(b, 'Import profile conflicts'); await click(b, 'Import as copies'); await text(b, 'Shipping copy');
+    await importExport(); await text(b, 'Import template conflicts'); await click(b, 'Import as copies'); await text(b, 'Shipping copy');
     await overflow(b); await setProfile(b, 'desktop'); await settled(b); await overflow(b);
     await click(b, 'Use Shipping copy for next upload'); await home(b);
     assert.equal(await b.eval(`document.querySelector('input[value="targeted"]')?.checked`), true);
@@ -234,12 +234,12 @@ export const scenarios = [
     });
     await route(b, '#/templates', 'Templates'); await text(b, 'Used by Targeted mode for the next upload');
     await click(b, 'Delete Shipping'); await click(b, 'Cancel'); await text(b, 'Shipping');
-    await click(b, 'Delete Shipping'); await click(b, 'Delete profile');
+    await click(b, 'Delete Shipping'); await click(b, 'Delete template');
     await b.wait(`![...document.querySelectorAll('h3')].some(e=>e.textContent==='Shipping')`, 'profile deleted');
     await text(b, 'Shipping copy');
     await settings(b); await text(b, 'Manage templates');
     assert.equal(await b.eval(`document.querySelector('main a[href="#/templates"]')?.textContent`), 'Manage templates');
-    assert.equal(await b.eval(`[...document.querySelectorAll('main button')].some(e=>e.textContent==='Create profile')`), false);
+    assert.equal(await b.eval(`[...document.querySelectorAll('main button')].some(e=>e.textContent==='Create template')`), false);
   } },
   { name: 'validation', async run({b,mocks}) {
     await drop(b); await text(b, 'INV-E2E-001');
@@ -415,14 +415,14 @@ export const scenarios = [
     assert.deepEqual(flat.line_items, grouped.rows); assert.equal(flat.total_amount, grouped.footer.total_amount); // the flat contract is unchanged
     // A template can put a field in the footer; the choice is saved and survives a reload.
     await route(b, '#/templates', 'Templates');
-    await click(b, 'Create profile'); await field(b, 'Profile name', 'Sectioned');
+    await click(b, 'Create template'); await field(b, 'Template name', 'Sectioned');
     await click(b, 'Add field'); await field(b, 'Header fields 1 label', 'Handling charge');
     await click(b, 'Add field'); await field(b, 'Header fields 2 label', 'Shipping Fee');
     const sectionValue = label => b.eval(`[...document.querySelectorAll('label')].find(e => e.textContent === ${js(label)}).control.value`);
     assert.equal(await sectionValue('Header fields 1 section'), 'info', 'no name says footer, so it starts in the info');
     assert.equal(await sectionValue('Header fields 2 section'), 'footer', 'a charge by name starts in the footer');
     await b.eval(`(() => { const s = [...document.querySelectorAll('label')].find(e => e.textContent === 'Header fields 1 section').control; Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'footer'); s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
-    await click(b, 'Save profile'); await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile saved');
+    await click(b, 'Save template'); await b.wait('!document.querySelector(\'[role="dialog"]\')', 'profile saved');
     await reload(b); await route(b, '#/templates', 'Templates');
     const stored = await b.eval(`JSON.parse(localStorage.getItem('idp-studio.profiles.v1')).find(p => p.name === 'Sectioned').fields.map(f => [f.key, f.section ?? null])`);
     assert.deepEqual(stored, [['handling_charge', 'footer'], ['shipping_fee', null]]);

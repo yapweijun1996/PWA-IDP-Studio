@@ -14,7 +14,7 @@ export function Home({ docs, settings, busy, onFiles, steps = [], search = '', l
   const descriptionId = useId();
   const modeDescription = mode.kind === 'auto'
     ? 'AI chooses the document type and extracts every field it finds.'
-    : 'Only the fields of the selected profile are extracted.';
+    : 'Only the fields of the selected template are extracted.';
   const profiles = loadProfiles();
   const profile = mode.kind === 'targeted' ? profiles.find(p => p.id === mode.profileId) : undefined;
   const summary = batchSummary(docs);
@@ -23,7 +23,7 @@ export function Home({ docs, settings, busy, onFiles, steps = [], search = '', l
     {offlineUpload && <Notice tone="warning">You are offline. Uploads need a connection to the AI provider, so nothing was stored or sent. Your saved documents are still available.</Notice>}
     <Segmented label="Extraction mode" describedBy={descriptionId} value={mode.kind} onChange={kind => { const next = kind === 'targeted' ? { kind: 'targeted' as const, profileId: profiles[0].id } : { kind: 'auto' as const }; setMode(next); saveMode(next); }} options={[{ value: 'auto', label: 'Auto (AI decides)' }, { value: 'targeted', label: 'Targeted fields' }]} />
     <p id={descriptionId} className="ds-muted">{modeDescription}</p>
-    {profile && <Card><Field label="Extraction profile"><Select value={profile.id} onChange={e => { const next = { kind: 'targeted' as const, profileId: e.target.value }; setMode(next); saveMode(next); }}>{profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field><p>{profile.fields.map(f => f.label).join(', ')}{profile.rowFields.length ? ` + ${profile.rowFields.length} row columns` : ''}</p><a href="#/templates">Edit profiles</a></Card>}
+    {profile && <Card><Field label="Extraction template"><Select value={profile.id} onChange={e => { const next = { kind: 'targeted' as const, profileId: e.target.value }; setMode(next); saveMode(next); }}>{profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field><p>{profile.fields.map(f => f.label).join(', ')}{profile.rowFields.length ? ` + ${profile.rowFields.length} row columns` : ''}</p><a href="#/templates">Edit templates</a></Card>}
     <p className="ds-muted">Pages are sent to <strong>{providerInfo(settings.provider).recipient}</strong>. <a href="#/settings">Change provider</a></p>
     <Dropzone label="Add documents" multiple accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" hint={`PDF, PNG, JPG or WebP, up to ${settings.maxPages} pages per file`} rejectionHint="TIFF is not supported." onFiles={files => onFiles(files, profile)} />
     {busy && <Progress label={busy} />}

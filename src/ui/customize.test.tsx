@@ -90,7 +90,7 @@ it('refuses an invalid template instead of starting an extraction, and Cancel ke
   await click('Customize fields');
   await fill('Template name', '');
   await click('Save and extract again');
-  expect(document.body.textContent).toContain('Enter a profile name.');
+  expect(document.body.textContent).toContain('Enter a template name.');
   expect(document.body.textContent).not.toContain('Extract this document again?');
   await fill('Template name', 'Discarded');
   await click('Cancel');

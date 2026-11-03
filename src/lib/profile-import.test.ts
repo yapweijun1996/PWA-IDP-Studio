@@ -25,24 +25,24 @@ it('reports invalid JSON separately from unsupported file envelopes', () => {
 });
 it('refuses malformed profile containers atomically with indexed errors', () => {
   for (const profile of [null, [], { ...custom, id: '' }, { ...custom, id: 1 }, { ...custom, name: null }, { ...custom, fields: null }, { ...custom, rowFields: {} }, { ...custom, builtin: 'yes' }, { ...custom, extra: true }]) {
-    expect(parseProfileImport(file([custom, profile]))).toEqual({ profiles: [], errors: ['Profile 2: Expected id, name, header fields and row columns.'] });
+    expect(parseProfileImport(file([custom, profile]))).toEqual({ profiles: [], errors: ['Template 2: Expected id, name, header fields and row columns.'] });
   }
 });
 it('refuses unknown field shapes and nonboolean required marks', () => {
   for (const field of [null, [], 'field', { ...custom.fields[0], extra: true }, { ...custom.fields[0], required: 'yes' }]) {
     for (const section of ['fields', 'rowFields']) {
-      expect(parseProfileImport(file([{ ...custom, [section]: [field] }]))).toEqual({ profiles: [], errors: ['Profile 1: Unknown field shape or invalid required mark.'] });
+      expect(parseProfileImport(file([{ ...custom, [section]: [field] }]))).toEqual({ profiles: [], errors: ['Template 1: Unknown field shape or invalid required mark.'] });
     }
   }
 });
 it('returns every validation problem without importing the valid prefix', () => {
   const result = parseProfileImport(file([custom, { ...custom, name: ' ', fields: [{ key: 'Bad key', label: '', type: 'other' }], rowFields: [] }, { ...custom, fields: [], rowFields: [] }]));
   expect(result).toEqual({ profiles: [], errors: [
-    'Profile 2: Enter a profile name.',
-    'Profile 2: Invalid snake_case key: Bad key',
-    'Profile 2: Enter a label for Bad key.',
-    'Profile 2: Unknown type for Bad key.',
-    'Profile 3: Use 1–30 fields in total.',
+    'Template 2: Enter a template name.',
+    'Template 2: Invalid snake_case key: Bad key',
+    'Template 2: Enter a label for Bad key.',
+    'Template 2: Unknown type for Bad key.',
+    'Template 3: Use 1–30 fields in total.',
   ] });
 });
 it('validates missing keys, labels, duplicate keys and the field-count boundary', () => {
@@ -53,10 +53,10 @@ it('validates missing keys, labels, duplicate keys and the field-count boundary'
     [{ key: 'valid', label: 'Valid' }, 'Unknown type for valid.'],
   ] as const) {
     const result = parseProfileImport(file([{ ...custom, fields: [field], rowFields: [] }]));
-    expect(result).toEqual({ profiles: [], errors: [`Profile 1: ${message}`] });
+    expect(result).toEqual({ profiles: [], errors: [`Template 1: ${message}`] });
   }
-  expect(parseProfileImport(file([{ ...custom, rowFields: custom.fields }])).errors).toEqual(['Profile 1: Duplicate key: document_no']);
+  expect(parseProfileImport(file([{ ...custom, rowFields: custom.fields }])).errors).toEqual(['Template 1: Duplicate key: document_no']);
   const fields = Array.from({ length: 30 }, (_, i) => ({ key: `field_${i}`, label: `Field ${i}`, type: 'text' }));
   expect(parseProfileImport(file([{ ...custom, fields, rowFields: [] }])).errors).toEqual([]);
-  expect(parseProfileImport(file([{ ...custom, fields, rowFields: custom.rowFields }])).errors).toEqual(['Profile 1: Use 1–30 fields in total.']);
+  expect(parseProfileImport(file([{ ...custom, fields, rowFields: custom.rowFields }])).errors).toEqual(['Template 1: Use 1–30 fields in total.']);
 });

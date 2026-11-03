@@ -30,21 +30,21 @@ beforeEach(async () => {
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 it('creates a profile only after valid fields and duplicates a locked builtin', async () => {
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
-  await click('Create profile'); await click('Save profile');
+  await click('Create template'); await click('Save template');
   expect(document.body.textContent).toContain('Use 1–30 fields in total.');
-  await fill('Profile name', 'Shipping'); await click('Add field');
+  await fill('Template name', 'Shipping'); await click('Add field');
   await fill('Header fields 1 label', 'Tracking number'); // the user only names the field; its key is derived
   await click('Add column'); await fill('Row columns 1 label', 'Stock code');
   expect(document.body.textContent).not.toContain('Header fields 1 key'); // technical keys are hidden by default
   await act(async () => { (document.querySelector('[role="dialog"] input[type="checkbox"]') as HTMLInputElement).click(); });
-  await click('Save profile');
+  await click('Save template');
   const shipping = loadProfiles().find(p => p.name === 'Shipping')!;
   expect(shipping.fields).toEqual([{ key: 'tracking_number', label: 'Tracking number', type: 'text', required: true }]);
   expect(shipping.rowFields).toEqual([{ key: 'stock_code', label: 'Stock code', type: 'text' }]);
   expect(container.textContent).toContain('Required *');
-  await click('Edit Shipping'); await fill('Profile name', 'Shipping updated'); await click('Save profile');
+  await click('Edit Shipping'); await fill('Template name', 'Shipping updated'); await click('Save template');
   expect(loadProfiles().find(p => p.id === shipping.id)?.name).toBe('Shipping updated');
-  await click('Duplicate Document info'); await click('Save profile');
+  await click('Duplicate Document info'); await click('Save template');
   const copy = loadProfiles().find(p => p.name === 'Document info copy')!;
   expect(copy.builtin).toBe(false); expect(copy.id).not.toBe('doc-info'); expect(copy.fields).toEqual(BUILTIN_PROFILES[0].fields);
   expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Edit Document info')).toBe(false);
@@ -62,7 +62,7 @@ it('derives a new field key from its label, never renames a saved key, and shows
   await click('Add field'); await fill('Header fields 4 label', 'Batch No');
   await fill('Header fields 4 label', 'Batch Number');  // the key keeps following the label while it was derived
   await click('Add field'); await fill('Header fields 5 label', 'Batch Number'); // same label twice -> unique key
-  await click('Save profile');
+  await click('Save template');
   const saved = loadProfiles().find(p => p.id === 'shipping')!;
   expect(saved.fields[0]).toMatchObject({ key: 'document_no', label: 'Doc no.' });
   expect(saved.fields.slice(3).map(f => [f.key, f.label])).toEqual([['batch_number', 'Batch Number'], ['batch_number_2', 'Batch Number']]);
@@ -74,18 +74,18 @@ it('derives a new field key from its label, never renames a saved key, and shows
 it('stops following the label once a key is typed by hand', async () => {
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
   await toggle('Show technical keys');
-  await click('Create profile'); await fill('Profile name', 'Lots'); await click('Add field');
+  await click('Create template'); await fill('Template name', 'Lots'); await click('Add field');
   await fill('Header fields 1 label', 'Batch No');
   await fill('Header fields 1 key', 'lot');
   await fill('Header fields 1 label', 'Batch Number');
-  await click('Save profile');
+  await click('Save template');
   expect(loadProfiles().find(p => p.name === 'Lots')!.fields).toEqual([{ key: 'lot', label: 'Batch Number', type: 'text' }]);
 });
 it('saves the row-transaction option in a custom profile snapshot', async () => {
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
   await click('Duplicate Document info + rows');
   await act(async () => { const label = [...document.querySelectorAll('label')].find(l => l.textContent === 'Each row is a transaction')!; (label.control as HTMLInputElement).click(); });
-  await click('Save profile');
+  await click('Save template');
   const profile = loadProfiles().find(p => p.name === 'Document info + rows copy')!;
   expect(profile.rowsAsTransactions).toBe(true);
   saveBatchMode('statement', { kind: 'targeted', profileId: profile.id }, profile);
@@ -98,7 +98,7 @@ it('confirms deletion and preserves the profile when cancelled', async () => {
   expect(container.textContent).toContain('Standard fields by document type');
   await click('Delete Shipping'); await click('Cancel');
   expect(loadProfiles().some(p => p.id === 'shipping')).toBe(true);
-  await click('Delete Shipping'); await click('Delete profile');
+  await click('Delete Shipping'); await click('Delete template');
   expect(loadProfiles().some(p => p.id === 'shipping')).toBe(false);
   expect(loadProfiles().some(p => p.id === 'doc-info')).toBe(true);
 });
@@ -120,19 +120,19 @@ it('requires conflict approval and imports an independent renamed copy', async (
 });
 it('imports nonconflicting files and displays empty, invalid and unreadable file results', async () => {
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
-  expect(container.textContent).toContain('No custom profiles yet.');
+  expect(container.textContent).toContain('No custom templates yet.');
   await importFile(async () => '{"idp_studio_profiles":1,"profiles":[]}');
-  expect(container.textContent).toContain('The file contains no profiles.');
+  expect(container.textContent).toContain('The file contains no templates.');
   await importFile(async () => '{');
   expect(container.textContent).toContain('Invalid JSON file.');
   expect(loadProfiles()).toEqual(BUILTIN_PROFILES);
   await importFile(async () => { throw new Error('read failed'); });
-  expect(container.textContent).toContain('Could not read the profile file.');
+  expect(container.textContent).toContain('Could not read the template file.');
   const profile = { ...BUILTIN_PROFILES[0], id: 'shipping', name: 'Shipping', builtin: false };
   await importFile(async () => JSON.stringify({ idp_studio_profiles: 1, profiles: [profile] }));
   expect(loadProfiles().find(p => p.id === 'shipping')).toEqual(profile);
-  expect(container.textContent).toContain('Imported 1 profile.');
-  expect(container.textContent).not.toContain('Could not read the profile file.');
+  expect(container.textContent).toContain('Imported 1 template.');
+  expect(container.textContent).not.toContain('Could not read the template file.');
 });
 it('offers copies for either an ID-only or name-only conflict without overwriting', async () => {
   const original = { ...structuredClone(BUILTIN_PROFILES[0]), id: 'shipping', name: 'Shipping', builtin: false };
@@ -160,13 +160,13 @@ it('cancels edits without saving and deletes the selected profile without removi
   saveProfiles([profile]);
   saveBatchMode('existing-batch', { kind: 'targeted', profileId: profile.id }, profile);
   await act(async () => root.render(<Templates docs={[]} settings={loadSettings()} refresh={async () => {}} />));
-  await click('Edit Shipping'); await fill('Profile name', 'Unsaved'); await click('Remove field'); await click('Cancel');
+  await click('Edit Shipping'); await fill('Template name', 'Unsaved'); await click('Remove field'); await click('Cancel');
   expect(loadProfiles().find(p => p.id === profile.id)).toEqual(profile);
   await click('Use Shipping for next upload');
   expect(loadMode()).toEqual({ kind: 'targeted', profileId: profile.id });
   expect(window.location.hash).toBe('#/');
   expect(container.textContent).toContain('Used by Targeted mode for the next upload');
-  await click('Delete Shipping'); await click('Delete profile');
+  await click('Delete Shipping'); await click('Delete template');
   expect(loadMode()).toEqual({ kind: 'auto' });
   expect(loadProfiles().some(p => p.id === profile.id)).toBe(false);
   expect(loadBatchMode('existing-batch')).toEqual({ mode: { kind: 'targeted', profileId: profile.id }, profile });

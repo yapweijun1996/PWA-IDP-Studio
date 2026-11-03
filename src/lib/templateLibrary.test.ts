@@ -91,7 +91,7 @@ describe('templates carry a match', () => {
     expect(loadProfiles().find(p => p.id === 'Mine')?.match).toEqual(mine.match);
     const imported = parseProfileImport(exportProfiles([mine]));
     expect(imported.errors).toEqual([]); expect(imported.profiles[0].match).toEqual(mine.match);
-    expect(parseProfileImport(JSON.stringify({ idp_studio_profiles: 1, profiles: [{ ...mine, match: { party: 5 } }] })).errors).toEqual(['Profile 1: Enter a supplier or customer name for the suggestion, or leave it empty.']);
+    expect(parseProfileImport(JSON.stringify({ idp_studio_profiles: 1, profiles: [{ ...mine, match: { party: 5 } }] })).errors).toEqual(['Template 1: Enter a supplier or customer name for the suggestion, or leave it empty.']);
   });
   it('is left out of the export when the template has none, and the built-ins have none', () => {
     expect(Object.keys(JSON.parse(exportProfiles([profile('Plain')])).profiles[0])).toEqual(['id', 'name', 'fields', 'rowFields']);
