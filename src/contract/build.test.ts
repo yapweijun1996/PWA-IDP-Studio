@@ -1,10 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import { buildBatch, type BuildInput } from './build';
 import { validateBatch, exportEligibleTransactions } from './validate';
-import { checkModelOutput } from '../lib/validate';
+import { checkModelOutput, checkProfileOutput } from '../lib/validate';
+import { BUILTIN_PROFILES } from '../lib/agent/contract';
 import { invoiceInput } from './fixtures';
 
 const openCodes = (input: BuildInput) => buildBatch(input).issues.filter(i => i.status === 'open').map(i => i.rule_code);
+
+describe('Targeted invoice template (footer totals)', () => {
+  const template = BUILTIN_PROFILES.find(p => p.id === 'invoice')!;
+  const cell = (value: unknown) => ({ value, page: 1, bbox: [0, 0, 100, 100], confidence: 1 });
+  // The reference layout: 2 x 100 + 3 x 50 = 350 sub total, 9 % GST = 31.50, grand total 381.50.
+  const targeted = (total: string, tax: string | null, amounts = ['200.00', '150.00']): BuildInput => ({
+    ...invoiceInput(),
+    output: checkProfileOutput({
+      document_type: 'sales_invoice',
+      fields: Object.entries({ document_no: 'INV-001', transaction_date: '2026-11-03', customer_name: 'ABC Trading', currency: 'SGD', subtotal_amount: '350.00', tax_amount: tax, total_amount: total }).map(([key, value]) => ({ key, value, page: 1, bbox: [0, 0, 100, 100], confidence: 1 })),
+      line_items: amounts.map((amount, i) => ({ row_no: cell(i + 1), stock_code: cell(['A001', 'B002'][i]), description: cell(null), quantity: cell(i ? '3' : '2'), uom: cell(null), unit_price: cell(i ? '50.00' : '100.00'), amount: cell(amount) })),
+    }, template),
+  });
+  it('reconciles grand total = rows + tax, and still flags a wrong total', () => {
+    expect(openCodes(targeted('381.50', '31.50'))).not.toContain('TOTALS_MISMATCH');
+    expect(openCodes(targeted('350.00', null))).not.toContain('TOTALS_MISMATCH'); // no tax printed: total equals the rows
+    expect(openCodes(targeted('400.00', '31.50'))).toContain('TOTALS_MISMATCH');
+  });
+  it('does not reconcile a Targeted template that has no total_amount amount field', () => {
+    const profile = BUILTIN_PROFILES.find(p => p.id === 'doc-info-rows')!; // rows have line_subtotal, header has no total
+    const input = { ...invoiceInput(), output: checkProfileOutput({ document_type: 'unknown', fields: [{ key: 'document_no', value: 'D-1', page: 1, bbox: null, confidence: 1 }, { key: 'transaction_date', value: '2026-11-03', page: 1, bbox: null, confidence: 1 }, { key: 'remarks', value: null, page: 1, bbox: null, confidence: 1 }], line_items: [] }, profile) };
+    expect(openCodes(input)).not.toContain('TOTALS_MISMATCH');
+  });
+});
 
 describe('buildBatch', () => {
   it('builds a schema-valid realistic invoice with decimal data and real geometry only', () => {

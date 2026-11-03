@@ -13,7 +13,7 @@ import type { Batch } from '../contract/types';
 import { createPageSource, restrictPageSource, type PageSource } from './agent/pageSource';
 import { createExtractionTools, type CodeDecoder } from './agent/tools';
 import { getFileByFileId } from './db';
-import { AUTO_HEADER_KEYS } from './standards';
+import { AUTO_HEADER_KEYS, AUTO_ROW_KEYS } from './standards';
 import { loadAgentConfig, type AgentConfig } from './agentConfig';
 
 export const SYSTEM_PROMPT = `You are a document-processing agent for ERP data entry.
@@ -24,9 +24,10 @@ Use the following JSON shape for submit_result (plain JSON text only if tools ar
   "fields": [{"key": snake_case_name, "value": string|number|null, "page": 1-based page number,
               "bbox": [ymin, xmin, ymax, xmax] integers 0..1000 of the page (top-left origin) around where the value is printed, or null,
               "confidence": 0..1}],
-  "line_items": [{"description": string, "quantity": decimal_string, "unit_price": decimal_string, "amount": decimal_string}]
+  "line_items": [{"stock_code": string|null, "description": string, "quantity": decimal_string, "uom": string|null, "unit_price": decimal_string, "amount": decimal_string}]
 }
 Use these keys when present: ${AUTO_HEADER_KEYS.join(', ')}.
+Row keys: ${AUTO_ROW_KEYS.join(', ')}. stock_code is the item or product code printed on the row, copied exactly as printed and never built from other columns (null when the row has none). uom is the unit of measure as printed (for example PC, PCS, EA, KG).
 Dates use YYYY-MM-DD; currency uses an ISO code.
 total_amount is the final payable total. When the document also prints an amount before tax and a tax amount (GST, VAT, sales tax), put them in subtotal_amount and tax_amount.
 For statements, preserve supplier, statement_date, period, opening_balance, closing_balance, currency and total_amount as header fields. Extract every entry in line_items with date, reference, description, debit, credit, balance and amount when present. Statement row cells use {value,page,bbox,confidence}, with the same evidence coordinates as header fields.

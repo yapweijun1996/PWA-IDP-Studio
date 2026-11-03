@@ -44,7 +44,9 @@ export function businessIssues(batch: Batch): Issue[] {
     walk(tx.data);
     const rows = tx.data.line_items;
     const total = normalizeDecimal(tx.data.total_amount);
-    if (!tx.field_types && total !== null && Array.isArray(rows) && rows.length) {
+    // Auto output always reconciles. A Targeted template reconciles too when it declares total_amount as an amount
+    // (the built-in invoice template does); rows without an `amount` value are skipped below, never reported.
+    if ((!tx.field_types || tx.field_types['/total_amount'] === 'amount') && total !== null && Array.isArray(rows) && rows.length) {
       const amounts = rows.map(row => row && typeof row === 'object' && !Array.isArray(row) ? normalizeDecimal(row.amount) : null);
       if (amounts.every((v): v is string => v !== null)) {
         // A total may be the line sum plus a separately printed tax (e.g. 673.50 + 8% GST 53.88 = 727.38).
