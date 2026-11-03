@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import type { Batch } from '../contract/types';
-import { Button, DataTable, Dialog, IconButton, Menu, Notice, Pagination, Select, StatusPill, type Column } from '../ds';
+import { DataTable, IconButton, Menu, Notice, Pagination, Select, StatusPill, type Column } from '../ds';
+import { DeleteUploadDialog } from './DeleteUploadDialog';
 import { go } from './useHash';
 import { readable, workspaceHref } from './nav';
 import { loadPreferences } from './preferences';
-import { deleteLocalBatch } from './storage';
 export const matchingBatches = (batches: readonly Batch[], search: string) => batches.filter(b => `${b.source_files.map(f => f.filename).join(' ')} ${b.documents.map(d => `${d.document_type} ${readable(d.document_type)}`).join(' ')}`.toLowerCase().includes(search.trim().toLowerCase()));
 export function BatchTable({ docs, search = '', recent = false, loading = false, onDeleted }: { docs: Batch[]; search?: string; recent?: boolean; loading?: boolean; onDeleted?: () => void | Promise<void> }) {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState<Batch>();
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
   const preferences = loadPreferences();
   const filtered = matchingBatches(docs, search).filter(b => status === 'all' || b.batch.status === status);
   const pageSize = recent ? 5 : preferences.pageSize;
@@ -35,9 +34,6 @@ export function BatchTable({ docs, search = '', recent = false, loading = false,
     <DataTable caption={recent ? 'Recent uploads' : 'Documents'} columns={columns} sort={sort} onSortChange={value => { setSort(value); setPage(1); }} rows={ordered.slice((current - 1) * pageSize, current * pageSize)} rowKey={b => b.batch.batch_id} onRowClick={b => go(workspaceHref(b))} density={preferences.density === 'compact' ? 'compact' : 'normal'} loading={loading} emptyMessage={search || status !== 'all' ? 'No matching uploads' : 'No uploads yet'} />
     {!recent && <Pagination page={current} pageCount={pageCount} onChange={setPage} />}
     {error && <Notice tone="error">{error}</Notice>}
-    <Dialog open={!!deleting} onClose={() => !busy && setDeleting(undefined)} title="Delete upload?">
-      <p>{deleting?.source_files[0].filename} and its batch will be removed from this browser only, including its legacy source record if migrated. Originals referenced by another batch or unrelated legacy record are kept. Provider-side data is not deleted.</p>
-      <Button disabled={busy} onClick={() => setDeleting(undefined)}>Cancel</Button><Button variant="danger" disabled={busy} onClick={async () => { if (!deleting) return; setBusy(true); try { await deleteLocalBatch(deleting); await onDeleted?.(); setDeleting(undefined); } catch (e) { setError(String(e)); } finally { setBusy(false); } }}>Delete</Button>
-    </Dialog>
+    <DeleteUploadDialog batch={deleting} onClose={() => setDeleting(undefined)} onDeleted={onDeleted} onError={setError} />
   </div>;
 }

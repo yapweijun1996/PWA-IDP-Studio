@@ -194,3 +194,31 @@ it('deleting a migrated upload removes only its migration source so it cannot re
   expect(await getFile('old')).toBeUndefined(); expect(await getFile('legacy_file_old')).toBeUndefined();
   expect((await listDocuments()).map(d => d.id)).toEqual(['unrelated']);
 });
+const unprocessed = (id: string, status: 'processing' | 'failed' = 'processing') => {
+  const input = invoiceInput(); input.batchId = id; input.file.file_id = `file_${id}`; input.file.filename = 'IPJEM23058814.pdf';
+  input.pages = [1, 2].map(n => ({ page_number: n, width: 595, height: 842 })); input.renderedPageCount = 1;
+  const batch = buildBatch(input);
+  for (const page of batch.pages) { page.status = 'pending'; page.regions = []; page.unassigned_reason = 'review_pending'; }
+  batch.documents = []; batch.transactions = [];
+  const next = recomputeIssues(batch); next.batch.status = status; return next;
+};
+it('Home: an interrupted upload states what happened and offers retry and delete', async () => {
+  const batch = unprocessed('stopped'); await putBatch(batch);
+  const retried: string[] = []; const deleted = vi.fn();
+  await render(<Home docs={[batch]} settings={loadSettings()} busy={null} onFiles={() => {}} onRetry={id => retried.push(id)} onDeleted={deleted} />);
+  const text = container.textContent ?? '';
+  expect(text).toContain('Interrupted'); expect(text).toContain('Page coverage 0 of 2');
+  expect(text).toContain('Pages 1, 2 were not processed, so export is blocked.'); expect(text).not.toContain('Unprocessed pages');
+  await click(button('Retry extraction')); expect(retried).toEqual(['stopped']);
+  await click(button('Delete upload')); expect(document.body.textContent).toContain('Delete upload?');
+  await click(button('Delete'));
+  expect(await getBatch('stopped')).toBeUndefined(); expect(deleted).toHaveBeenCalledTimes(1);
+});
+it('Home: while extraction runs the card shows Processing and blocks retry and delete; a failed upload shows Failed with retry', async () => {
+  const running = unprocessed('running');
+  await render(<Home docs={[running]} settings={loadSettings()} busy="Reading page 2" onFiles={() => {}} onRetry={() => {}} onDeleted={() => {}} />);
+  expect(container.textContent).toContain('Processing'); expect(container.textContent).toContain('Reading page 2');
+  expect(button('Retry extraction')).toBeUndefined(); expect(button('Delete upload').disabled).toBe(true);
+  await render(<Home docs={[unprocessed('broken', 'failed')]} settings={loadSettings()} busy={null} onFiles={() => {}} onRetry={() => {}} onDeleted={() => {}} />);
+  expect(container.textContent).toContain('Failed'); expect(button('Retry extraction').disabled).toBe(false);
+});
